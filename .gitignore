@@ -1,0 +1,11 @@
+# compiled output
+bin/
+obj/
+
+# IDE - VistualStudio
+.vs/
+*.csproj.user
+
+# System Files
+.DS_Store
+Thumbs.db
