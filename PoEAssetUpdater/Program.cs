@@ -1,11 +1,13 @@
 using LibDat;
 using LibGGPK;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 
 namespace PoEAssetUpdater
@@ -62,7 +64,7 @@ namespace PoEAssetUpdater
 			ExportClientStrings(contentFilePath, assetOutputDir, container);
 			//maps.json
 			ExportMods(contentFilePath, assetOutputDir, container);
-			ExportStats(contentFilePath, assetOutputDir, container);
+			//ExportStats(contentFilePath, assetOutputDir, container);
 			//stats-local.json -> Likely created manually.
 			ExportWords(contentFilePath, assetOutputDir, container);
 
@@ -306,6 +308,56 @@ namespace PoEAssetUpdater
 				if(modsDatContainer == null || statsDatContainer == null)
 				{
 					return;
+				}
+
+				// Download the PoE Trade Stats json
+				JObject poeTradeStats;
+				using(WebClient wc = new WebClient())
+				{
+					poeTradeStats = JObject.Parse(wc.DownloadString("https://www.pathofexile.com/api/trade/data/stats"));
+				}
+
+				// Parse the PoE Trade Stats
+				foreach(var result in poeTradeStats["result"])
+				{
+					var label = ((string)result["label"]).ToLowerInvariant();
+					jsonWriter.WritePropertyName(label);
+					jsonWriter.WriteStartObject();
+					foreach(var entry in result["entries"])
+					{
+						string tradeId = ((string)entry["id"]).Substring(label.Length + 1);
+						string text = (string)entry["text"];
+						string regexText = $"^{text.Replace("#", @"(\\S+)")}$";
+						string statSearchText = text.Replace("#", "");
+
+						// TODO: There has to be a better way to find them? -- Also: not all stats are being found correctly this way.
+						RecordData stat = statsDatContainer.Records.FirstOrDefault(x => x.GetDataValueStringByFieldId("Text") == statSearchText);
+
+						jsonWriter.WritePropertyName(tradeId);
+						jsonWriter.WriteStartObject();
+						jsonWriter.WritePropertyName("id");
+						jsonWriter.WriteValue(stat?.GetDataValueStringByFieldId("Id") ?? "-- UNKNOWN --");
+						if(stat != null && bool.Parse(stat.GetDataValueStringByFieldId("IsLocal")))
+						{
+							jsonWriter.WritePropertyName("mod");
+							jsonWriter.WriteValue("local");
+						}
+						jsonWriter.WritePropertyName("negated");
+						jsonWriter.WriteValue("!! TODO !!");		// Not sure what this actually is intended for, or where it's supposed to come from.
+						jsonWriter.WritePropertyName("text");
+						jsonWriter.WriteStartObject();
+						for(int i = 0; i < Languages.Length; i++)
+						{
+							jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
+							jsonWriter.WriteStartObject();
+							jsonWriter.WritePropertyName("#");
+							jsonWriter.WriteValue(regexText);// TODO: Actually obtain the correct regexText for each language. Currently English is being used for all languages.
+							jsonWriter.WriteEndObject();
+						}
+						jsonWriter.WriteEndObject();
+						jsonWriter.WriteEndObject();
+					}
+					jsonWriter.WriteEndObject();
 				}
 			}
 		}
