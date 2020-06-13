@@ -30,7 +30,7 @@ namespace PoEAssetUpdater
 		public static void Main(string[] args)
 		{
 			// Validate args array size
-			if(args.Length != 1)
+			if(args.Length != 2)
 			{
 				Console.WriteLine("Invalid number of arguments.");
 				PrintUsage();
@@ -45,21 +45,26 @@ namespace PoEAssetUpdater
 				PrintUsage();
 				return;
 			}
-
-			var exportDir = Path.GetDirectoryName(contentFilePath);
+			string assetOutputDir = args[1];
+			if(!Directory.Exists(assetOutputDir))
+			{
+				Console.WriteLine($"Directory '{assetOutputDir}' does not exist.");
+				PrintUsage();
+				return;
+			}
 
 			// Read the GGPKG file
 			GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
 			container.Read(contentFilePath, Console.Write);
 
 			//base-item-type-categories.json
-			ExportBaseItemTypes(contentFilePath, exportDir, container);
-			ExportClientStrings(contentFilePath, exportDir, container);
+			ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
+			ExportClientStrings(contentFilePath, assetOutputDir, container);
 			//maps.json
-			ExportMods(contentFilePath, exportDir, container);
-			ExportStats(contentFilePath, exportDir, container);
-			//stats-local.json -♠
-			ExportWords(contentFilePath, exportDir, container);
+			ExportMods(contentFilePath, assetOutputDir, container);
+			ExportStats(contentFilePath, assetOutputDir, container);
+			//stats-local.json -> Likely created manually.
+			ExportWords(contentFilePath, assetOutputDir, container);
 
 			Console.Read();
 		}
@@ -71,7 +76,7 @@ namespace PoEAssetUpdater
 		private static void PrintUsage()
 		{
 			Console.WriteLine("Usage:");
-			Console.WriteLine($"{ApplicationName} <path-to-Content.ggpk>");
+			Console.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir>");
 			Console.Read();
 		}
 
