@@ -25,12 +25,102 @@ namespace PoEAssetUpdater
 
 		private const ulong UndefinedValue = 18374403900871474942L;
 
+		private static readonly Dictionary<string, string> ItemTradeDataCategoryIdToCategoryMapping = new Dictionary<string, string>()
+		{
+			["Currency"] = ItemCategory.Currency,
+			["Cards"] = ItemCategory.Card,
+			["Catalysts"] = ItemCategory.Currency,
+			["DeliriumOrbs"] = ItemCategory.Currency,
+			["DelveFossils"] = ItemCategory.CurrencyFossil,
+			["DelveResonators"] = ItemCategory.CurrencyResonator,
+			["Essences"] = ItemCategory.Currency,
+			["Fragments"] = ItemCategory.MapFragment,
+			["Incubators"] = ItemCategory.CurrencyIncubator,
+			["Leaguestones"] = ItemCategory.Leaguestone,
+			["MapsBlighted"] = ItemCategory.Map,
+			["MapsTier1"] = ItemCategory.Map,
+			["MapsTier2"] = ItemCategory.Map,
+			["MapsTier3"] = ItemCategory.Map,
+			["MapsTier4"] = ItemCategory.Map,
+			["MapsTier5"] = ItemCategory.Map,
+			["MapsTier6"] = ItemCategory.Map,
+			["MapsTier7"] = ItemCategory.Map,
+			["MapsTier8"] = ItemCategory.Map,
+			["MapsTier9"] = ItemCategory.Map,
+			["MapsTier10"] = ItemCategory.Map,
+			["MapsTier11"] = ItemCategory.Map,
+			["MapsTier12"] = ItemCategory.Map,
+			["MapsTier13"] = ItemCategory.Map,
+			["MapsTier14"] = ItemCategory.Map,
+			["MapsTier15"] = ItemCategory.Map,
+			["MapsTier16"] = ItemCategory.Map,
+			["Nets"] = ItemCategory.Currency,
+			["Oils"] = ItemCategory.Currency,
+			["Prophecies"] = ItemCategory.Currency,
+			["Scarabs"] = ItemCategory.MapScarab,
+			["Vials"] = ItemCategory.Currency,
+		};
+
+		private static readonly Dictionary<string, string> BaseItemTypeInheritsFromToCategoryMapping = new Dictionary<string, string>()
+		{
+			// Accessories
+			["AbstractRing"] = ItemCategory.AccessoryRing,
+			["AbstractAmulet"] = ItemCategory.AccessoryAmulet,
+			["AbstractBelt"] = ItemCategory.AccessoryBelt,
+			// Armors/Armours
+			["AbstractShield"] = ItemCategory.ArmourShield,
+			["AbstractHelmet"] = ItemCategory.ArmourHelmet,
+			["AbstractBodyArmour"] = ItemCategory.ArmourChest,
+			["AbstractBoots"] = ItemCategory.ArmourBoots,
+			["AbstractGloves"] = ItemCategory.ArmourGloves,
+			["AbstractQuiver"] = ItemCategory.ArmourQuiver,
+			// Flasks
+			["AbstractLifeFlask"] = ItemCategory.Flask,
+			["AbstractManaFlask"] = ItemCategory.Flask,
+			["AbstractHybridFlask"] = ItemCategory.Flask,
+			["CriticalUtilityFlask"] = ItemCategory.Flask,
+			["AbstractUtilityFlask"] = ItemCategory.Flask,
+			// Gems
+			["ActiveSkillGem"] = ItemCategory.GemActivegem,
+			["SupportSkillGem"] = ItemCategory.GemSupportGem,
+			// Jewels
+			["AbstractJewel"] = ItemCategory.Jewel,
+			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
+			// Metamorph Samples
+			["MetamorphosisDNA"] = ItemCategory.MonsterSample,
+			// Unique Fragments
+			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
+			// Weapons
+			["AbstractTwoHandSword"] = ItemCategory.WeaponTwoSword,
+			["AbstractWand"] = ItemCategory.WeaponWand,
+			["AbstractDagger"] = ItemCategory.WeaponDagger,
+			["AbstractRuneDagger"] = ItemCategory.WeaponRunedagger,
+			["AbstractClaw"] = ItemCategory.WeaponClaw,
+			["AbstractOneHandAxe"] = ItemCategory.WeaponOneAxe,
+			["AbstractOneHandSword"] = ItemCategory.WeaponOneSword,
+			["AbstractOneHandSwordThrusting"] = ItemCategory.WeaponOneSword,
+			["AbstractOneHandMace"] = ItemCategory.WeaponOneMace,
+			["AbstractSceptre"] = ItemCategory.WeaponSceptre,
+			["AbstractBow"] = ItemCategory.WeaponBow,
+			["AbstractStaff"] = ItemCategory.WeaponStaff,
+			["AbstractWarstaff"] = ItemCategory.WeaponWarstaff,
+			["AbstractTwoHandAxe"] = ItemCategory.WeaponTwoAxe,
+			["AbstractTwoHandSword"] = ItemCategory.WeaponTwoSword,
+			["AbstractTwoHandMace"] = ItemCategory.WeaponTwoMace,
+			["AbstractFishingRod"] = ItemCategory.WeaponRod,
+			// Ignored
+			["ApplyInfluence"] = null,
+#warning TODO: Add all ignores ones here!
+		};
+
 		#endregion
 
 		#region Public Methods
 
 		public static void Main(string[] args)
 		{
+#warning TODO: Also write logs to a log file (not just the console)
+
 			// Validate args array size
 			if(args.Length != 2)
 			{
@@ -59,7 +149,7 @@ namespace PoEAssetUpdater
 			GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
 			container.Read(contentFilePath, Console.Write);
 
-			//base-item-type-categories.json
+			ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
 			ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
 			ExportClientStrings(contentFilePath, assetOutputDir, container);
 			//maps.json
@@ -80,6 +170,13 @@ namespace PoEAssetUpdater
 			Console.WriteLine("Usage:");
 			Console.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir>");
 			Console.Read();
+		}
+
+		private static void PrintError(string errorMessage)
+		{
+			Console.WriteLine(string.Empty);
+			Console.WriteLine($"!!! ERROR !!! {errorMessage}");
+			Console.WriteLine(string.Empty);
 		}
 
 		private static void ExportDataFile(GrindingGearsPackageContainer container, string contentFilePath, string exportFilePath, Action<string, DirectoryTreeNode, JsonWriter> writeData)
@@ -148,12 +245,24 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "BaseItemTypes.dat", WriteRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "BaseItemTypes.dat", WriteSlashSeparatedRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "Prophecies.dat", WriteNormalRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "MonsterVarieties.dat", WriteSlashSeparatedRecord);
 			}
 
-			void WriteRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			void WriteSlashSeparatedRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
+				string name = recordData.GetDataValueStringByFieldId("Name");
+				jsonWriter.WritePropertyName(id);
+				jsonWriter.WriteValue(name);
+				jsonWriter.WritePropertyName(name);
+				jsonWriter.WriteValue(id);
+			}
+
+			void WriteNormalRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			{
+				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Name");
 				jsonWriter.WritePropertyName(id);
 				jsonWriter.WriteValue(name);
@@ -169,6 +278,7 @@ namespace PoEAssetUpdater
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
 				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "ClientStrings.dat", WriteRecord);
+#warning TODO: Add Quality Type Names
 			}
 
 			void WriteRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
@@ -358,6 +468,101 @@ namespace PoEAssetUpdater
 						jsonWriter.WriteEndObject();
 					}
 					jsonWriter.WriteEndObject();
+				}
+			}
+		}
+
+		private static void ExportBaseItemTypeCategories(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		{
+			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "base-item-type-categories.json"), WriteRecords);
+
+			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			{
+				var baseItemTypesDatContainer = GetDatContainer(dataDir, contentFilePath, "BaseItemTypes.dat");
+				var propheciesDatContainer = GetDatContainer(dataDir, contentFilePath, "Prophecies.dat");
+				var monsterVarietiesDatContainer = GetDatContainer(dataDir, contentFilePath, "MonsterVarieties.dat");
+				var itemTradeDataDatContainer = GetDatContainer(dataDir, contentFilePath, "ItemTradeData.dat");
+
+				if(baseItemTypesDatContainer == null || itemTradeDataDatContainer == null)
+				{
+					return;
+				}
+
+				// Parse the Item Trade Data
+				Dictionary<string, string> itemTradeDataCategories = new Dictionary<string, string>();
+				foreach(var itemTradeData in itemTradeDataDatContainer.Records)
+				{
+					var categoryId = itemTradeData.GetDataValueStringByFieldId("CategoryId");
+					if(!ItemTradeDataCategoryIdToCategoryMapping.TryGetValue(categoryId, out string category))
+					{
+						PrintError($"Missing {nameof(ItemTradeDataCategoryIdToCategoryMapping)} for '{categoryId}'");
+						continue;
+					}
+					var baseItemTypes = ParseList(itemTradeData.GetDataValueStringByFieldId("Keys0"));
+					baseItemTypes.ForEach(x =>
+					{
+						if(!itemTradeDataCategories.TryGetValue(x, out string existingCategory) || category == existingCategory)
+						{
+							itemTradeDataCategories[x] = category;
+						}
+						else
+						{
+							PrintError($"BaseItemType {x} belongs to two different categories '{existingCategory}' and '{category}'");
+						}
+					});
+				}
+
+				// Create the root node.
+				jsonWriter.WritePropertyName("Default");
+				jsonWriter.WriteStartObject();
+
+				// Write the Base Item Types
+				int row = 0;
+				foreach(var baseItemType in baseItemTypesDatContainer.Records)
+				{
+					string id = baseItemType.GetDataValueStringByFieldId("Id").Split('/').Last();
+					string inheritsFrom = baseItemType.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
+					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category) &&
+						!itemTradeDataCategories.TryGetValue(row.ToString(CultureInfo.InvariantCulture), out category))
+					{
+						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.DatName)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {row}");
+						continue;
+					}
+					if(category == ItemCategory.GemSupportGem && id.EndsWith("Plus"))
+					{
+						category = ItemCategory.GemSupportGemplus;
+					}
+					if(category != null)
+					{
+						jsonWriter.WritePropertyName(id);
+						jsonWriter.WriteValue(category);
+					}
+					row++;
+				}
+
+				// Write the Prophecies
+				foreach(var prophecy in propheciesDatContainer.Records)
+				{
+					jsonWriter.WritePropertyName(prophecy.GetDataValueStringByFieldId("Id"));
+					jsonWriter.WriteValue(ItemCategory.Prophecy);
+				}
+
+				// Write the Monster Varieties
+				foreach(var prophecy in monsterVarietiesDatContainer.Records)
+				{
+					jsonWriter.WritePropertyName(prophecy.GetDataValueStringByFieldId("Id").Split('/').Last());
+					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
+				}
+
+				jsonWriter.WriteEndObject();
+
+				List<string> ParseList(string stringifiedList)
+				{
+					return stringifiedList
+						.Substring(1, stringifiedList.Length - 2)// Remove the brackets
+						.Split(',')//Split the list
+						.Select(x => x.Trim())//Trim any spaces
+						.ToList();
 				}
 			}
 		}
