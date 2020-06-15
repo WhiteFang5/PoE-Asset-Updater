@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PoEAssetUpdater
 {
@@ -18,12 +20,18 @@ namespace PoEAssetUpdater
 
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 
-		private const string EnglishLanguage = "English";
-		private static readonly string[] Languages = new string[] { EnglishLanguage, "French", "German", "Korean", "Portuguese", "Russian", "SimplifiedChinese", "Spanish", "Thai", "TraditionalChinese" };
-
 		private const int TotalNumberOfStats = 6;
 
 		private const ulong UndefinedValue = 18374403900871474942L;
+
+		private static readonly char[] NewLineSplitter = "\r\n".ToCharArray();
+		private static readonly char[] WhiteSpaceSplitter = "\t ".ToCharArray();
+
+		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
+
+		private static readonly string[] TradeAPIStatSuffixes = new string[] { " (Local)", " (Shields)", " (Maps)", " (Legacy)", " (Staves)" };
+
+		private static readonly string[] SuppressedWarningLabels = new string[] { "pseudo", "delve", "monster", "veiled" };
 
 		private static readonly Dictionary<string, string> ItemTradeDataCategoryIdToCategoryMapping = new Dictionary<string, string>()
 		{
@@ -134,12 +142,10 @@ namespace PoEAssetUpdater
 
 		public static void Main(string[] args)
 		{
-#warning TODO: Also write logs to a log file (not just the console)
-
 			// Validate args array size
 			if(args.Length != 2)
 			{
-				Console.WriteLine("Invalid number of arguments.");
+				Logger.WriteLine("Invalid number of arguments.");
 				PrintUsage();
 				return;
 			}
@@ -148,32 +154,45 @@ namespace PoEAssetUpdater
 			string contentFilePath = args[0];
 			if(!File.Exists(contentFilePath))
 			{
-				Console.WriteLine($"File '{contentFilePath}' does not exist.");
+				Logger.WriteLine($"File '{contentFilePath}' does not exist.");
 				PrintUsage();
 				return;
 			}
 			string assetOutputDir = args[1];
 			if(!Directory.Exists(assetOutputDir))
 			{
-				Console.WriteLine($"Directory '{assetOutputDir}' does not exist.");
+				Logger.WriteLine($"Directory '{assetOutputDir}' does not exist.");
 				PrintUsage();
 				return;
 			}
 
-			// Read the GGPKG file
-			GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
-			container.Read(contentFilePath, Console.Write);
+			try
+			{
+				// Read the GGPKG file
+				GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
+				container.Read(contentFilePath, Logger.Write);
 
-			ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
-			ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
-			ExportClientStrings(contentFilePath, assetOutputDir, container);
-			//maps.json
-			ExportMods(contentFilePath, assetOutputDir, container);
-			//ExportStats(contentFilePath, assetOutputDir, container);
-			//stats-local.json -> Likely created manually.
-			ExportWords(contentFilePath, assetOutputDir, container);
+				/*ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
+				ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
+				ExportClientStrings(contentFilePath, assetOutputDir, container);
+				//maps.json -> Likely created/maintained manually.
+				ExportMods(contentFilePath, assetOutputDir, container);*/
+				ExportStats(contentFilePath, assetOutputDir, container);
+				//stats-local.json -> Likely/maintained created manually.
+				//ExportWords(contentFilePath, assetOutputDir, container);
 
-			Console.Read();
+				Console.WriteLine(string.Empty);
+				Console.WriteLine("Press any key to exit...");
+				Console.Read();
+			}
+			catch(Exception ex)
+			{
+				PrintError($"{ex.Message}\r\n{ex.StackTrace}");
+			}
+			finally
+			{
+				Logger.SaveLogs(Path.Combine(assetOutputDir, string.Concat(ApplicationName, ".log")));
+			}
 		}
 
 		#endregion
@@ -182,21 +201,26 @@ namespace PoEAssetUpdater
 
 		private static void PrintUsage()
 		{
-			Console.WriteLine("Usage:");
-			Console.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir>");
+			Logger.WriteLine("Usage:");
+			Logger.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir>");
 			Console.Read();
 		}
 
-		private static void PrintError(string errorMessage)
+		private static void PrintError(string message)
 		{
-			Console.WriteLine(string.Empty);
-			Console.WriteLine($"!!! ERROR !!! {errorMessage}");
-			Console.WriteLine(string.Empty);
+			Logger.WriteLine(string.Empty);
+			Logger.WriteLine($"!!! ERROR !!! {message}");
+			Logger.WriteLine(string.Empty);
+		}
+
+		private static void PrintWarning(string message)
+		{
+			Logger.WriteLine($"!! WARNING: {message}");
 		}
 
 		private static void ExportDataFile(GrindingGearsPackageContainer container, string contentFilePath, string exportFilePath, Action<string, DirectoryTreeNode, JsonWriter> writeData)
 		{
-			Console.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
+			Logger.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
 
 			var dataDir = container.DirectoryRoot.Children.Find(x => x.Name == "Data");
 
@@ -216,18 +240,18 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteEndObject();
 			}
 
-			Console.WriteLine($"Exported '{exportFilePath}'.");
+			Logger.WriteLine($"Exported '{exportFilePath}'.");
 		}
 
 		private static void ExportLanguageDataFile(string contentFilePath, DirectoryTreeNode dataDir, JsonWriter jsonWriter, string datFileName, Action<int, RecordData, JsonWriter> writeRecordData)
 		{
-			foreach(var language in Languages)
+			foreach(var language in Language.All)
 			{
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
-				var searchDir = language == EnglishLanguage ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name == language);
+				var searchDir = language == Language.English ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name == language);
 				if(searchDir == null)
 				{
-					Console.WriteLine($"\t{language} Language folder not found.");
+					Logger.WriteLine($"\t{language} Language folder not found.");
 					continue;
 				}
 
@@ -239,7 +263,7 @@ namespace PoEAssetUpdater
 					continue;
 				}
 
-				Console.WriteLine($"\tExporting {language}.");
+				Logger.WriteLine($"\tExporting {datFileName} in {language}.");
 
 				// Create a node and write the data of each record in this node.
 				jsonWriter.WritePropertyName(language);
@@ -292,14 +316,22 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "ClientStrings.dat", WriteRecord);
-#warning TODO: Add Quality Type Names
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "ClientStrings.dat", WriteClientStringRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "AlternateQualityTypes.dat", WriteAlternateQualityTypesRecord);
 			}
 
-			void WriteRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			void WriteClientStringRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Text");
+				jsonWriter.WritePropertyName(id);
+				jsonWriter.WriteValue(name);
+			}
+
+			void WriteAlternateQualityTypesRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			{
+				string id = string.Concat("Quality", idx.ToString(CultureInfo.InvariantCulture));
+				string name = recordData.GetDataValueStringByFieldId("Name");
 				jsonWriter.WritePropertyName(id);
 				jsonWriter.WriteValue(name);
 			}
@@ -330,10 +362,11 @@ namespace PoEAssetUpdater
 			var dataFile = dataDir.Files.FirstOrDefault(x => x.Name == datFileName);
 			if(dataFile == null)
 			{
-				Console.WriteLine($"\t{datFileName} not found in '{dataDir.Name}'.");
+				Logger.WriteLine($"\t{datFileName} not found in '{dataDir.Name}'.");
 				return null;
 			}
 
+#warning TODO: Optimize ReadFileContent by using a BinaryReader instead.
 			var data = dataFile.ReadFileContent(contentFilePath);
 			using(var dataStream = new MemoryStream(data))
 			{
@@ -430,10 +463,71 @@ namespace PoEAssetUpdater
 				var modsDatContainer = GetDatContainer(dataDir, contentFilePath, "Mods.dat");
 				var statsDatContainer = GetDatContainer(dataDir, contentFilePath, "Stats.dat");
 
-				if(modsDatContainer == null || statsDatContainer == null)
+				DirectoryTreeNode statDescriptionsDir = container.DirectoryRoot.Children.FirstOrDefault(x => x.Name == "Metadata")?.Children.FirstOrDefault(x => x.Name == "StatDescriptions");
+				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
+				string[] mapStatDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
+				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
+
+				if(modsDatContainer == null || statsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
 				{
 					return;
 				}
+
+				Logger.WriteLine($"Parsing Stat Description Files...");
+
+				// Create a list of all stat descriptions
+				List<StatDescription> statDescriptions = new List<StatDescription>();
+				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).ToArray();
+				for(int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
+				{
+					string line = lines[lineIdx];
+					// Description found => read id(s)
+					if(line.StartsWith("description"))
+					{
+						line = lines[++lineIdx];
+						string[] ids = line.Split(WhiteSpaceSplitter, StringSplitOptions.RemoveEmptyEntries);
+						int statCount = int.Parse(ids[0]);
+
+						// Strip the number indicating how many stats are present from the IDs
+						StatDescription statDescription = new StatDescription(ids.Skip(1).ToArray());
+
+						// Initial (first) language is always english
+						string language = Language.English;
+						while(true)
+						{
+							// Read the next line as it contains how many mods are added.
+							line = lines[++lineIdx];
+							int textCount = int.Parse(line);
+							for(int i = 0; i < textCount; i++)
+							{
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx]);
+							}
+							if(lineIdx < lastLineIdx)
+							{
+								// Take a peek at the next line to check if it's a new language, or something else
+								line = lines[lineIdx + 1];
+								Match match = StatDescriptionLangRegex.Match(line);
+								if(match.Success)
+								{
+									lineIdx++;
+									language = match.Groups[1].Value.Replace(" ", "");
+								}
+								else
+								{
+									break;
+								}
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						statDescriptions.Add(statDescription);
+					}
+				}
+
+				Logger.WriteLine("Downloading PoE Trade API Stats...");
 
 				// Download the PoE Trade Stats json
 				JObject poeTradeStats;
@@ -441,6 +535,8 @@ namespace PoEAssetUpdater
 				{
 					poeTradeStats = JObject.Parse(wc.DownloadString("https://www.pathofexile.com/api/trade/data/stats"));
 				}
+
+				Logger.WriteLine("Parsing PoE Trade API Stats...");
 
 				// Parse the PoE Trade Stats
 				foreach(var result in poeTradeStats["result"])
@@ -452,37 +548,73 @@ namespace PoEAssetUpdater
 					{
 						string tradeId = ((string)entry["id"]).Substring(label.Length + 1);
 						string text = (string)entry["text"];
-						string regexText = $"^{text.Replace("#", @"(\\S+)")}$";
-						string statSearchText = text.Replace("#", "");
 
-						// TODO: There has to be a better way to find them? -- Also: not all stats are being found correctly this way.
-						RecordData stat = statsDatContainer.Records.FirstOrDefault(x => x.GetDataValueStringByFieldId("Text") == statSearchText);
+						// Strip the "local" stat indication from the trade site text
+						foreach(var tradeAPIStatSuffix in TradeAPIStatSuffixes)
+						{
+							if(text.EndsWith(tradeAPIStatSuffix))
+							{
+								text = text.Substring(0, text.LastIndexOf(tradeAPIStatSuffix));
+							}
+						}
+
+						StatDescription statDescription = statDescriptions.Find(x => x.HasMatchingStatLine(text));
+
+						if(statDescription == null)
+						{
+							if(!SuppressedWarningLabels.Contains(label))
+							{
+								PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}' TradeID '{tradeId}', Desc: '{text}'");
+							}
+							continue;
+						}
 
 						jsonWriter.WritePropertyName(tradeId);
 						jsonWriter.WriteStartObject();
 						jsonWriter.WritePropertyName("id");
-						jsonWriter.WriteValue(stat?.GetDataValueStringByFieldId("Id") ?? "-- UNKNOWN --");
-						if(stat != null && bool.Parse(stat.GetDataValueStringByFieldId("IsLocal")))
+						jsonWriter.WriteValue(statDescription.FullIdentifier);
+						if(statsDatContainer.Records.Exists(x => statDescription.HasMatchingIdentifier(x.GetDataValueStringByFieldId("Id")) && bool.Parse(x.GetDataValueStringByFieldId("IsLocal"))))
 						{
 							jsonWriter.WritePropertyName("mod");
 							jsonWriter.WriteValue("local");
 						}
 						jsonWriter.WritePropertyName("negated");
-						jsonWriter.WriteValue("!! TODO !!");		// Not sure what this actually is intended for, or where it's supposed to come from.
+						jsonWriter.WriteValue(statDescription.Negated);
 						jsonWriter.WritePropertyName("text");
 						jsonWriter.WriteStartObject();
-						for(int i = 0; i < Languages.Length; i++)
+						for(int i = 0; i < Language.All.Length; i++)
 						{
 							jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
 							jsonWriter.WriteStartObject();
-							jsonWriter.WritePropertyName("#");
-							jsonWriter.WriteValue(regexText);// TODO: Actually obtain the correct regexText for each language. Currently English is being used for all languages.
+							foreach(var statLine in statDescription.GetStatLines(Language.All[i]))
+							{
+								jsonWriter.WritePropertyName(statLine.NumberPart);
+								jsonWriter.WriteValue(statLine.StatDescription);
+							}
 							jsonWriter.WriteEndObject();
 						}
 						jsonWriter.WriteEndObject();
 						jsonWriter.WriteEndObject();
 					}
 					jsonWriter.WriteEndObject();
+				}
+
+				string[] GetStatDescriptions(string fileName)
+				{
+					var statDescriptionsFile = statDescriptionsDir.Files.FirstOrDefault(x => x.Name == fileName);
+
+					if(statDescriptionsFile == null)
+					{
+						Logger.WriteLine($"\t{fileName} not found in '{statDescriptionsDir.Name}'.");
+						return null;
+					}
+
+					Logger.WriteLine($"Reading {statDescriptionsFile.Name}...");
+					string content = Encoding.Unicode.GetString(statDescriptionsFile.ReadFileContent(contentFilePath));
+					return content
+						.Split(NewLineSplitter, StringSplitOptions.RemoveEmptyEntries)
+						.Select(x => x.Trim())
+						.Where(x => x.Length > 0).ToArray();
 				}
 			}
 		}
