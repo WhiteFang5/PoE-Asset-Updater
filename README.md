@@ -27,7 +27,7 @@ Note: We should port this from .NET Framework to .NET Core for better multiplatf
 **Run tests**
 
 ```powershell
-> dotnet build
+> dotnet test
 ```
 
 **Compile the app**
