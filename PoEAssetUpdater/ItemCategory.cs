@@ -38,6 +38,7 @@ namespace PoEAssetUpdater
 		public const string GemSupportGemplus = "gem.supportgemplus";
 		public const string Jewel = "jewel";
 		public const string JewelAbyss = "jewel.abyss";
+		public const string JewelCluster = "jewel.cluster";
 		public const string Flask = "flask";
 		public const string Map = "map";
 		public const string MapFragment = "map.fragment";

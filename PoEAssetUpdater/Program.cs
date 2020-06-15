@@ -74,6 +74,13 @@ namespace PoEAssetUpdater
 			["AbstractBoots"] = ItemCategory.ArmourBoots,
 			["AbstractGloves"] = ItemCategory.ArmourGloves,
 			["AbstractQuiver"] = ItemCategory.ArmourQuiver,
+			// Currencies
+			["AbstractCurrency"] = ItemCategory.Currency,
+			["StackableCurrency"] = ItemCategory.Currency,
+			["DelveSocketableCurrency"] = ItemCategory.CurrencyResonator,
+			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
+			// Divination Cards
+			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
 			["AbstractLifeFlask"] = ItemCategory.Flask,
 			["AbstractManaFlask"] = ItemCategory.Flask,
@@ -86,10 +93,14 @@ namespace PoEAssetUpdater
 			// Jewels
 			["AbstractJewel"] = ItemCategory.Jewel,
 			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
+			// Maps
+			["AbstractMap"] = ItemCategory.Map,
+			["AbstractMapFragment"] = ItemCategory.MapFragment,
+			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
 			// Metamorph Samples
 			["MetamorphosisDNA"] = ItemCategory.MonsterSample,
-			// Unique Fragments
-			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
+			// Watchstones
+			["AtlasRegionUpgrade"] = ItemCategory.Watchstone,
 			// Weapons
 			["AbstractTwoHandSword"] = ItemCategory.WeaponTwoSword,
 			["AbstractWand"] = ItemCategory.WeaponWand,
@@ -108,9 +119,13 @@ namespace PoEAssetUpdater
 			["AbstractTwoHandSword"] = ItemCategory.WeaponTwoSword,
 			["AbstractTwoHandMace"] = ItemCategory.WeaponTwoMace,
 			["AbstractFishingRod"] = ItemCategory.WeaponRod,
-			// Ignored
-			["ApplyInfluence"] = null,
-#warning TODO: Add all ignores ones here!
+			// Ignored (i.e. not exported as they're untradable items!)
+			["AbstractMicrotransaction"] = null,
+			["AbstractQuestItem"] = null,
+			["AbstractLabyrinthItem"] = null,
+			["AbstractHideoutDoodad"] = null,
+			["LabyrinthTrinket"] = null,
+			["AbstactPantheonSoul"] = null,
 		};
 
 		#endregion
@@ -517,27 +532,38 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteStartObject();
 
 				// Write the Base Item Types
-				int row = 0;
-				foreach(var baseItemType in baseItemTypesDatContainer.Records)
+				for(int i = 0, recordCount = baseItemTypesDatContainer.Records.Count; i < recordCount; i++)
 				{
+					var baseItemType = baseItemTypesDatContainer.Records[i];
 					string id = baseItemType.GetDataValueStringByFieldId("Id").Split('/').Last();
 					string inheritsFrom = baseItemType.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
-					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category) &&
-						!itemTradeDataCategories.TryGetValue(row.ToString(CultureInfo.InvariantCulture), out category))
+
+					// First try to find a specialised trade curreny category; If non exist, check the inheritance mapping for a matching category.
+					if(!itemTradeDataCategories.TryGetValue(i.ToString(CultureInfo.InvariantCulture), out string category) &&
+						!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out category))
 					{
-						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.DatName)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {row}");
+						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.DatName)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {i}");
 						continue;
 					}
+
+					// Special case for Awakened Support Gems
 					if(category == ItemCategory.GemSupportGem && id.EndsWith("Plus"))
 					{
 						category = ItemCategory.GemSupportGemplus;
 					}
+
+					// Special case for Cluster Jewels
+					if(category == ItemCategory.Jewel && id.StartsWith("JewelPassiveTreeExpansion"))
+					{
+						category = ItemCategory.JewelCluster;
+					}
+
+					// Only write to the json if an appropriate category was found.
 					if(category != null)
 					{
 						jsonWriter.WritePropertyName(id);
 						jsonWriter.WriteValue(category);
 					}
-					row++;
 				}
 
 				// Write the Prophecies
