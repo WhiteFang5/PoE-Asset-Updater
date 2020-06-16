@@ -180,14 +180,14 @@ namespace PoEAssetUpdater
 				GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
 				container.Read(contentFilePath, Logger.Write);
 
-				/*ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
+				ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
 				ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
 				ExportClientStrings(contentFilePath, assetOutputDir, container);
 				//maps.json -> Likely created/maintained manually.
-				ExportMods(contentFilePath, assetOutputDir, container);*/
+				ExportMods(contentFilePath, assetOutputDir, container);
 				ExportStats(contentFilePath, assetOutputDir, container);
 				//stats-local.json -> Likely/maintained created manually.
-				//ExportWords(contentFilePath, assetOutputDir, container);
+				ExportWords(contentFilePath, assetOutputDir, container);
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -642,7 +642,7 @@ namespace PoEAssetUpdater
 								jsonWriter.WriteStartObject();
 								if(statDescription != null)
 								{
-									foreach(var statLine in statDescription.GetStatLines(Language.All[i], singleMatchOnly ? text : null))
+									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, singleMatchOnly))
 									{
 										jsonWriter.WritePropertyName(statLine.NumberPart);
 										jsonWriter.WriteValue(statLine.StatDescription);

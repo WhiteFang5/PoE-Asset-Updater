@@ -33,6 +33,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool ContainsAfflictionRewardType
+		{
+			get; private set;
+		}
+
 		#endregion
 
 		#region Lifecycle
@@ -83,6 +88,7 @@ namespace PoEAssetUpdater
 
 			if(additionalData.Contains("affliction_reward_type"))
 			{
+				ContainsAfflictionRewardType = true;
 				for(int i = 0; i < afflictionRewardTypes.Length; i++)
 				{
 					CreateAndAddStatLine(new StatLine(i.ToString(CultureInfo.InvariantCulture), statDescription.Replace(ValuePlaceholder, afflictionRewardTypes[i])));
@@ -92,16 +98,18 @@ namespace PoEAssetUpdater
 
 			void CreateAndAddStatLine(StatLine statLine)
 			{
+/*#if DEBUG
 				if(language == Language.English)
 				{
 					Logger.WriteLine($"ID '{FullIdentifier}' | Desc: '{statLine.StatDescription}' | Trade Desc: '{statLine.TradeAPIStatDescription}'");
 				}
+#endif*/
 
 				statLines.Add(statLine);
 			}
 		}
 
-		public StatLine[] GetStatLines(string language, string englishStatDescription)
+		public StatLine[] GetStatLines(string language, string englishStatDescription, bool singleMatchOnly)
 		{
 			if(!_statLines.TryGetValue(language, out List<StatLine> statLines))
 			{
@@ -109,7 +117,7 @@ namespace PoEAssetUpdater
 			}
 
 			// Check if an english stat description is provided, if so, the matching index should be returned as only result.
-			if(englishStatDescription != null)
+			if(singleMatchOnly || ContainsAfflictionRewardType)
 			{
 				if(!_statLines.TryGetValue(Language.English, out List<StatLine> englishStatLines))
 				{
