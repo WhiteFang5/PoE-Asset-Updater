@@ -185,10 +185,12 @@ namespace PoEAssetUpdater
 				Console.WriteLine("Press any key to exit...");
 				Console.Read();
 			}
+#if !DEBUG
 			catch(Exception ex)
 			{
 				PrintError($"{ex.Message}\r\n{ex.StackTrace}");
 			}
+#endif
 			finally
 			{
 				Logger.SaveLogs(Path.Combine(assetOutputDir, string.Concat(ApplicationName, ".log")));
