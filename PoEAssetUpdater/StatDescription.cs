@@ -117,7 +117,7 @@ namespace PoEAssetUpdater
 			{
 				NumberPart = numberPart;
 				StatDescription = $"^{statDescription}$";
-				TradeAPIStatDescription = statDescription.Replace(ValuePlaceholder, TradeAPIPlaceholder);
+				TradeAPIStatDescription = statDescription.Replace(ValuePlaceholder, TradeAPIPlaceholder).Replace("\\n", "\n").Split('\n').First();
 			}
 		}
 
