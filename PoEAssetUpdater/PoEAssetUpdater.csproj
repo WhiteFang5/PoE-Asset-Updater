@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ItemCategory.cs" />
+    <Compile Include="KeyValuePairExtensionMethods.cs" />
     <Compile Include="Language.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Program.cs" />

@@ -29,9 +29,17 @@ namespace PoEAssetUpdater
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
-		private static readonly string[] TradeAPIStatSuffixes = new string[] { " (Local)", " (Shields)", " (Maps)", " (Legacy)", " (Staves)" };
-
-		private static readonly string[] SuppressedWarningLabels = new string[] { "pseudo", "delve", "monster", "veiled" };
+		private static readonly Dictionary<string, string> TradeAPIStatSuffixToModMapping = new Dictionary<string, string>()
+		{
+			[" (Local)"] = "local",
+			[" (Shields)"] = "shields",
+			[" (Maps)"] = "maps",
+			[" (Legacy)"] = "legacy",
+			[" (Staves)"] = "staves",
+			[" (Additional)"] = "additional",
+			[" (Master)"] = "master",
+			[" (\u00d7#)"] = null,
+		};
 
 		private static readonly Dictionary<string, string> ItemTradeDataCategoryIdToCategoryMapping = new Dictionary<string, string>()
 		{
@@ -180,10 +188,6 @@ namespace PoEAssetUpdater
 				ExportStats(contentFilePath, assetOutputDir, container);
 				//stats-local.json -> Likely/maintained created manually.
 				//ExportWords(contentFilePath, assetOutputDir, container);
-
-				Console.WriteLine(string.Empty);
-				Console.WriteLine("Press any key to exit...");
-				Console.Read();
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -195,6 +199,10 @@ namespace PoEAssetUpdater
 			{
 				Logger.SaveLogs(Path.Combine(assetOutputDir, string.Concat(ApplicationName, ".log")));
 			}
+
+			Console.WriteLine(string.Empty);
+			Console.WriteLine("Press any key to exit...");
+			Console.Read();
 		}
 
 		#endregion
@@ -462,18 +470,21 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				var modsDatContainer = GetDatContainer(dataDir, contentFilePath, "Mods.dat");
-				var statsDatContainer = GetDatContainer(dataDir, contentFilePath, "Stats.dat");
+				var afflictionRewardTypeVisualsDatContainer = GetDatContainer(dataDir, contentFilePath, "AfflictionRewardTypeVisuals.dat");
 
 				DirectoryTreeNode statDescriptionsDir = container.DirectoryRoot.Children.FirstOrDefault(x => x.Name == "Metadata")?.Children.FirstOrDefault(x => x.Name == "StatDescriptions");
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
-				string[] mapStatDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
+				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 
-				if(modsDatContainer == null || statsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
+				if(afflictionRewardTypeVisualsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
 				{
 					return;
 				}
+
+				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.DatName}...");
+
+				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetDataValueStringByFieldId("Name")).ToArray();
 
 				Logger.WriteLine($"Parsing Stat Description Files...");
 
@@ -502,7 +513,7 @@ namespace PoEAssetUpdater
 							int textCount = int.Parse(line);
 							for(int i = 0; i < textCount; i++)
 							{
-								statDescription.ParseAndAddStatLine(language, lines[++lineIdx]);
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], afflictionRewardTypes);
 							}
 							if(lineIdx < lastLineIdx)
 							{
@@ -550,53 +561,32 @@ namespace PoEAssetUpdater
 					{
 						string tradeId = ((string)entry["id"]).Substring(label.Length + 1);
 						string text = (string)entry["text"];
+						string modValue = null;
 
 						// Strip the "local" stat indication from the trade site text
-						foreach(var tradeAPIStatSuffix in TradeAPIStatSuffixes)
+						foreach((var tradeAPIStatSuffix, var mod) in TradeAPIStatSuffixToModMapping)
 						{
 							if(text.EndsWith(tradeAPIStatSuffix))
 							{
 								text = text.Substring(0, text.LastIndexOf(tradeAPIStatSuffix));
+								modValue = mod;
 							}
 						}
 
-						StatDescription statDescription = statDescriptions.Find(x => x.HasMatchingStatLine(text));
-
-						if(statDescription == null)
+						var options = entry["option"]?["options"];
+						if(options != null && options[0]["id"].Type == JTokenType.String)
 						{
-							if(!SuppressedWarningLabels.Contains(label))
+							foreach(var option in options)
 							{
-								PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}' TradeID '{tradeId}', Desc: '{text}'");
-							}
-							continue;
-						}
+								string optionText = (string)option["text"];
 
-						jsonWriter.WritePropertyName(tradeId);
-						jsonWriter.WriteStartObject();
-						jsonWriter.WritePropertyName("id");
-						jsonWriter.WriteValue(statDescription.FullIdentifier);
-						if(statsDatContainer.Records.Exists(x => statDescription.HasMatchingIdentifier(x.GetDataValueStringByFieldId("Id")) && bool.Parse(x.GetDataValueStringByFieldId("IsLocal"))))
-						{
-							jsonWriter.WritePropertyName("mod");
-							jsonWriter.WriteValue("local");
-						}
-						jsonWriter.WritePropertyName("negated");
-						jsonWriter.WriteValue(statDescription.Negated);
-						jsonWriter.WritePropertyName("text");
-						jsonWriter.WriteStartObject();
-						for(int i = 0; i < Language.All.Length; i++)
-						{
-							jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
-							jsonWriter.WriteStartObject();
-							foreach(var statLine in statDescription.GetStatLines(Language.All[i]))
-							{
-								jsonWriter.WritePropertyName(statLine.NumberPart);
-								jsonWriter.WriteValue(statLine.StatDescription);
+								FindAndWriteStatDescription(label, tradeId, modValue, text.Replace(StatDescription.TradeAPIPlaceholder, optionText), true);
 							}
-							jsonWriter.WriteEndObject();
 						}
-						jsonWriter.WriteEndObject();
-						jsonWriter.WriteEndObject();
+						else
+						{
+							FindAndWriteStatDescription(label, tradeId, modValue, text, false);
+						}
 					}
 					jsonWriter.WriteEndObject();
 				}
@@ -617,6 +607,58 @@ namespace PoEAssetUpdater
 						.Split(NewLineSplitter, StringSplitOptions.RemoveEmptyEntries)
 						.Select(x => x.Trim())
 						.Where(x => x.Length > 0).ToArray();
+				}
+
+				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, bool singleMatchOnly)
+				{
+					StatDescription statDescription = statDescriptions.Find(x => x.HasMatchingStatLine(text));
+
+					if(statDescription == null)
+					{
+						PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
+					}
+
+					jsonWriter.WritePropertyName(tradeId);
+					jsonWriter.WriteStartObject();
+					{
+						if(statDescription != null)
+						{
+							jsonWriter.WritePropertyName("id");
+							jsonWriter.WriteValue(statDescription.FullIdentifier);
+							if(mod != null)
+							{
+								jsonWriter.WritePropertyName("mod");
+								jsonWriter.WriteValue(mod);
+							}
+							jsonWriter.WritePropertyName("negated");
+							jsonWriter.WriteValue(statDescription.Negated);
+						}
+						jsonWriter.WritePropertyName("text");
+						jsonWriter.WriteStartObject();
+						{
+							for(int i = 0; i < Language.All.Length; i++)
+							{
+								jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
+								jsonWriter.WriteStartObject();
+								if(statDescription != null)
+								{
+									foreach(var statLine in statDescription.GetStatLines(Language.All[i], singleMatchOnly ? text : null))
+									{
+										jsonWriter.WritePropertyName(statLine.NumberPart);
+										jsonWriter.WriteValue(statLine.StatDescription);
+									}
+								}
+								else
+								{
+									jsonWriter.WritePropertyName("#");
+									jsonWriter.WriteValue(text.Replace("\n", "\\n"));
+								}
+								jsonWriter.WriteEndObject();
+							}
+						}
+						jsonWriter.WriteEndObject();
+					}
+					jsonWriter.WriteEndObject();
 				}
 			}
 		}

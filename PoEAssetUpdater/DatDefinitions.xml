@@ -195,6 +195,11 @@
 		<record file="AfflictionRewardMapMods" length="8">
 			<field id="ModsKey" type="ulong"/>
 		</record>
+		<record file="AfflictionRewardTypeVisuals" length="12">
+			<field id="Key0" type="int"/>
+			<field id="Unknown0" type="ref|string"/>
+			<field id="Name" type="ref|string"/>
+		</record>
 		<record file="AfflictionRewardTypes" length="0">
 		</record>
 		<record file="AfflictionSplitDemons" length="20">
