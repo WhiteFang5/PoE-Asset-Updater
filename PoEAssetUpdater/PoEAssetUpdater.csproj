@@ -38,19 +38,19 @@
   <ItemGroup>
     <Reference Include="Ionic.Zip, Version=1.9.1.8, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\libGGPK\Ionic.Zip.dll</HintPath>
+      <HintPath>libGGPK\Ionic.Zip.dll</HintPath>
     </Reference>
     <Reference Include="LibDat, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\libGGPK\LibDat\bin\Release\LibDat.dll</HintPath>
+      <HintPath>libGGPK\LibDat.dll</HintPath>
     </Reference>
     <Reference Include="LibGGPK, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\libGGPK\LibGGPK\bin\Release\LibGGPK.dll</HintPath>
+      <HintPath>libGGPK\LibGGPK.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\libGGPK\VPatchGGPK\bin\Release\Newtonsoft.Json.dll</HintPath>
+      <HintPath>libGGPK\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
