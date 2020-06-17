@@ -8,8 +8,8 @@ namespace PoEAssetUpdater
 	{
 		#region Consts
 
-		private const string ValuePlaceholder = "(\\S+)";
-		public const string TradeAPIPlaceholder = "#";
+		private const string RegexPlaceholder = "(\\S+)";
+		public const string Placeholder = "#";
 
 		#endregion
 
@@ -28,6 +28,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool LocalStat
+		{
+			get; private set;
+		}
+
 		public bool Negated
 		{
 			get; private set;
@@ -42,9 +47,10 @@ namespace PoEAssetUpdater
 
 		#region Lifecycle
 
-		public StatDescription(string[] ids)
+		public StatDescription(string[] ids, bool localStat)
 		{
 			_identifiers = ids;
+			LocalStat = localStat;
 			FullIdentifier = string.Join(" ", _identifiers);
 		}
 
@@ -65,6 +71,12 @@ namespace PoEAssetUpdater
 				numberPart = string.Concat("N", numberPart);
 				if(additionalData.Contains("canonical_line"))
 				{
+					// Only mark this stat desc as negated when the 'canonical_line' occurs after to the 'negate'.
+					Negated = additionalData.IndexOf("negate") < additionalData.IndexOf("canonical_line");
+				}
+				// The numberPart is negated, but expressed explicitly positive => mark the stat as negated.
+				else if(additionalData.Contains("ReminderTextPhysReductionNotNegative"))
+				{
 					Negated = true;
 				}
 			}
@@ -74,12 +86,14 @@ namespace PoEAssetUpdater
 			{
 				string num = i.ToString(CultureInfo.InvariantCulture);
 				statDescription = statDescription
-					.Replace($"%{num}%", ValuePlaceholder)
-					.Replace($"%{num}$d", ValuePlaceholder)
-					.Replace($"%{num}$+d", ValuePlaceholder);
+					.Replace($"%{num}%", Placeholder)
+					.Replace($"%{num}$d", Placeholder)
+					.Replace($"%{num}$+d", Placeholder);
 			}
-			statDescription = statDescription.Replace("%d", ValuePlaceholder);
-			statDescription = statDescription.Replace("%%", "%");
+			statDescription = statDescription
+				.Replace("%d", Placeholder)
+				.Replace("%%", "%")
+				.Replace("\\n", "\n");
 
 			if(!_statLines.TryGetValue(language, out List<StatLine> statLines))
 			{
@@ -91,19 +105,19 @@ namespace PoEAssetUpdater
 				ContainsAfflictionRewardType = true;
 				for(int i = 0; i < afflictionRewardTypes.Length; i++)
 				{
-					CreateAndAddStatLine(new StatLine(i.ToString(CultureInfo.InvariantCulture), statDescription.Replace(ValuePlaceholder, afflictionRewardTypes[i])));
+					CreateAndAddStatLine(new StatLine(i.ToString(CultureInfo.InvariantCulture), statDescription.Replace(Placeholder, afflictionRewardTypes[i])));
 				}
 			}
 			CreateAndAddStatLine(new StatLine(numberPart, statDescription));
 
 			void CreateAndAddStatLine(StatLine statLine)
 			{
-/*#if DEBUG
+#if DEBUG
 				if(language == Language.English)
 				{
-					Logger.WriteLine($"ID '{FullIdentifier}' | Desc: '{statLine.StatDescription}' | Trade Desc: '{statLine.TradeAPIStatDescription}'");
+					Logger.WriteLine($"ID '{FullIdentifier}' | Local: {LocalStat} | Desc: '{statLine.StatDescription}' | Trade Desc: '{statLine.TradeAPIStatDescription}'");
 				}
-#endif*/
+#endif
 
 				statLines.Add(statLine);
 			}
@@ -155,8 +169,8 @@ namespace PoEAssetUpdater
 			public StatLine(string numberPart, string statDescription)
 			{
 				NumberPart = numberPart;
-				StatDescription = $"^{statDescription}$";
-				TradeAPIStatDescription = statDescription.Replace(ValuePlaceholder, TradeAPIPlaceholder).Replace("\\n", "\n");
+				StatDescription = $"^{statDescription.Replace("+", "\\+").Replace(Placeholder, RegexPlaceholder)}$";
+				TradeAPIStatDescription = statDescription;
 				_strippedTradeAPIStatDescription = TradeAPIStatDescription.Split('\n').First();
 			}
 

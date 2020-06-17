@@ -29,17 +29,7 @@ namespace PoEAssetUpdater
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
-		private static readonly Dictionary<string, string> TradeAPIStatSuffixToModMapping = new Dictionary<string, string>()
-		{
-			[" (Local)"] = "local",
-			[" (Shields)"] = "shields",
-			[" (Maps)"] = "maps",
-			[" (Legacy)"] = "legacy",
-			[" (Staves)"] = "staves",
-			[" (Additional)"] = "additional",
-			[" (Master)"] = "master",
-			[" (\u00d7#)"] = null,
-		};
+		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant" };
 
 		private static readonly Dictionary<string, string> ItemTradeDataCategoryIdToCategoryMapping = new Dictionary<string, string>()
 		{
@@ -209,6 +199,8 @@ namespace PoEAssetUpdater
 
 		#region Private Methods
 
+		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData);
+
 		private static void PrintUsage()
 		{
 			Logger.WriteLine("Usage:");
@@ -253,7 +245,7 @@ namespace PoEAssetUpdater
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
 		}
 
-		private static void ExportLanguageDataFile(string contentFilePath, DirectoryTreeNode dataDir, JsonWriter jsonWriter, string datFileName, Action<int, RecordData, JsonWriter> writeRecordData)
+		private static void ExportLanguageDataFile(string contentFilePath, DirectoryTreeNode dataDir, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
 		{
 			foreach(var language in Language.All)
 			{
@@ -265,23 +257,43 @@ namespace PoEAssetUpdater
 					continue;
 				}
 
-				// Find the given datFile.
-				var datContainer = GetDatContainer(searchDir, contentFilePath, datFileName);
-				if(datContainer == null)
+				// Retrieve all records
+				Dictionary<string, string> records = new Dictionary<string, string>();
+				foreach((var datFileName, var getKeyValuePair) in datFiles)
 				{
-					// An error was already logged.
-					continue;
-				}
+					// Find the given datFile.
+					var datContainer = GetDatContainer(searchDir, contentFilePath, datFileName);
+					if(datContainer == null)
+					{
+						// An error was already logged.
+						continue;
+					}
 
-				Logger.WriteLine($"\tExporting {datFileName} in {language}.");
+					Logger.WriteLine($"\tExporting {searchDir.GetDirectoryPath()}{datFileName}.");
+
+					for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
+					{
+						(string key, string value) = getKeyValuePair(j, datContainer.Records[j]);
+						if(key == null || value == null)
+						{
+							continue;
+						}
+						if(!records.ContainsKey(key) && (!mirroredRecords || !records.ContainsKey(value)))
+						{
+							records[key] = value;
+							records[value] = key;
+						}
+					}
+				}
 
 				// Create a node and write the data of each record in this node.
 				jsonWriter.WritePropertyName(language);
 				jsonWriter.WriteStartObject();
 
-				for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
+				foreach((var key, var value) in records)
 				{
-					writeRecordData(j, datContainer.Records[j], jsonWriter);
+					jsonWriter.WritePropertyName(key);
+					jsonWriter.WriteValue(value);
 				}
 
 				jsonWriter.WriteEndObject();
@@ -294,30 +306,48 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "BaseItemTypes.dat", WriteSlashSeparatedRecord);
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "Prophecies.dat", WriteNormalRecord);
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "MonsterVarieties.dat", WriteSlashSeparatedRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				{
+					["BaseItemTypes.dat"] = GetBaseItemTypeKVP,
+					["Prophecies.dat"] = GetPropheciesKVP,
+					["MonsterVarieties.dat"] = GetMonsterVaritiesKVP,
+				}, true);
 			}
 
-			void WriteSlashSeparatedRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			(string, string) GetBaseItemTypeKVP(int idx, RecordData recordData)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
-				string name = recordData.GetDataValueStringByFieldId("Name");
-				jsonWriter.WritePropertyName(id);
-				jsonWriter.WriteValue(name);
-				jsonWriter.WritePropertyName(name);
-				jsonWriter.WriteValue(id);
+				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
+				string inheritsFrom = recordData.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
+				if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
+				{
+					return (null, null);
+				}
+				return (id, name);
 			}
 
-			void WriteNormalRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			(string, string) GetPropheciesKVP(int idx, RecordData recordData)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = recordData.GetDataValueStringByFieldId("Name");
-				jsonWriter.WritePropertyName(id);
-				jsonWriter.WriteValue(name);
-				jsonWriter.WritePropertyName(name);
-				jsonWriter.WriteValue(id);
+				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
+				return (id, name);
 			}
+
+			(string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData)
+			{
+				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
+				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
+				return (id, name);
+			}
+
+			string Escape(string input)
+				=> input
+					.Replace("[", "\\[")
+					.Replace("]", "\\]")
+					.Replace("(", "\\(")
+					.Replace(")", "\\)")
+					.Replace(".", "\\.")
+					.Replace("|", "\\|");
 		}
 
 		private static void ExportClientStrings(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
@@ -326,24 +356,26 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "ClientStrings.dat", WriteClientStringRecord);
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "AlternateQualityTypes.dat", WriteAlternateQualityTypesRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				{
+					["ClientStrings.dat"] = GetClientStringKVP,
+					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
+				}, false);
 			}
 
-			void WriteClientStringRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			(string, string) GetClientStringKVP(int idx, RecordData recordData)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = recordData.GetDataValueStringByFieldId("Text");
-				jsonWriter.WritePropertyName(id);
-				jsonWriter.WriteValue(name);
+				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
+				return (id, name);
 			}
 
-			void WriteAlternateQualityTypesRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			(string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData)
 			{
-				string id = string.Concat("Quality", idx.ToString(CultureInfo.InvariantCulture));
+				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
+				string id = string.Concat("Quality", (modsKey - 17517).ToString(CultureInfo.InvariantCulture));//Magic number 17517 is the lowest mods key value; It's used to create a DESC sort.
 				string name = recordData.GetDataValueStringByFieldId("Name");
-				jsonWriter.WritePropertyName(id);
-				jsonWriter.WriteValue(name);
+				return (id, name);
 			}
 		}
 
@@ -353,17 +385,17 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, "Words.dat", WriteRecord);
+				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				{
+					["Words.dat"] = GetWordsKVP,
+				}, true);
 			}
 
-			void WriteRecord(int idx, RecordData recordData, JsonWriter jsonWriter)
+			(string, string) GetWordsKVP(int idx, RecordData recordData)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetDataValueStringByFieldId("Text");
-				jsonWriter.WritePropertyName(id);
-				jsonWriter.WriteValue(name);
-				jsonWriter.WritePropertyName(name);
-				jsonWriter.WriteValue(id);
+				string name = recordData.GetDataValueStringByFieldId("Text2").Trim();
+				return (id, name);
 			}
 		}
 
@@ -470,6 +502,7 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
 			{
+				var statsDatContainer = GetDatContainer(dataDir, contentFilePath, "Stats.dat");
 				var afflictionRewardTypeVisualsDatContainer = GetDatContainer(dataDir, contentFilePath, "AfflictionRewardTypeVisuals.dat");
 
 				DirectoryTreeNode statDescriptionsDir = container.DirectoryRoot.Children.FirstOrDefault(x => x.Name == "Metadata")?.Children.FirstOrDefault(x => x.Name == "StatDescriptions");
@@ -477,10 +510,15 @@ namespace PoEAssetUpdater
 				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 
-				if(afflictionRewardTypeVisualsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
+				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
 				{
 					return;
 				}
+
+				Logger.WriteLine($"Parsing {statsDatContainer.DatName}...");
+
+				string[] localStats = statsDatContainer.Records.Where(x => bool.Parse(x.GetDataValueStringByFieldId("IsLocal"))).Select(x => x.GetDataValueStringByFieldId("Id")).ToArray();
+				string[] flag6Stats = statsDatContainer.Records.Where(x => bool.Parse(x.GetDataValueStringByFieldId("Flag6"))).Select(x => x.GetDataValueStringByFieldId("Id")).ToArray();
 
 				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.DatName}...");
 
@@ -501,8 +539,14 @@ namespace PoEAssetUpdater
 						string[] ids = line.Split(WhiteSpaceSplitter, StringSplitOptions.RemoveEmptyEntries);
 						int statCount = int.Parse(ids[0]);
 
+						if(Array.Exists(ids, x => x.Contains("old_do_not_use")))
+						{
+							// Ignore all "old do not use" stats.
+							continue;
+						}
+
 						// Strip the number indicating how many stats are present from the IDs
-						StatDescription statDescription = new StatDescription(ids.Skip(1).ToArray());
+						StatDescription statDescription = new StatDescription(ids.Skip(1).ToArray(), ids.Any(x => localStats.Contains(x)));
 
 						// Initial (first) language is always english
 						string language = Language.English;
@@ -563,14 +607,13 @@ namespace PoEAssetUpdater
 						string text = (string)entry["text"];
 						string modValue = null;
 
-						// Strip the "local" stat indication from the trade site text
-						foreach((var tradeAPIStatSuffix, var mod) in TradeAPIStatSuffixToModMapping)
+						// Check the trade text for mods
+						if(text.EndsWith(")"))
 						{
-							if(text.EndsWith(tradeAPIStatSuffix))
-							{
-								text = text.Substring(0, text.LastIndexOf(tradeAPIStatSuffix));
-								modValue = mod;
-							}
+							int bracketsOpenIdx = text.LastIndexOf("(");
+							int bracketsCloseIdx = text.LastIndexOf(")");
+							modValue = text.Substring(bracketsOpenIdx + 1, bracketsCloseIdx - bracketsOpenIdx - 1).ToLowerInvariant();
+							text = text.Substring(0, bracketsOpenIdx).Trim();
 						}
 
 						var options = entry["option"]?["options"];
@@ -580,7 +623,7 @@ namespace PoEAssetUpdater
 							{
 								string optionText = (string)option["text"];
 
-								FindAndWriteStatDescription(label, tradeId, modValue, text.Replace(StatDescription.TradeAPIPlaceholder, optionText), true);
+								FindAndWriteStatDescription(label, tradeId, modValue, text.Replace(StatDescription.Placeholder, optionText), true);
 							}
 						}
 						else
@@ -609,9 +652,10 @@ namespace PoEAssetUpdater
 						.Where(x => x.Length > 0).ToArray();
 				}
 
-				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, bool singleMatchOnly)
+				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, bool hasOptions)
 				{
-					StatDescription statDescription = statDescriptions.Find(x => x.HasMatchingStatLine(text));
+					bool explicitLocal = mod == "local";
+					StatDescription statDescription = statDescriptions.Find(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text));
 
 					if(statDescription == null)
 					{
@@ -633,6 +677,11 @@ namespace PoEAssetUpdater
 							jsonWriter.WritePropertyName("negated");
 							jsonWriter.WriteValue(statDescription.Negated);
 						}
+						if(hasOptions)
+						{
+							jsonWriter.WritePropertyName("option");
+							jsonWriter.WriteValue(true);
+						}
 						jsonWriter.WritePropertyName("text");
 						jsonWriter.WriteStartObject();
 						{
@@ -642,16 +691,23 @@ namespace PoEAssetUpdater
 								jsonWriter.WriteStartObject();
 								if(statDescription != null)
 								{
-									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, singleMatchOnly))
+									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, hasOptions))
 									{
+										string desc = statLine.StatDescription;
+										if(LabelsWithSuffix.Contains(label))
+										{
+											desc = $"{desc.Substring(0, desc.Length - 1)} \\({label}\\)$";
+										}
+
 										jsonWriter.WritePropertyName(statLine.NumberPart);
-										jsonWriter.WriteValue(statLine.StatDescription);
+										jsonWriter.WriteValue(desc);
 									}
 								}
 								else
 								{
-									jsonWriter.WritePropertyName("#");
-									jsonWriter.WriteValue(text.Replace("\n", "\\n"));
+									var statLine = new StatDescription.StatLine("#", text.Replace("\n", "\\n"));
+									jsonWriter.WritePropertyName(statLine.NumberPart);
+									jsonWriter.WriteValue(statLine.StatDescription);
 								}
 								jsonWriter.WriteEndObject();
 							}
