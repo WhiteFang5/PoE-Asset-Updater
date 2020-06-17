@@ -249,41 +249,43 @@ namespace PoEAssetUpdater
 		{
 			foreach(var language in Language.All)
 			{
+				Dictionary<string, string> records = new Dictionary<string, string>();
+
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
 				var searchDir = language == Language.English ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name == language);
-				if(searchDir == null)
+				if(searchDir != null)
 				{
-					Logger.WriteLine($"\t{language} Language folder not found.");
-					continue;
-				}
-
-				// Retrieve all records
-				Dictionary<string, string> records = new Dictionary<string, string>();
-				foreach((var datFileName, var getKeyValuePair) in datFiles)
-				{
-					// Find the given datFile.
-					var datContainer = GetDatContainer(searchDir, contentFilePath, datFileName);
-					if(datContainer == null)
+					// Retrieve all records
+					foreach((var datFileName, var getKeyValuePair) in datFiles)
 					{
-						// An error was already logged.
-						continue;
-					}
-
-					Logger.WriteLine($"\tExporting {searchDir.GetDirectoryPath()}{datFileName}.");
-
-					for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
-					{
-						(string key, string value) = getKeyValuePair(j, datContainer.Records[j]);
-						if(key == null || value == null)
+						// Find the given datFile.
+						var datContainer = GetDatContainer(searchDir, contentFilePath, datFileName);
+						if(datContainer == null)
 						{
+							// An error was already logged.
 							continue;
 						}
-						if(!records.ContainsKey(key) && (!mirroredRecords || !records.ContainsKey(value)))
+
+						Logger.WriteLine($"\tExporting {searchDir.GetDirectoryPath()}{datFileName}.");
+
+						for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
 						{
-							records[key] = value;
-							records[value] = key;
+							(string key, string value) = getKeyValuePair(j, datContainer.Records[j]);
+							if(key == null || value == null)
+							{
+								continue;
+							}
+							if(!records.ContainsKey(key) && (!mirroredRecords || !records.ContainsKey(value)))
+							{
+								records[key] = value;
+								records[value] = key;
+							}
 						}
 					}
+				}
+				else
+				{
+					Logger.WriteLine($"\t{language} Language folder not found.");
 				}
 
 				// Create a node and write the data of each record in this node.
