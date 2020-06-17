@@ -592,6 +592,7 @@ namespace PoEAssetUpdater
 				JObject poeTradeStats;
 				using(WebClient wc = new WebClient())
 				{
+#warning TODO: Obtain the stats from all other languages too (needed for pseudo stat translations)
 					poeTradeStats = JObject.Parse(wc.DownloadString("https://www.pathofexile.com/api/trade/data/stats"));
 				}
 
@@ -657,7 +658,8 @@ namespace PoEAssetUpdater
 				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, bool hasOptions)
 				{
 					bool explicitLocal = mod == "local";
-					StatDescription statDescription = statDescriptions.Find(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text));
+					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
+					StatDescription statDescription = label == "pseudo" ? null : statDescriptions.Find(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text));
 
 					if(statDescription == null)
 					{
