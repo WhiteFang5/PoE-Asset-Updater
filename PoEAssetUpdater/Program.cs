@@ -271,13 +271,14 @@ namespace PoEAssetUpdater
 						for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
 						{
 							(string key, string value) = getKeyValuePair(j, datContainer.Records[j]);
-							if(key == null || value == null)
+							if(key == null || value == null || records.ContainsKey(key) || (mirroredRecords && records.ContainsKey(value)))
 							{
 								continue;
 							}
-							if(!records.ContainsKey(key) && (!mirroredRecords || !records.ContainsKey(value)))
+
+							records[key] = value;
+							if(mirroredRecords)
 							{
-								records[key] = value;
 								records[value] = key;
 							}
 						}
