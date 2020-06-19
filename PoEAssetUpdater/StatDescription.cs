@@ -115,7 +115,7 @@ namespace PoEAssetUpdater
 #if DEBUG
 				if(language == Language.English)
 				{
-					Logger.WriteLine($"ID '{FullIdentifier}' | Local: {LocalStat} | Desc: '{statLine.StatDescription}' | Trade Desc: '{statLine.TradeAPIStatDescription}'");
+					Logger.WriteLine($"ID '{FullIdentifier}' | Local: {LocalStat} | Desc: '{statLine.StatDescription}'");
 				}
 #endif
 
@@ -160,31 +160,40 @@ namespace PoEAssetUpdater
 
 		public readonly struct StatLine
 		{
+			#region Variables
+
 			public readonly string NumberPart;
 			public readonly string StatDescription;
-			public readonly string TradeAPIStatDescription;
 
 			private readonly string _strippedTradeAPIStatDescription;
+
+			#endregion
 
 			public StatLine(string numberPart, string statDescription)
 			{
 				NumberPart = numberPart;
-				StatDescription = $"^{statDescription.Replace("+", "\\+").Replace(Placeholder, RegexPlaceholder)}$";
-				TradeAPIStatDescription = statDescription;
-				_strippedTradeAPIStatDescription = TradeAPIStatDescription.Split('\n').First();
+				StatDescription = statDescription;
+				_strippedTradeAPIStatDescription = StatDescription.Split('\n').First();
 			}
+
+			#region Public Methods
+
+			public static string GetStatDescriptionRegex(string statDescription)
+				=> $"^{statDescription.Replace("+", "\\+").Replace(Placeholder, RegexPlaceholder)}$";
 
 			public bool IsMatchingTradeAPIStatDescription(string statDescription)
 			{
 				if(statDescription.Contains("\n"))
 				{
-					return TradeAPIStatDescription == statDescription;
+					return StatDescription == statDescription;
 				}
 				else
 				{
 					return _strippedTradeAPIStatDescription == statDescription;
 				}
 			}
+
+			#endregion
 		}
 
 		#endregion

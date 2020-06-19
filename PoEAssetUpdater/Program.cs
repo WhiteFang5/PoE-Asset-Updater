@@ -610,6 +610,7 @@ namespace PoEAssetUpdater
 						string tradeId = ((string)entry["id"]).Substring(label.Length + 1);
 						string text = (string)entry["text"];
 						string modValue = null;
+						Dictionary<string, string> optionValues = null;
 
 						// Check the trade text for mods
 						if(text.EndsWith(")"))
@@ -620,20 +621,14 @@ namespace PoEAssetUpdater
 							text = text.Substring(0, bracketsOpenIdx).Trim();
 						}
 
+						// Check for options
 						var options = entry["option"]?["options"];
-						if(options != null && options[0]["id"].Type == JTokenType.String)
+						if(options != null)
 						{
-							foreach(var option in options)
-							{
-								string optionText = (string)option["text"];
+							optionValues = options.ToDictionary(option => option["id"].ToString(), option => option["text"].ToString());
+						}
 
-								FindAndWriteStatDescription(label, tradeId, modValue, text.Replace(StatDescription.Placeholder, optionText), true);
-							}
-						}
-						else
-						{
-							FindAndWriteStatDescription(label, tradeId, modValue, text, false);
-						}
+						FindAndWriteStatDescription(label, tradeId, modValue, text, optionValues);
 					}
 					jsonWriter.WriteEndObject();
 				}
@@ -656,7 +651,7 @@ namespace PoEAssetUpdater
 						.Where(x => x.Length > 0).ToArray();
 				}
 
-				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, bool hasOptions)
+				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, Dictionary<string, string> options)
 				{
 					bool explicitLocal = mod == "local";
 					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
@@ -682,7 +677,7 @@ namespace PoEAssetUpdater
 							jsonWriter.WritePropertyName("negated");
 							jsonWriter.WriteValue(statDescription.Negated);
 						}
-						if(hasOptions)
+						if(options != null)
 						{
 							jsonWriter.WritePropertyName("option");
 							jsonWriter.WriteValue(true);
@@ -696,23 +691,15 @@ namespace PoEAssetUpdater
 								jsonWriter.WriteStartObject();
 								if(statDescription != null)
 								{
-									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, hasOptions))
+									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, options != null))
 									{
-										string desc = statLine.StatDescription;
-										if(LabelsWithSuffix.Contains(label))
-										{
-											desc = $"{desc.Substring(0, desc.Length - 1)} \\({label}\\)$";
-										}
-
-										jsonWriter.WritePropertyName(statLine.NumberPart);
-										jsonWriter.WriteValue(desc);
+										WriteStatLine(statLine, options, label, jsonWriter);
 									}
 								}
 								else
 								{
 									var statLine = new StatDescription.StatLine("#", text.Replace("\n", "\\n"));
-									jsonWriter.WritePropertyName(statLine.NumberPart);
-									jsonWriter.WriteValue(statLine.StatDescription);
+									WriteStatLine(statLine, options, label, jsonWriter);
 								}
 								jsonWriter.WriteEndObject();
 							}
@@ -720,6 +707,29 @@ namespace PoEAssetUpdater
 						jsonWriter.WriteEndObject();
 					}
 					jsonWriter.WriteEndObject();
+				}
+			}
+
+			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, JsonWriter jsonWriter)
+			{
+				string desc = statLine.StatDescription;
+				if(LabelsWithSuffix.Contains(label))
+				{
+					desc = $"{desc} \\({label}\\)";
+				}
+
+				if(options == null)
+				{
+					jsonWriter.WritePropertyName(statLine.NumberPart);
+					jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(desc));
+				}
+				else
+				{
+					foreach((var id, var optionValue) in options)
+					{
+						jsonWriter.WritePropertyName(id);
+						jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(desc.Replace(StatDescription.Placeholder, optionValue)));
+					}
 				}
 			}
 		}
