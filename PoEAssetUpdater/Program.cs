@@ -363,6 +363,7 @@ namespace PoEAssetUpdater
 				{
 					["ClientStrings.dat"] = GetClientStringKVP,
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
+					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
 				}, false);
 			}
 
@@ -378,6 +379,14 @@ namespace PoEAssetUpdater
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
 				string id = string.Concat("Quality", (modsKey - 17517).ToString(CultureInfo.InvariantCulture));//Magic number 17517 is the lowest mods key value; It's used to create a DESC sort.
 				string name = recordData.GetDataValueStringByFieldId("Name");
+				return (id, name);
+			}
+
+			(string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData)
+			{
+				int index = int.Parse(recordData.GetDataValueStringByFieldId("Unknown8"));
+				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
+				string name = recordData.GetDataValueStringByFieldId("BodypartName").Trim();
 				return (id, name);
 			}
 		}
