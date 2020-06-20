@@ -42,7 +42,6 @@ namespace PoEAssetUpdater
 			["Essences"] = ItemCategory.Currency,
 			["Fragments"] = ItemCategory.MapFragment,
 			["Incubators"] = ItemCategory.CurrencyIncubator,
-			["Leaguestones"] = ItemCategory.Leaguestone,
 			["MapsBlighted"] = ItemCategory.Map,
 			["MapsTier1"] = ItemCategory.Map,
 			["MapsTier2"] = ItemCategory.Map,
@@ -85,6 +84,7 @@ namespace PoEAssetUpdater
 			["StackableCurrency"] = ItemCategory.Currency,
 			["DelveSocketableCurrency"] = ItemCategory.CurrencyResonator,
 			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
+			["HarvestSeed"] = ItemCategory.Currency,
 			// Divination Cards
 			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
@@ -99,6 +99,8 @@ namespace PoEAssetUpdater
 			// Jewels
 			["AbstractJewel"] = ItemCategory.Jewel,
 			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
+			// Leaguestones
+			["Leaguestone"] = ItemCategory.Leaguestone,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
@@ -132,6 +134,7 @@ namespace PoEAssetUpdater
 			["AbstractHideoutDoodad"] = null,
 			["LabyrinthTrinket"] = null,
 			["AbstactPantheonSoul"] = null,
+			["HarvestInfrastructure"] = null,
 		};
 
 		#endregion
