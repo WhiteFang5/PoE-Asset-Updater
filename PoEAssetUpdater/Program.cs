@@ -725,22 +725,29 @@ namespace PoEAssetUpdater
 			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, JsonWriter jsonWriter)
 			{
 				string desc = statLine.StatDescription;
+				string descSuffix;
 				if(LabelsWithSuffix.Contains(label))
 				{
-					desc = $"{desc} \\({label}\\)";
+					descSuffix = $" \\({label}\\)";
+				}
+				else
+				{
+					descSuffix = string.Empty;
 				}
 
 				if(options == null)
 				{
 					jsonWriter.WritePropertyName(statLine.NumberPart);
-					jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(desc));
+					jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(desc, descSuffix)));
 				}
 				else
 				{
 					foreach((var id, var optionValue) in options)
 					{
+						// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
+						string optionDesc = string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
 						jsonWriter.WritePropertyName(id);
-						jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(desc.Replace(StatDescription.Placeholder, optionValue)));
+						jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(optionDesc, descSuffix)));
 					}
 				}
 			}
