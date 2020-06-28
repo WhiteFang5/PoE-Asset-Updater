@@ -137,6 +137,25 @@ namespace PoEAssetUpdater
 			["HarvestInfrastructure"] = null,
 		};
 
+		private static readonly string[] IgnoredProphecyIds = new string[]
+		{
+			"MapExtraHaku",
+			"MapExtraTora",
+			"MapExtraCatarina",
+			"MapExtraVagan",
+			"MapExtraElreon",
+			"MapExtraVorici",
+		};
+
+		private static readonly Dictionary<string, string> ProphecyIdToSuffixClientStringIdMapping = new Dictionary<string, string>()
+		{
+			["MapExtraZana"] = "MasterNameZana",
+			["MapExtraEinhar"] = "MasterNameEinhar",
+			["MapExtraAlva"] = "MasterNameAlva",
+			["MapExtraNiko"] = "MasterNameNiko",
+			["MapExtraJun"] = "MasterNameJun",
+		};
+
 		#endregion
 
 		#region Public Methods
@@ -202,7 +221,7 @@ namespace PoEAssetUpdater
 
 		#region Private Methods
 
-		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData);
+		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData, DirectoryTreeNode languageDir);
 
 		private static void PrintUsage()
 		{
@@ -273,7 +292,7 @@ namespace PoEAssetUpdater
 
 						for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
 						{
-							(string key, string value) = getKeyValuePair(j, datContainer.Records[j]);
+							(string key, string value) = getKeyValuePair(j, datContainer.Records[j], searchDir);
 							if(key == null || value == null || records.ContainsKey(key) || (mirroredRecords && records.ContainsKey(value)))
 							{
 								continue;
@@ -320,7 +339,7 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			(string, string) GetBaseItemTypeKVP(int idx, RecordData recordData)
+			(string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
@@ -332,14 +351,34 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetPropheciesKVP(int idx, RecordData recordData)
+			(string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
-				return (id, name);
+				string name = recordData.GetDataValueStringByFieldId("Name").Trim();
+
+				if(IgnoredProphecyIds.Contains(id))
+				{
+					return (null, null);
+				}
+
+				if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
+				{
+					DatContainer clientStringsDatContainer = GetDatContainer(languageDir, contentFilePath, "ClientStrings.dat");
+					RecordData clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetDataValueStringByFieldId("Id") == clientStringId);
+					if(clientStringRecordData != null)
+					{
+						name += $" ({clientStringRecordData.GetDataValueStringByFieldId("Text")})";
+					}
+					else
+					{
+						PrintError($"Missing {nameof(clientStringId)} for '{clientStringId}'");
+					}
+				}
+
+				return (id, Escape(name));
 			}
 
-			(string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData)
+			(string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
@@ -367,17 +406,18 @@ namespace PoEAssetUpdater
 					["ClientStrings.dat"] = GetClientStringKVP,
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
 					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
+					["Prophecies.dat"] = GetPropheciesKVP,
 				}, false);
 			}
 
-			(string, string) GetClientStringKVP(int idx, RecordData recordData)
+			(string, string) GetClientStringKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
 				return (id, name);
 			}
 
-			(string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData)
+			(string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
 				string id = string.Concat("Quality", (modsKey - 17517).ToString(CultureInfo.InvariantCulture));//Magic number 17517 is the lowest mods key value; It's used to create a DESC sort.
@@ -385,12 +425,26 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData)
+			(string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				int index = int.Parse(recordData.GetDataValueStringByFieldId("Unknown8"));
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
 				string name = recordData.GetDataValueStringByFieldId("BodypartName").Trim();
 				return (id, name);
+			}
+
+			(string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			{
+				string id = recordData.GetDataValueStringByFieldId("Id");
+				string name = recordData.GetDataValueStringByFieldId("PredictionText").Trim();
+				string name2 = recordData.GetDataValueStringByFieldId("PredictionText2").Trim();
+
+				if(IgnoredProphecyIds.Contains(id))
+				{
+					return (null, null);
+				}
+
+				return ($"Prophecy{id}", string.IsNullOrEmpty(name2) ? name : name2);
 			}
 		}
 
@@ -406,7 +460,7 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			(string, string) GetWordsKVP(int idx, RecordData recordData)
+			(string, string) GetWordsKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
 				string name = recordData.GetDataValueStringByFieldId("Text2").Trim();
@@ -533,7 +587,6 @@ namespace PoEAssetUpdater
 				Logger.WriteLine($"Parsing {statsDatContainer.DatName}...");
 
 				string[] localStats = statsDatContainer.Records.Where(x => bool.Parse(x.GetDataValueStringByFieldId("IsLocal"))).Select(x => x.GetDataValueStringByFieldId("Id")).ToArray();
-				string[] flag6Stats = statsDatContainer.Records.Where(x => bool.Parse(x.GetDataValueStringByFieldId("Flag6"))).Select(x => x.GetDataValueStringByFieldId("Id")).ToArray();
 
 				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.DatName}...");
 
@@ -840,9 +893,9 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the Monster Varieties
-				foreach(var prophecy in monsterVarietiesDatContainer.Records)
+				foreach(var monsterVariety in monsterVarietiesDatContainer.Records)
 				{
-					jsonWriter.WritePropertyName(prophecy.GetDataValueStringByFieldId("Id").Split('/').Last());
+					jsonWriter.WritePropertyName(monsterVariety.GetDataValueStringByFieldId("Id").Split('/').Last());
 					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
 				}
 
