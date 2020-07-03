@@ -420,7 +420,7 @@ namespace PoEAssetUpdater
 			(string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
-				string id = string.Concat("Quality", (modsKey - 17517).ToString(CultureInfo.InvariantCulture));//Magic number 17517 is the lowest mods key value; It's used to create a DESC sort.
+				string id = string.Concat("Quality", (modsKey - 17725).ToString(CultureInfo.InvariantCulture));//Magic number 17725 is the lowest mods key value minus one; It's used to create a DESC sort.
 				string name = recordData.GetDataValueStringByFieldId("Name");
 				return (id, name);
 			}
