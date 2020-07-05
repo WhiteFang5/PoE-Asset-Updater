@@ -357,7 +357,7 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			(string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
@@ -396,14 +396,14 @@ namespace PoEAssetUpdater
 				return (id, Escape(name));
 			}
 
-			(string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
 				return (id, name);
 			}
 
-			string Escape(string input)
+			static string Escape(string input)
 				=> input
 					.Replace("[", "\\[")
 					.Replace("]", "\\]")
@@ -428,14 +428,14 @@ namespace PoEAssetUpdater
 				}, false);
 			}
 
-			(string, string) GetClientStringKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetClientStringKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
 				return (id, name);
 			}
 
-			(string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
 				string id = string.Concat("Quality", (modsKey - 17725).ToString(CultureInfo.InvariantCulture));//Magic number 17725 is the lowest mods key value minus one; It's used to create a DESC sort.
@@ -443,7 +443,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				int index = int.Parse(recordData.GetDataValueStringByFieldId("Unknown8"));
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
@@ -451,7 +451,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("PredictionText").Trim();
@@ -478,7 +478,7 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			(string, string) GetWordsKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetWordsKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
 				string name = recordData.GetDataValueStringByFieldId("Text2").Trim();
@@ -497,11 +497,9 @@ namespace PoEAssetUpdater
 
 #warning TODO: Optimize ReadFileContent by using a BinaryReader instead.
 			var data = dataFile.ReadFileContent(contentFilePath);
-			using(var dataStream = new MemoryStream(data))
-			{
-				// Read the MemoryStream and create a DatContainer
-				return new DatContainer(dataStream, dataFile.Name);
-			}
+			using var dataStream = new MemoryStream(data);
+			// Read the MemoryStream and create a DatContainer
+			return new DatContainer(dataStream, dataFile.Name);
 		}
 
 		private static void ExportMods(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
@@ -568,7 +566,7 @@ namespace PoEAssetUpdater
 				}
 			}
 
-			void WriteMinMaxValues(RecordData recordData, JsonWriter jsonWriter, int statNum)
+			static void WriteMinMaxValues(RecordData recordData, JsonWriter jsonWriter, int statNum)
 			{
 				string statPrefix = string.Concat("Stat", statNum.ToString(CultureInfo.InvariantCulture));
 				int minValue = int.Parse(recordData.GetDataValueStringByFieldId(string.Concat(statPrefix, "Min")));
@@ -961,7 +959,7 @@ namespace PoEAssetUpdater
 
 				jsonWriter.WriteEndObject();
 
-				List<string> ParseList(string stringifiedList)
+				static List<string> ParseList(string stringifiedList)
 				{
 					return stringifiedList
 						.Substring(1, stringifiedList.Length - 2)// Remove the brackets
