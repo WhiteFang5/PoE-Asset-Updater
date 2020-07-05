@@ -37,6 +37,7 @@ namespace PoEAssetUpdater
 		public const string GemSupportGem = "gem.supportgem";
 		public const string GemSupportGemplus = "gem.supportgemplus";
 		public const string Jewel = "jewel";
+		public const string JewelBase = "jewel.base";
 		public const string JewelAbyss = "jewel.abyss";
 		public const string JewelCluster = "jewel.cluster";
 		public const string Flask = "flask";
@@ -54,5 +55,10 @@ namespace PoEAssetUpdater
 		public const string CurrencyResonator = "currency.resonator";
 		public const string CurrencyFossil = "currency.fossil";
 		public const string CurrencyIncubator = "currency.incubator";
+		public const string CurrencySeed = "currency.seed";
+		public const string CurrencyWildSeed = "currency.wildseed";
+		public const string CurrencyVividSeed = "currency.vividseed";
+		public const string CurrencyPrimalSeed = "currency.primalseed";
+		public const string CurrencySeedBooster = "currency.seedbooster";
 	}
 }

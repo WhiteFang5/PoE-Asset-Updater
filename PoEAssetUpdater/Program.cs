@@ -102,7 +102,8 @@ namespace PoEAssetUpdater
 			["StackableCurrency"] = ItemCategory.Currency,
 			["DelveSocketableCurrency"] = ItemCategory.CurrencyResonator,
 			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
-			["HarvestSeed"] = ItemCategory.Currency,
+			["HarvestSeed"] = ItemCategory.CurrencySeed,
+			["HarvestPlantBooster"] = ItemCategory.CurrencySeedBooster,
 			// Divination Cards
 			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
@@ -153,6 +154,13 @@ namespace PoEAssetUpdater
 			["LabyrinthTrinket"] = null,
 			["AbstactPantheonSoul"] = null,
 			["HarvestInfrastructure"] = null,
+		};
+
+		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
+		{
+			["Wild"] = ItemCategory.CurrencyWildSeed,
+			["Vivid"] = ItemCategory.CurrencyVividSeed,
+			["Primal"] = ItemCategory.CurrencyPrimalSeed,
 		};
 
 		private static readonly string[] IgnoredProphecyIds = new string[]
@@ -923,16 +931,28 @@ namespace PoEAssetUpdater
 						continue;
 					}
 
-					// Special case for Awakened Support Gems
-					if(category == ItemCategory.GemSupportGem && id.EndsWith("Plus"))
+					// Special cases
+					switch (category)
 					{
-						category = ItemCategory.GemSupportGemplus;
-					}
+						// Special case for Awakened Support Gems
+						case ItemCategory.GemSupportGem when id.EndsWith("Plus"):
+							category = ItemCategory.GemSupportGemplus;
+							break;
 
-					// Special case for Cluster Jewels
-					if(category == ItemCategory.Jewel && id.StartsWith("JewelPassiveTreeExpansion"))
-					{
-						category = ItemCategory.JewelCluster;
+						// Special case for Cluster Jewels
+						case ItemCategory.Jewel when id.StartsWith("JewelPassiveTreeExpansion"):
+							category = ItemCategory.JewelCluster;
+							break;
+
+						// Special case for Harvest Seeds
+						case ItemCategory.CurrencySeed:
+							string seedName = baseItemType.GetDataValueStringByFieldId("Name").Split(' ').First();
+							if (!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
+							{
+								PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
+								category = ItemCategory.CurrencySeed;
+							}
+							break;
 					}
 
 					// Only write to the json if an appropriate category was found.
@@ -962,7 +982,7 @@ namespace PoEAssetUpdater
 				static List<string> ParseList(string stringifiedList)
 				{
 					return stringifiedList
-						.Substring(1, stringifiedList.Length - 2)// Remove the brackets
+						[1..^1]// Remove the brackets
 						.Split(',')//Split the list
 						.Select(x => x.Trim())//Trim any spaces
 						.ToList();
