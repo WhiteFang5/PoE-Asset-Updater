@@ -11,6 +11,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace PoEAssetUpdater
 {
@@ -26,6 +27,23 @@ namespace PoEAssetUpdater
 
 		private static readonly char[] NewLineSplitter = "\r\n".ToCharArray();
 		private static readonly char[] WhiteSpaceSplitter = "\t ".ToCharArray();
+
+		private static readonly Language[] AllLanguages = (Language[])Enum.GetValues(typeof(Language));
+
+		private const string CountryURLFormat = "https://{0}.pathofexile.com/api/trade/data/stats";
+		private static readonly Dictionary<Language, string> LanguageToPoETradeAPIUrlMapping = new Dictionary<Language, string>()
+		{
+			[Language.English] = string.Format(CountryURLFormat, "www"),
+			[Language.Portuguese] = string.Format(CountryURLFormat, "br"),
+			[Language.Russian] = string.Format(CountryURLFormat, "ru"),
+			[Language.Thai] = string.Format(CountryURLFormat, "th"),
+			[Language.German] = string.Format(CountryURLFormat, "de"),
+			[Language.French] = string.Format(CountryURLFormat, "fr"),
+			[Language.Spanish] = string.Format(CountryURLFormat, "es"),
+			[Language.Korean] = "https://poe.game.daum.net/api/trade/data/stats",
+			[Language.SimplifiedChinese] = "https://poe.game.qq.com/api/trade/data/stats",
+			[Language.TraditionalChinese] = "https://web.poe.garena.tw/api/trade/data/stats",
+		};
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
@@ -269,12 +287,12 @@ namespace PoEAssetUpdater
 
 		private static void ExportLanguageDataFile(string contentFilePath, DirectoryTreeNode dataDir, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
 		{
-			foreach(var language in Language.All)
+			foreach(var language in AllLanguages)
 			{
 				Dictionary<string, string> records = new Dictionary<string, string>();
 
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
-				var searchDir = language == Language.English ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name == language);
+				var searchDir = language == Language.English ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name.ToLowerInvariant() == language.ToString().ToLowerInvariant());
 				if(searchDir != null)
 				{
 					// Retrieve all records
@@ -312,7 +330,7 @@ namespace PoEAssetUpdater
 				}
 
 				// Create a node and write the data of each record in this node.
-				jsonWriter.WritePropertyName(language);
+				jsonWriter.WritePropertyName(language.ToString());
 				jsonWriter.WriteStartObject();
 
 				foreach((var key, var value) in records)
@@ -617,7 +635,7 @@ namespace PoEAssetUpdater
 						StatDescription statDescription = new StatDescription(ids.Skip(1).ToArray(), ids.Any(x => localStats.Contains(x)));
 
 						// Initial (first) language is always english
-						string language = Language.English;
+						Language language = Language.English;
 						while(true)
 						{
 							// Read the next line as it contains how many mods are added.
@@ -635,7 +653,7 @@ namespace PoEAssetUpdater
 								if(match.Success)
 								{
 									lineIdx++;
-									language = match.Groups[1].Value.Replace(" ", "");
+									language = Enum.Parse<Language>(match.Groups[1].Value.Replace(" ", ""), true);
 								}
 								else
 								{
@@ -655,36 +673,41 @@ namespace PoEAssetUpdater
 				Logger.WriteLine("Downloading PoE Trade API Stats...");
 
 				// Download the PoE Trade Stats json
-				JObject poeTradeStats;
-				using(WebClient wc = new WebClient())
+				Dictionary<Language, JObject> poeTradeStats = new Dictionary<Language, JObject>();
+				using (WebClient wc = new WebClient())
 				{
-#warning TODO: Obtain the stats from all other languages too (needed for pseudo stat translations)
-					poeTradeStats = JObject.Parse(wc.DownloadString("https://www.pathofexile.com/api/trade/data/stats"));
+					foreach ((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
+					{
+						try
+						{
+							poeTradeStats[language] = JObject.Parse(wc.DownloadString(tradeAPIUrl));
+						}
+						catch (Exception ex)
+						{
+							PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
+						}
+						// Sleep for a short time to avoid spamming the different trade APIs
+						Thread.Sleep(1000);
+					}
 				}
 
 				Logger.WriteLine("Parsing PoE Trade API Stats...");
 
 				// Parse the PoE Trade Stats
-				foreach(var result in poeTradeStats["result"])
+				foreach(var result in poeTradeStats[Language.English]["result"])
 				{
-					var label = ((string)result["label"]).ToLowerInvariant();
+					var label = GetLabel(result);
 					jsonWriter.WritePropertyName(label);
 					jsonWriter.WriteStartObject();
 					foreach(var entry in result["entries"])
 					{
-						string tradeId = ((string)entry["id"]).Substring(label.Length + 1);
+						string tradeId = GetTradeID(entry, label);
 						string text = (string)entry["text"];
 						string modValue = null;
 						Dictionary<string, string> optionValues = null;
 
 						// Check the trade text for mods
-						if(text.EndsWith(")"))
-						{
-							int bracketsOpenIdx = text.LastIndexOf("(");
-							int bracketsCloseIdx = text.LastIndexOf(")");
-							modValue = text.Substring(bracketsOpenIdx + 1, bracketsCloseIdx - bracketsOpenIdx - 1).ToLowerInvariant();
-							text = text.Substring(0, bracketsOpenIdx).Trim();
-						}
+						(text, modValue) = GetTradeMod(text);
 
 						// Check for options
 						var options = entry["option"]?["options"];
@@ -696,6 +719,23 @@ namespace PoEAssetUpdater
 						FindAndWriteStatDescription(label, tradeId, modValue, text, optionValues);
 					}
 					jsonWriter.WriteEndObject();
+				}
+
+				static string GetLabel(JToken token) => ((string)token["label"]).ToLowerInvariant();
+
+				static string GetTradeID(JToken token, string label) => ((string)token["id"]).Substring(label.Length + 1);
+
+				static (string modlessText, string modValue) GetTradeMod(string tradeAPIStatDescription)
+				{
+					if (tradeAPIStatDescription.EndsWith(")"))
+					{
+						int bracketsOpenIdx = tradeAPIStatDescription.LastIndexOf("(");
+						int bracketsCloseIdx = tradeAPIStatDescription.LastIndexOf(")");
+						string modValue = tradeAPIStatDescription.Substring(bracketsOpenIdx + 1, bracketsCloseIdx - bracketsOpenIdx - 1).ToLowerInvariant();
+						string modlessText = tradeAPIStatDescription.Substring(0, bracketsOpenIdx).Trim();
+						return (modlessText, modValue);
+					}
+					return (tradeAPIStatDescription, null);
 				}
 
 				string[] GetStatDescriptions(string fileName)
@@ -750,20 +790,40 @@ namespace PoEAssetUpdater
 						jsonWriter.WritePropertyName("text");
 						jsonWriter.WriteStartObject();
 						{
-							for(int i = 0; i < Language.All.Length; i++)
+							for(int i = 0; i < AllLanguages.Length; i++)
 							{
+								Language language = AllLanguages[i];
+
 								jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
 								jsonWriter.WriteStartObject();
-								if(statDescription != null)
+								if (statDescription != null)
 								{
-									foreach(var statLine in statDescription.GetStatLines(Language.All[i], text, options != null))
+									foreach (var statLine in statDescription.GetStatLines(language, text, options != null))
 									{
 										WriteStatLine(statLine, options, label, jsonWriter);
 									}
 								}
 								else
 								{
-									var statLine = new StatDescription.StatLine("#", text.Replace("\n", "\\n"));
+									var tradeIdSearch = $"{label}.{tradeId}";
+
+									JToken otherLangStat = null;
+									if (poeTradeStats.TryGetValue(language, out var otherLangTradeStats))
+									{
+										otherLangStat = otherLangTradeStats["result"].SelectMany(x => x["entries"]).FirstOrDefault(x => ((string)x["id"]).ToLowerInvariant() == tradeIdSearch);
+									}
+									string otherLangText;
+									if (otherLangStat != null)
+									{
+										otherLangText = (string)otherLangStat["text"];
+									}
+									else
+									{
+										otherLangText = text;
+										PrintWarning($"Missing {language} trade ID '{tradeIdSearch}'");
+									}
+
+									var statLine = new StatDescription.StatLine("#", otherLangText.Replace("\n", "\\n"));
 									WriteStatLine(statLine, options, label, jsonWriter);
 								}
 								jsonWriter.WriteEndObject();

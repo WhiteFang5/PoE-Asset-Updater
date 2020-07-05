@@ -15,7 +15,7 @@ namespace PoEAssetUpdater
 
 		#region Variables
 
-		private readonly Dictionary<string, List<StatLine>> _statLines = new Dictionary<string, List<StatLine>>();
+		private readonly Dictionary<Language, List<StatLine>> _statLines = new Dictionary<Language, List<StatLine>>();
 
 		private readonly string[] _identifiers;
 
@@ -58,7 +58,7 @@ namespace PoEAssetUpdater
 
 		#region Public Methods
 
-		public void ParseAndAddStatLine(string language, string line, string[] afflictionRewardTypes)
+		public void ParseAndAddStatLine(Language language, string line, string[] afflictionRewardTypes)
 		{
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
@@ -123,7 +123,7 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		public StatLine[] GetStatLines(string language, string englishStatDescription, bool singleMatchOnly)
+		public StatLine[] GetStatLines(Language language, string englishStatDescription, bool singleMatchOnly)
 		{
 			if(!_statLines.TryGetValue(language, out List<StatLine> statLines))
 			{

@@ -1,21 +1,16 @@
 namespace PoEAssetUpdater
 {
-	internal static class Language
+	internal enum Language
 	{
-		public const string English = "English";
-
-		// Must match the Language enum in PoE Overlay's language.type.ts
-		public static readonly string[] All = new string[] {
-			English,
-			"Portuguese",
-			"Russian",
-			"Thai",
-			"German",
-			"French",
-			"Spanish",
-			"Korean",
-			"SimplifiedChinese",
-			"TraditionalChinese"
-		};
+		English = 1,
+		Portuguese = 2,
+		Russian = 3,
+		Thai = 4,
+		German = 5,
+		French = 6,
+		Spanish = 7,
+		Korean = 8,
+		SimplifiedChinese = 9,
+		TraditionalChinese = 10,
 	}
 }
