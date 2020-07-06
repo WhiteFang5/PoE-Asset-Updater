@@ -440,6 +440,14 @@ namespace PoEAssetUpdater
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
+
+				switch(id)
+				{
+					case "ItemDisplayStoredExperience" when name.EndsWith(": %0"):
+						name = name[0..^4];
+						break;
+				}
+
 				return (id, name);
 			}
 
