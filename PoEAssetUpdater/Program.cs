@@ -788,13 +788,13 @@ namespace PoEAssetUpdater
 						{
 							jsonWriter.WritePropertyName("id");
 							jsonWriter.WriteValue(statDescription.FullIdentifier);
-							if(mod != null)
-							{
-								jsonWriter.WritePropertyName("mod");
-								jsonWriter.WriteValue(mod);
-							}
 							jsonWriter.WritePropertyName("negated");
 							jsonWriter.WriteValue(statDescription.Negated);
+						}
+						if(mod != null)
+						{
+							jsonWriter.WritePropertyName("mod");
+							jsonWriter.WriteValue(mod);
 						}
 						if(options != null)
 						{
@@ -830,6 +830,7 @@ namespace PoEAssetUpdater
 									if (otherLangStat != null)
 									{
 										otherLangText = (string)otherLangStat["text"];
+										(otherLangText, _) = GetTradeMod(otherLangText);// i.e. strips the trade mod.
 									}
 									else
 									{
