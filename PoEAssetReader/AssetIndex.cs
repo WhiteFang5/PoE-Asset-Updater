@@ -36,6 +36,26 @@ namespace PoEAssetReader
 
 		#region Public Methods
 
+		public AssetFile FindFile(Predicate<AssetFile> predicate)
+		{
+			return (
+				from assetBundle in Bundles
+				from assetFile in assetBundle.Files
+				where predicate(assetFile)
+				select assetFile
+			).First();
+		}
+
+		public List<AssetFile> FindFiles(Predicate<AssetFile> predicate)
+		{
+			return (
+				from assetBundle in Bundles
+				from assetFile in assetBundle.Files
+				where predicate(assetFile)
+				select assetFile
+			).ToList();
+		}
+
 		public byte[] GetFileContents(AssetFile assetFile) => assetFile.Bundle.GetFileContents(assetFile);
 
 		#endregion
