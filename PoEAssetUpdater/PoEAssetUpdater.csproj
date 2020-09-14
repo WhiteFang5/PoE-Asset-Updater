@@ -27,9 +27,18 @@
     <Content Include="DatDefinitions.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="libooz.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PoEAssetReader\PoEAssetReader.csproj">
+      <Private>true</Private>
+      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
+    </ProjectReference>
   </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@ obj/
 # IDE - VistualStudio
 .vs/
 *.csproj.user
+launchSettings.json
 
 # System Files
 .DS_Store

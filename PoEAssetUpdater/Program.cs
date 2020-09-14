@@ -2,6 +2,7 @@ using LibDat;
 using LibGGPK;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PoEAssetReader;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -191,16 +192,16 @@ namespace PoEAssetUpdater
 			// Validate args array size
 			if(args.Length != 2)
 			{
-				Logger.WriteLine("Invalid number of arguments.");
+				Logger.WriteLine($"Invalid number of arguments. Found {args.Length}, expected 2.");
 				PrintUsage();
 				return;
 			}
 
 			// Validate arguments
-			string contentFilePath = args[0];
-			if(!File.Exists(contentFilePath))
+			string poeDirectory = args[0];
+			if(!Directory.Exists(poeDirectory))
 			{
-				Logger.WriteLine($"File '{contentFilePath}' does not exist.");
+				Logger.WriteLine($"Directory '{poeDirectory}' does not exist.");
 				PrintUsage();
 				return;
 			}
@@ -214,18 +215,17 @@ namespace PoEAssetUpdater
 
 			try
 			{
-				// Read the GGPKG file
-				GrindingGearsPackageContainer container = new GrindingGearsPackageContainer();
-				container.Read(contentFilePath, Logger.Write);
+				// Read the index
+				AssetIndex assetIndex = new AssetIndex(poeDirectory);
 
-				ExportBaseItemTypeCategories(contentFilePath, assetOutputDir, container);
-				ExportBaseItemTypes(contentFilePath, assetOutputDir, container);
-				ExportClientStrings(contentFilePath, assetOutputDir, container);
+				ExportBaseItemTypeCategories(assetIndex, assetOutputDir);
+				ExportBaseItemTypes(assetIndex, assetOutputDir);
+				ExportClientStrings(assetIndex, assetOutputDir);
 				//maps.json -> Likely created/maintained manually.
-				ExportMods(contentFilePath, assetOutputDir, container);
-				ExportStats(contentFilePath, assetOutputDir, container);
+				ExportMods(assetIndex, assetOutputDir);
+				ExportStats(assetIndex, assetOutputDir);
 				//stats-local.json -> Likely/maintained created manually.
-				ExportWords(contentFilePath, assetOutputDir, container);
+				ExportWords(assetIndex, assetOutputDir);
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -247,7 +247,7 @@ namespace PoEAssetUpdater
 
 		#region Private Methods
 
-		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData, DirectoryTreeNode languageDir);
+		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData, List<AssetFile> languageFiles);
 
 		private static void PrintUsage()
 		{
@@ -268,11 +268,11 @@ namespace PoEAssetUpdater
 			Logger.WriteLine($"!! WARNING: {message}");
 		}
 
-		private static void ExportDataFile(GrindingGearsPackageContainer container, string contentFilePath, string exportFilePath, Action<string, DirectoryTreeNode, JsonWriter> writeData)
+		private static void ExportDataFile(AssetIndex assetIndex, string exportFilePath, Action<List<AssetFile>, JsonWriter> writeData, bool includeLanguageFolders)
 		{
 			Logger.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
 
-			var dataDir = container.DirectoryRoot.Children.Find(x => x.Name == "Data");
+			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("Data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "Data");
 
 			using(var streamWriter = new StreamWriter(exportFilePath))
 			{
@@ -285,7 +285,7 @@ namespace PoEAssetUpdater
 				};
 				jsonWriter.WriteStartObject();
 
-				writeData(contentFilePath, dataDir, jsonWriter);
+				writeData(dataFiles, jsonWriter);
 
 				jsonWriter.WriteEndObject();
 			}
@@ -293,32 +293,33 @@ namespace PoEAssetUpdater
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
 		}
 
-		private static void ExportLanguageDataFile(string contentFilePath, DirectoryTreeNode dataDir, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
+		private static void ExportLanguageDataFile(List<AssetFile> assetFiles, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
 		{
 			foreach(var language in AllLanguages)
 			{
 				Dictionary<string, string> records = new Dictionary<string, string>();
 
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
-				var searchDir = language == Language.English ? dataDir : dataDir.Children.FirstOrDefault(x => x.Name.ToLowerInvariant() == language.ToString().ToLowerInvariant());
-				if(searchDir != null)
+				var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
+				var languageFiles = assetFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
+				if(languageFiles.Count > 0)
 				{
 					// Retrieve all records
 					foreach((var datFileName, var getKeyValuePair) in datFiles)
 					{
 						// Find the given datFile.
-						var datContainer = GetDatContainer(searchDir, contentFilePath, datFileName);
+						var datContainer = GetDatContainer(languageFiles, datFileName);
 						if(datContainer == null)
 						{
 							// An error was already logged.
 							continue;
 						}
 
-						Logger.WriteLine($"\tExporting {searchDir.GetDirectoryPath()}{datFileName}.");
+						Logger.WriteLine($"\tExporting {langDir}/{datFileName}.");
 
 						for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
 						{
-							(string key, string value) = getKeyValuePair(j, datContainer.Records[j], searchDir);
+							(string key, string value) = getKeyValuePair(j, datContainer.Records[j], languageFiles);
 							if(key == null || value == null || records.ContainsKey(key) || (mirroredRecords && records.ContainsKey(value)))
 							{
 								continue;
@@ -351,13 +352,13 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportBaseItemTypes(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportBaseItemTypes(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "base-item-types.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types.json"), WriteRecords, true);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(assetFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["BaseItemTypes.dat"] = GetBaseItemTypeKVP,
 					["Prophecies.dat"] = GetPropheciesKVP,
@@ -365,7 +366,7 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			static (string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
@@ -377,7 +378,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			(string, string) GetPropheciesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Name").Trim();
@@ -389,7 +390,7 @@ namespace PoEAssetUpdater
 
 				if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
 				{
-					DatContainer clientStringsDatContainer = GetDatContainer(languageDir, contentFilePath, "ClientStrings.dat");
+					DatContainer clientStringsDatContainer = GetDatContainer(languageFiles, "ClientStrings.dat");
 					RecordData clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetDataValueStringByFieldId("Id") == clientStringId);
 					if(clientStringRecordData != null)
 					{
@@ -404,7 +405,7 @@ namespace PoEAssetUpdater
 				return (id, Escape(name));
 			}
 
-			static (string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
 				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
@@ -421,13 +422,13 @@ namespace PoEAssetUpdater
 					.Replace("|", "\\|");
 		}
 
-		private static void ExportClientStrings(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportClientStrings(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "client-strings.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "client-strings.json"), WriteRecords, true);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(dataFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["ClientStrings.dat"] = GetClientStringKVP,
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
@@ -436,7 +437,7 @@ namespace PoEAssetUpdater
 				}, false);
 			}
 
-			static (string, string) GetClientStringKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetClientStringKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
@@ -451,7 +452,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			static (string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
 				string id = string.Concat("Quality", (modsKey - 17725).ToString(CultureInfo.InvariantCulture));//Magic number 17725 is the lowest mods key value minus one; It's used to create a DESC sort.
@@ -459,7 +460,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				int index = int.Parse(recordData.GetDataValueStringByFieldId("Unknown8"));
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
@@ -467,7 +468,7 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			static (string, string) GetPropheciesKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetPropheciesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetDataValueStringByFieldId("Id");
 				string name = recordData.GetDataValueStringByFieldId("PredictionText").Trim();
@@ -482,19 +483,19 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportWords(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportWords(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "words.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "words.json"), WriteRecords, true);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(contentFilePath, dataDir, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(dataFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["Words.dat"] = GetWordsKVP,
 				}, true);
 			}
 
-			static (string, string) GetWordsKVP(int idx, RecordData recordData, DirectoryTreeNode languageDir)
+			static (string, string) GetWordsKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
 				string name = recordData.GetDataValueStringByFieldId("Text2").Trim();
@@ -502,30 +503,29 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static DatContainer GetDatContainer(DirectoryTreeNode dataDir, string contentFilePath, string datFileName)
+		private static DatContainer GetDatContainer(List<AssetFile> assetFiles, string datFileName)
 		{
-			var dataFile = dataDir.Files.FirstOrDefault(x => x.Name == datFileName);
-			if(dataFile == null)
+			var assetFile = assetFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == datFileName);
+			if(assetFile == null)
 			{
-				Logger.WriteLine($"\t{datFileName} not found in '{dataDir.Name}'.");
+				Logger.WriteLine($"\t{datFileName} not found.");
 				return null;
 			}
 
-#warning TODO: Optimize ReadFileContent by using a BinaryReader instead.
-			var data = dataFile.ReadFileContent(contentFilePath);
-			using var dataStream = new MemoryStream(data);
+			using var dataStream = new MemoryStream(assetFile.GetFileContents());
+
 			// Read the MemoryStream and create a DatContainer
-			return new DatContainer(dataStream, dataFile.Name);
+			return new DatContainer(dataStream, datFileName);
 		}
 
-		private static void ExportMods(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportMods(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "mods.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "mods.json"), WriteRecords, false);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var modsDatContainer = GetDatContainer(dataDir, contentFilePath, "Mods.dat");
-				var statsDatContainer = GetDatContainer(dataDir, contentFilePath, "Stats.dat");
+				var modsDatContainer = GetDatContainer(dataFiles, "Mods.dat");
+				var statsDatContainer = GetDatContainer(dataFiles, "Stats.dat");
 
 				if(modsDatContainer == null || statsDatContainer == null)
 				{
@@ -597,21 +597,21 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportStats(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportStats(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "stats.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, false);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var statsDatContainer = GetDatContainer(dataDir, contentFilePath, "Stats.dat");
-				var afflictionRewardTypeVisualsDatContainer = GetDatContainer(dataDir, contentFilePath, "AfflictionRewardTypeVisuals.dat");
+				var statsDatContainer = GetDatContainer(dataFiles, "Stats.dat");
+				var afflictionRewardTypeVisualsDatContainer = GetDatContainer(dataFiles, "AfflictionRewardTypeVisuals.dat");
 
-				DirectoryTreeNode statDescriptionsDir = container.DirectoryRoot.Children.FirstOrDefault(x => x.Name == "Metadata")?.Children.FirstOrDefault(x => x.Name == "StatDescriptions");
+				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
 				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 
-				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionsDir == null || statDescriptionsText == null || atlasStatDescriptionsText == null)
+				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -754,16 +754,16 @@ namespace PoEAssetUpdater
 
 				string[] GetStatDescriptions(string fileName)
 				{
-					var statDescriptionsFile = statDescriptionsDir.Files.FirstOrDefault(x => x.Name == fileName);
+					var statDescriptionsFile = statDescriptionFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == fileName);
 
 					if(statDescriptionsFile == null)
 					{
-						Logger.WriteLine($"\t{fileName} not found in '{statDescriptionsDir.Name}'.");
+						Logger.WriteLine($"\t{fileName} not found.");
 						return null;
 					}
 
 					Logger.WriteLine($"Reading {statDescriptionsFile.Name}...");
-					string content = Encoding.Unicode.GetString(statDescriptionsFile.ReadFileContent(contentFilePath));
+					string content = Encoding.Unicode.GetString(statDescriptionsFile.GetFileContents());
 					return content
 						.Split(NewLineSplitter, StringSplitOptions.RemoveEmptyEntries)
 						.Select(x => x.Trim())
@@ -881,16 +881,16 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportBaseItemTypeCategories(string contentFilePath, string exportDir, GrindingGearsPackageContainer container)
+		private static void ExportBaseItemTypeCategories(AssetIndex assetIndex, string exportDir)
 		{
-			ExportDataFile(container, contentFilePath, Path.Combine(exportDir, "base-item-type-categories.json"), WriteRecords);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-type-categories.json"), WriteRecords, false);
 
-			void WriteRecords(string _, DirectoryTreeNode dataDir, JsonWriter jsonWriter)
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatContainer(dataDir, contentFilePath, "BaseItemTypes.dat");
-				var propheciesDatContainer = GetDatContainer(dataDir, contentFilePath, "Prophecies.dat");
-				var monsterVarietiesDatContainer = GetDatContainer(dataDir, contentFilePath, "MonsterVarieties.dat");
-				var itemTradeDataDatContainer = GetDatContainer(dataDir, contentFilePath, "ItemTradeData.dat");
+				var baseItemTypesDatContainer = GetDatContainer(dataFiles, "BaseItemTypes.dat");
+				var propheciesDatContainer = GetDatContainer(dataFiles, "Prophecies.dat");
+				var monsterVarietiesDatContainer = GetDatContainer(dataFiles, "MonsterVarieties.dat");
+				var itemTradeDataDatContainer = GetDatContainer(dataFiles, "ItemTradeData.dat");
 
 				if(baseItemTypesDatContainer == null || itemTradeDataDatContainer == null)
 				{
