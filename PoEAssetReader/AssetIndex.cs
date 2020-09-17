@@ -83,7 +83,7 @@ struct files_t
 	local int i;
 	for (i = 0; i < file_count; ++i) {
 		struct {
-			uint32 unk[2];
+			uint64 file_name_hash <comment="FVN1a-hash of the lower-case path name with a '++' suffix">;
 			uint32 bundle_index <comment=BundleIndexComment>;
 			uint32 file_offset;
 			uint32 file_size;
@@ -227,7 +227,6 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 						}
 
 						(basePhase ? bases : results).Add(path);
-						//Console.WriteLine(path);
 					}
 				}
 				return results;
