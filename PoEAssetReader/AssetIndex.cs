@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace PoEAssetReader
 {
@@ -10,7 +11,6 @@ namespace PoEAssetReader
 		#region Consts
 
 		private const string IndexBinFileName = "_.index.bin";
-		private const string IndexTxtFileName = "_.index.txt";
 
 		#endregion
 
@@ -67,39 +67,51 @@ namespace PoEAssetReader
 uint32 bundle_count;
 struct bundles_t
 {
-local int i;
-for (i = 0; i < bundle_count; ++i) {
-	struct {
-		uint32 name_length;
-		char name[name_length];
-		uint32 bundle_uncompressed_size;
-	} bundle_info;
-}
+	local int i;
+	for (i = 0; i < bundle_count; ++i) {
+		struct {
+			uint32 name_length;
+			char name[name_length];
+			uint32 bundle_uncompressed_size;
+		} bundle_info;
+	}
 } bundles;
 
 uint32 file_count;
 struct files_t
 {
-local int i;
-for (i = 0; i < file_count; ++i) {
-	struct {
-		uint32 unk[2];
-		uint32 bundle_index <comment=BundleIndexComment>;
-		uint32 file_offset;
-		uint32 file_size;
-	} file_info;
-}
+	local int i;
+	for (i = 0; i < file_count; ++i) {
+		struct {
+			uint32 unk[2];
+			uint32 bundle_index <comment=BundleIndexComment>;
+			uint32 file_offset;
+			uint32 file_size;
+		} file_info;
+	}
 } files;
 
 string BundleIndexComment(int bundle_index)
 {
-return bundles.bundle_info[bundle_index].name;
+	return bundles.bundle_info[bundle_index].name;
 }
+
+uint32 path_rep_count;
+struct path_rep_t
+{
+    uint32 unk[2];
+    uint32 payload_offset;
+    uint32 payload_size;
+    uint32 unk4;
+} path_rep[path_rep_count];
+
+// The file ends in a nested compressed bundle containing
+// compact representation of all possible paths.
+local int bundle_start = FTell();
+ubyte path_rep_bundle[FileSize() - bundle_start];
 		*/
 		private void ReadIndexFiles()
 		{
-			string[] indexTxt = File.ReadAllLines(Path.Combine(PoEDirectory, IndexTxtFileName));
-
 			byte[] content = AssetBundle.GetBundleContent(Path.Combine(PoEDirectory, IndexBinFileName));
 
 			using MemoryStream stream = new MemoryStream(content);
@@ -107,7 +119,6 @@ return bundles.bundle_info[bundle_index].name;
 
 			// Read the bundle info
 			int bundleCount = reader.ReadInt32();
-			HashSet<string> bundleNames = new HashSet<string>(bundleCount);
 			for(int i = 0; i < bundleCount; i++)
 			{
 				int nameLength = reader.ReadInt32();
@@ -115,52 +126,111 @@ return bundles.bundle_info[bundle_index].name;
 				int uncompressedSize = reader.ReadInt32();
 
 				Bundles.Add(new AssetBundle(PoEDirectory, $"{name}{AssetBundle.FileExtension}"));
-				bundleNames.Add(name);
-			}
-
-			// Map the files to their respective bundles
-			Dictionary<string, List<string>> bundleFiles = new Dictionary<string, List<string>>();
-			string lastBundleName = null;
-			for(int i = 0; i < indexTxt.Length; i++)
-			{
-				string name = indexTxt[i];
-				if(bundleNames.Contains(name))
-				{
-					lastBundleName = $"{name}{AssetBundle.FileExtension}";
-					bundleFiles.Add(lastBundleName, new List<string>());
-				}
-				else
-				{
-					bundleFiles[lastBundleName].Add(name);
-				}
 			}
 
 			// Read the file info
 			int fileCount = reader.ReadInt32();
-			int lastBundleIndex = -1;
-			AssetBundle currentBundle = null;
-			List<string> currentBundleFilesList = null;
+			List<(int bundleIndex, int offset, int size, long fileNameHash)> files = new List<(int bundleIndex, int offset, int size, long fileNameHash)>(fileCount);
 			for(int i = 0; i < fileCount; i++)
 			{
-				// Read unknown values.
-				reader.ReadInt32();
-				reader.ReadInt32();
-
-				// Read known values.
+				long fileNameHash = reader.ReadInt64();
 				int bundleIndex = reader.ReadInt32();
 				int offset = reader.ReadInt32();
 				int size = reader.ReadInt32();
 
-				// Find the file name
-				if(lastBundleIndex != bundleIndex)
-				{
-					currentBundle = Bundles[bundleIndex];
-					currentBundleFilesList = bundleFiles[currentBundle.Name];
-					lastBundleIndex = bundleIndex;
-				}
-				string name = currentBundleFilesList.Count > currentBundle.Files.Count ? currentBundleFilesList[currentBundle.Files.Count] : $"--MISSING FILE NAME FOR INDEX {currentBundle.Files.Count}";
+				//currentBundle.Files.Add(new AssetFile(currentBundle, name, offset, size));
+				files.Add((bundleIndex, offset, size, fileNameHash));
+			}
 
-				currentBundle.Files.Add(new AssetFile(currentBundle, name, offset, size));
+			int pathCount = reader.ReadInt32();
+			List<(int offset, int size, int unk0, int unk1, int unk2)> pathSections = new List<(int offset, int size, int unk0, int unk1, int unk2)>(pathCount);
+			for(int i = 0; i < pathCount; i++)
+			{
+				// Read unknown values.
+				int unk0 = reader.ReadInt32();
+				int unk1 = reader.ReadInt32();
+
+				// Read known values.
+				int payload_offset = reader.ReadInt32();
+				int payload_size = reader.ReadInt32();
+
+				// Read unknown values.
+				int unk2 = reader.ReadInt32();
+
+				pathSections.Add((payload_offset, payload_size, unk0, unk1, unk2));
+			}
+
+			byte[] pathBundle = AssetBundle.GetBundleContent(reader.ReadBytes((int)(content.Length - reader.BaseStream.Position)));
+
+			List<string> pathNames = new List<string>(pathCount);
+
+			FNV1aHash64 fnv1a = new FNV1aHash64();
+
+			for(int i = 0; i < pathCount; i++)
+			{
+				var pathSection = pathSections[i];
+				var generatedPaths = GeneratePaths(pathBundle.Skip(pathSection.offset).Take(pathSection.size).ToArray());
+				pathNames.AddRange(generatedPaths);
+			}
+
+			Dictionary<long, string> pathHashes = pathNames.ToDictionary(x => BitConverter.ToInt64(fnv1a.ComputeHash(Encoding.UTF8.GetBytes($"{x.ToLowerInvariant()}++")), 0), x => x);
+
+			AssetBundle currentBundle = null;
+			int currentBundleIndex = -1;
+			for(int i = 0; i < fileCount; i++)
+			{
+				var fileInfo = files[i];
+				var fileName = pathHashes[fileInfo.fileNameHash];
+
+				if(currentBundleIndex != fileInfo.bundleIndex)
+				{
+					currentBundle = Bundles[fileInfo.bundleIndex];
+				}
+				currentBundle.Files.Add(new AssetFile(currentBundle, fileName, fileInfo.offset, fileInfo.size));
+			}
+
+			static List<string> GeneratePaths(byte[] section)
+			{
+				using MemoryStream pathStream = new MemoryStream(section);
+				using BinaryReader pathReader = new BinaryReader(pathStream);
+
+				bool basePhase = false;
+				List<string> bases = new List<string>();
+				List<string> results = new List<string>();
+				while(pathReader.BaseStream.Position < pathReader.BaseStream.Length)
+				{
+					int cmd = pathReader.ReadInt32();
+					if(cmd == 0)
+					{
+						basePhase = !basePhase;
+						if(basePhase)
+						{
+							bases.Clear();
+						}
+					}
+					else
+					{
+						string path = string.Empty;
+						while(pathReader.PeekChar() > 0)
+						{
+							path += pathReader.ReadChar();
+						}
+						// Skip the 0-termination byte
+						pathReader.ReadByte();
+
+						// the input is one-indexed
+						int index = cmd - 1;
+						if(index < bases.Count)
+						{
+							// Prepend the base string
+							path = $"{bases[index]}{path}";
+						}
+
+						(basePhase ? bases : results).Add(path);
+						//Console.WriteLine(path);
+					}
+				}
+				return results;
 			}
 		}
 

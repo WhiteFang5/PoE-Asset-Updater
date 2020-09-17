@@ -90,10 +90,13 @@ for (i = 0; i < head.entry_count; ++i) {
 		/// <summary>
 		/// Returns the decompressed contents of the bundle located at the given <paramref name="bundleFilePath"/>.
 		/// </summary>
-		public static byte[] GetBundleContent(string bundleFilePath)
-		{
-			byte[] content = File.ReadAllBytes(bundleFilePath);
+		public static byte[] GetBundleContent(string bundleFilePath) => GetBundleContent(File.ReadAllBytes(bundleFilePath));
 
+		/// <summary>
+		/// Returns the decompressed contents of the bundle contained in the given <paramref name="content"/>.
+		/// </summary>
+		public static byte[] GetBundleContent(byte[] content)
+		{
 			using MemoryStream stream = new MemoryStream(content);
 			using BinaryReader reader = new BinaryReader(stream);
 
