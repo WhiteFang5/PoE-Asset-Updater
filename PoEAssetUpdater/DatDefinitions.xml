@@ -262,9 +262,8 @@
 			<field id="BaseItemTypesKey" type="ulong"/>
 			<field id="Factor" type="int"/>
 		</record>
-		<record file="AlternateQualityTypes" length="36">
+		<record file="AlternateQualityTypes" length="28">
 			<field id="StatsKey" type="ulong"/>
-			<field id="TagsKeys" type="ref|list|ulong"/>
 			<field id="Name" type="ref|string" isUser="1"/>
 			<field id="BaseItemTypesKey" type="ulong"/>
 			<field id="ModsKey" type="ulong"/>
@@ -573,7 +572,7 @@
 			<field id="Id" type="ref|string"/>
 			<field id="Text" type="ref|string" isUser="1"/>
 		</record>
-		<record file="BaseItemTypes" length="211">
+		<record file="BaseItemTypes" length="215">
 			<field id="Id" type="ref|string"/>
 			<field id="ItemClassesKey" type="ulong"/>
 			<field id="Width" type="int"/>
@@ -609,6 +608,7 @@
 			<field id="IsBlessing" type="bool"/>
 			<field id="Unknown0" type="int"/>
 			<field id="Key0" type="ulong"/>
+			<field id="Unknown1" type="int"/>
 		</record>
 		<record file="BestiaryCapturableMonsters" length="64">
 			<field id="MonsterVarietiesKey" type="ulong"/>
@@ -3422,7 +3422,7 @@
 			<field id="ModSellPriceTypesKeys" type="ref|list|ulong"/>
 			<field id="TagsKeys" type="ref|list|ulong"/>
 		</record>
-		<record file="Mods" length="298">
+		<record file="Mods" length="306">
 			<field id="Id" type="ref|string"/>
 			<field id="Unknown0" type="int"/>
 			<field id="ModTypeKey" type="ulong"/>
@@ -3474,6 +3474,8 @@
 			<field id="MonsterOnDeath" type="ref|string"/>
 			<field id="Unknown2" type="int"/>
 			<field id="Unknown3" type="ref|list|int"/>
+			<field id="Unknown4" type="int"/>
+			<field id="Unknown5" type="int"/>
 		</record>
 		<record file="MonsterAdditionalMonsterDrops" length="16">
 			<field id="MonsterVarietiesKey" type="ulong"/>
@@ -3749,7 +3751,7 @@
 			<field id="IsLargeAbyssMonster" type="bool"/>
 			<field id="IsSmallAbyssMonster" type="bool"/>
 		</record>
-		<record file="MonsterVarieties" length="426">
+		<record file="MonsterVarieties" length="438">
 			<field id="Id" type="ref|string"/>
 			<field id="MonsterTypesKey" type="ulong"/>
 			<field id="Unknown0" type="int"/>
@@ -3831,6 +3833,9 @@
 			<field id="Unknown102" type="int"/>
 			<field id="Unknown103" type="int"/>
 			<field id="Unknown104" type="int"/>
+			<field id="Unknown105" type="int"/>
+			<field id="Unknown106" type="int"/>
+			<field id="Unknown107" type="int"/>
 		</record>
 		<record file="MoveDaemon" length="106">
 			<field id="Unknown0" type="int"/>

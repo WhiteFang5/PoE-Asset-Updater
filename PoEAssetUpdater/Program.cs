@@ -78,6 +78,22 @@ namespace PoEAssetUpdater
 			["MapsTier14"] = ItemCategory.Map,
 			["MapsTier15"] = ItemCategory.Map,
 			["MapsTier16"] = ItemCategory.Map,
+			["Tier1"] = ItemCategory.Map,
+			["Tier2"] = ItemCategory.Map,
+			["Tier3"] = ItemCategory.Map,
+			["Tier4"] = ItemCategory.Map,
+			["Tier5"] = ItemCategory.Map,
+			["Tier6"] = ItemCategory.Map,
+			["Tier7"] = ItemCategory.Map,
+			["Tier8"] = ItemCategory.Map,
+			["Tier9"] = ItemCategory.Map,
+			["Tier10"] = ItemCategory.Map,
+			["Tier11"] = ItemCategory.Map,
+			["Tier12"] = ItemCategory.Map,
+			["Tier13"] = ItemCategory.Map,
+			["Tier14"] = ItemCategory.Map,
+			["Tier15"] = ItemCategory.Map,
+			["Tier16"] = ItemCategory.Map,
 			["Nets"] = ItemCategory.Currency,
 			["Oils"] = ItemCategory.Currency,
 			["Prophecies"] = ItemCategory.Currency,
@@ -91,6 +107,7 @@ namespace PoEAssetUpdater
 			["AbstractRing"] = ItemCategory.AccessoryRing,
 			["AbstractAmulet"] = ItemCategory.AccessoryAmulet,
 			["AbstractBelt"] = ItemCategory.AccessoryBelt,
+			["AbstractTrinket"] = ItemCategory.AccessoryTrinket,
 			// Armors/Armours
 			["AbstractShield"] = ItemCategory.ArmourShield,
 			["AbstractHelmet"] = ItemCategory.ArmourHelmet,
@@ -105,6 +122,7 @@ namespace PoEAssetUpdater
 			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
 			["HarvestSeed"] = ItemCategory.CurrencySeed,
 			["HarvestPlantBooster"] = ItemCategory.CurrencySeedBooster,
+			["HeistObjective"] = ItemCategory.CurrencyHeistTarget,
 			// Divination Cards
 			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
@@ -116,6 +134,10 @@ namespace PoEAssetUpdater
 			// Gems
 			["ActiveSkillGem"] = ItemCategory.GemActivegem,
 			["SupportSkillGem"] = ItemCategory.GemSupportGem,
+			// Heist
+			["HeistContract"] = ItemCategory.HeistContract,
+			["HeistBlueprint"] = ItemCategory.HeistBlueprint,
+			["AbstractHeistEquipment"] = ItemCategory.HeistEquipment,
 			// Jewels
 			["AbstractJewel"] = ItemCategory.Jewel,
 			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
@@ -218,6 +240,8 @@ namespace PoEAssetUpdater
 				// Read the index
 				AssetIndex assetIndex = new AssetIndex(poeDirectory);
 
+				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
+				
 				ExportBaseItemTypeCategories(assetIndex, assetOutputDir);
 				ExportBaseItemTypes(assetIndex, assetOutputDir);
 				ExportClientStrings(assetIndex, assetOutputDir);
@@ -447,6 +471,9 @@ namespace PoEAssetUpdater
 					case "ItemDisplayStoredExperience" when name.EndsWith(": %0"):
 						name = name[0..^4];
 						break;
+					case "ItemDisplayStoredExperience" when name.EndsWith(": {0}"):
+						name = name[0..^5];
+						break;
 				}
 
 				return (id, name);
@@ -455,7 +482,7 @@ namespace PoEAssetUpdater
 			static (string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
 			{
 				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
-				string id = string.Concat("Quality", (modsKey - 17725).ToString(CultureInfo.InvariantCulture));//Magic number 17725 is the lowest mods key value minus one; It's used to create a DESC sort.
+				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
 				string name = recordData.GetDataValueStringByFieldId("Name");
 				return (id, name);
 			}

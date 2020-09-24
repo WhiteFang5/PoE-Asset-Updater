@@ -82,16 +82,16 @@ namespace PoEAssetUpdater
 			}
 
 			// Replace all placeholders
-			for(int i = 1; i <= 9; i++)
+			for(int i = 0; i <= 9; i++)
 			{
 				string num = i.ToString(CultureInfo.InvariantCulture);
 				statDescription = statDescription
 					.Replace($"%{num}%", Placeholder)
-					.Replace($"%{num}$d", Placeholder)
-					.Replace($"%{num}$+d", Placeholder);
+					.Replace($"{{{num}}}", Placeholder)
+					.Replace($"{{{num}:d}}", Placeholder)
+					.Replace($"{{{num}:+d}}", Placeholder);
 			}
 			statDescription = statDescription
-				.Replace("%d", Placeholder)
 				.Replace("%%", "%")
 				.Replace("\\n", "\n");
 
