@@ -162,25 +162,22 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 
 			byte[] pathBundle = AssetBundle.GetBundleContent(reader.ReadBytes((int)(content.Length - reader.BaseStream.Position)));
 
-			List<string> pathNames = new List<string>(pathCount);
-
 			FNV1aHash64 fnv1a = new FNV1aHash64();
+			Dictionary<long, string> paths = new Dictionary<long, string>(pathCount);
 
 			for(int i = 0; i < pathCount; i++)
 			{
 				var pathSection = pathSections[i];
 				var generatedPaths = GeneratePaths(pathBundle.Skip(pathSection.offset).Take(pathSection.size).ToArray());
-				pathNames.AddRange(generatedPaths);
+				generatedPaths.ForEach(x => paths.Add(BitConverter.ToInt64(fnv1a.ComputeHash(Encoding.UTF8.GetBytes($"{x.ToLowerInvariant()}++"))), x));
 			}
-
-			Dictionary<long, string> pathHashes = pathNames.ToDictionary(x => BitConverter.ToInt64(fnv1a.ComputeHash(Encoding.UTF8.GetBytes($"{x.ToLowerInvariant()}++")), 0), x => x);
 
 			AssetBundle currentBundle = null;
 			int currentBundleIndex = -1;
 			for(int i = 0; i < fileCount; i++)
 			{
 				var fileInfo = files[i];
-				var fileName = pathHashes[fileInfo.fileNameHash];
+				var fileName = paths[fileInfo.fileNameHash];
 
 				if(currentBundleIndex != fileInfo.bundleIndex)
 				{
