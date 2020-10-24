@@ -462,6 +462,7 @@ namespace PoEAssetUpdater
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
 					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
 					["Prophecies.dat"] = GetPropheciesKVP,
+					["GrantedEffectQualityTypes.dat"] = GetAlternateGemQualityTypesKVP,
 				}, false);
 			}
 
@@ -511,6 +512,14 @@ namespace PoEAssetUpdater
 				}
 
 				return ($"Prophecy{id}", string.IsNullOrEmpty(name2) ? name : name2);
+			}
+
+			static (string, string) GetAlternateGemQualityTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			{
+				int qualityNum = int.Parse(recordData.GetDataValueStringByFieldId("Id"));
+				string id = string.Concat("GemAlternateQuality", qualityNum.ToString(CultureInfo.InvariantCulture), "EffectName");
+				string name = recordData.GetDataValueStringByFieldId("Text");
+				return (id, name);
 			}
 		}
 
