@@ -119,10 +119,12 @@ namespace PoEAssetUpdater
 			["AbstractCurrency"] = ItemCategory.Currency,
 			["StackableCurrency"] = ItemCategory.Currency,
 			["DelveSocketableCurrency"] = ItemCategory.CurrencyResonator,
+			["DelveStackableSocketableCurrency"] = ItemCategory.CurrencyResonator,
 			["AbstractUniqueFragment"] = ItemCategory.CurrencyPiece,
 			["HarvestSeed"] = ItemCategory.CurrencySeed,
 			["HarvestPlantBooster"] = ItemCategory.CurrencySeedBooster,
 			["HeistObjective"] = ItemCategory.CurrencyHeistTarget,
+			["Incubator"] = ItemCategory.CurrencyIncubator,
 			// Divination Cards
 			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
@@ -147,6 +149,7 @@ namespace PoEAssetUpdater
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
 			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
+			["OfferingToTheGoddess"] = ItemCategory.MapFragment,
 			// Metamorph Samples
 			["MetamorphosisDNA"] = ItemCategory.MonsterSample,
 			// Watchstones
@@ -917,35 +920,10 @@ namespace PoEAssetUpdater
 				var baseItemTypesDatContainer = GetDatContainer(dataFiles, "BaseItemTypes.dat");
 				var propheciesDatContainer = GetDatContainer(dataFiles, "Prophecies.dat");
 				var monsterVarietiesDatContainer = GetDatContainer(dataFiles, "MonsterVarieties.dat");
-				var itemTradeDataDatContainer = GetDatContainer(dataFiles, "ItemTradeData.dat");
 
-				if(baseItemTypesDatContainer == null || itemTradeDataDatContainer == null)
+				if(baseItemTypesDatContainer == null)
 				{
 					return;
-				}
-
-				// Parse the Item Trade Data
-				Dictionary<string, string> itemTradeDataCategories = new Dictionary<string, string>();
-				foreach(var itemTradeData in itemTradeDataDatContainer.Records)
-				{
-					var categoryId = itemTradeData.GetDataValueStringByFieldId("CategoryId");
-					if(!ItemTradeDataCategoryIdToCategoryMapping.TryGetValue(categoryId, out string category))
-					{
-						PrintError($"Missing {nameof(ItemTradeDataCategoryIdToCategoryMapping)} for '{categoryId}'");
-						continue;
-					}
-					var baseItemTypes = ParseList(itemTradeData.GetDataValueStringByFieldId("Keys0"));
-					baseItemTypes.ForEach(x =>
-					{
-						if(!itemTradeDataCategories.TryGetValue(x, out string existingCategory) || category == existingCategory)
-						{
-							itemTradeDataCategories[x] = category;
-						}
-						else
-						{
-							PrintError($"BaseItemType {x} belongs to two different categories '{existingCategory}' and '{category}'");
-						}
-					});
 				}
 
 				// Create the root node.
@@ -959,9 +937,8 @@ namespace PoEAssetUpdater
 					string id = baseItemType.GetDataValueStringByFieldId("Id").Split('/').Last();
 					string inheritsFrom = baseItemType.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
 
-					// First try to find a specialised trade curreny category; If non exist, check the inheritance mapping for a matching category.
-					if(!itemTradeDataCategories.TryGetValue(i.ToString(CultureInfo.InvariantCulture), out string category) &&
-						!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out category))
+					// Check the inheritance mapping for a matching category.
+					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
 					{
 						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.DatName)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {i}");
 						continue;
