@@ -21,6 +21,7 @@ namespace PoEAssetUpdater
 		#region Properties
 
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
+		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
 		private const int TotalNumberOfStats = 6;
 
@@ -722,6 +723,7 @@ namespace PoEAssetUpdater
 				{
 					foreach ((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
 					{
+						wc.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
 						try
 						{
 							poeTradeStats[language] = JObject.Parse(wc.DownloadString(tradeAPIUrl));
