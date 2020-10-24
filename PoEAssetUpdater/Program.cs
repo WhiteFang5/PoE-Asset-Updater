@@ -641,8 +641,9 @@ namespace PoEAssetUpdater
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
 				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
+				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 
-				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null)
+				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null || heistEquipmentStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -659,7 +660,7 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).ToArray();
+				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).ToArray();
 				for(int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
 				{
 					string line = lines[lineIdx];
