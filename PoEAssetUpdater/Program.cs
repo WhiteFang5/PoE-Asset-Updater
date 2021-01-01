@@ -51,57 +51,6 @@ namespace PoEAssetUpdater
 
 		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant" };
 
-		private static readonly Dictionary<string, string> ItemTradeDataCategoryIdToCategoryMapping = new Dictionary<string, string>()
-		{
-			["Currency"] = ItemCategory.Currency,
-			["Cards"] = ItemCategory.Card,
-			["Catalysts"] = ItemCategory.Currency,
-			["DeliriumOrbs"] = ItemCategory.Currency,
-			["DelveFossils"] = ItemCategory.CurrencyFossil,
-			["DelveResonators"] = ItemCategory.CurrencyResonator,
-			["Essences"] = ItemCategory.Currency,
-			["Fragments"] = ItemCategory.MapFragment,
-			["Incubators"] = ItemCategory.CurrencyIncubator,
-			["MapsBlighted"] = ItemCategory.Map,
-			["MapsTier1"] = ItemCategory.Map,
-			["MapsTier2"] = ItemCategory.Map,
-			["MapsTier3"] = ItemCategory.Map,
-			["MapsTier4"] = ItemCategory.Map,
-			["MapsTier5"] = ItemCategory.Map,
-			["MapsTier6"] = ItemCategory.Map,
-			["MapsTier7"] = ItemCategory.Map,
-			["MapsTier8"] = ItemCategory.Map,
-			["MapsTier9"] = ItemCategory.Map,
-			["MapsTier10"] = ItemCategory.Map,
-			["MapsTier11"] = ItemCategory.Map,
-			["MapsTier12"] = ItemCategory.Map,
-			["MapsTier13"] = ItemCategory.Map,
-			["MapsTier14"] = ItemCategory.Map,
-			["MapsTier15"] = ItemCategory.Map,
-			["MapsTier16"] = ItemCategory.Map,
-			["Tier1"] = ItemCategory.Map,
-			["Tier2"] = ItemCategory.Map,
-			["Tier3"] = ItemCategory.Map,
-			["Tier4"] = ItemCategory.Map,
-			["Tier5"] = ItemCategory.Map,
-			["Tier6"] = ItemCategory.Map,
-			["Tier7"] = ItemCategory.Map,
-			["Tier8"] = ItemCategory.Map,
-			["Tier9"] = ItemCategory.Map,
-			["Tier10"] = ItemCategory.Map,
-			["Tier11"] = ItemCategory.Map,
-			["Tier12"] = ItemCategory.Map,
-			["Tier13"] = ItemCategory.Map,
-			["Tier14"] = ItemCategory.Map,
-			["Tier15"] = ItemCategory.Map,
-			["Tier16"] = ItemCategory.Map,
-			["Nets"] = ItemCategory.Currency,
-			["Oils"] = ItemCategory.Currency,
-			["Prophecies"] = ItemCategory.Currency,
-			["Scarabs"] = ItemCategory.MapScarab,
-			["Vials"] = ItemCategory.Currency,
-		};
-
 		private static readonly Dictionary<string, string> BaseItemTypeInheritsFromToCategoryMapping = new Dictionary<string, string>()
 		{
 			// Accessories
@@ -959,6 +908,16 @@ namespace PoEAssetUpdater
 					// Special cases
 					switch (category)
 					{
+						// Special case for Fossils
+						case ItemCategory.Currency when id.StartsWith("CurrencyDelveCrafting"):
+							category = ItemCategory.CurrencyFossil;
+							break;
+
+						// Special case for Scarabs
+						case ItemCategory.MapFragment when id.StartsWith("Scarab"):
+							category = ItemCategory.MapScarab;
+							break;
+
 						// Special case for Awakened Support Gems
 						case ItemCategory.GemSupportGem when id.EndsWith("Plus"):
 							category = ItemCategory.GemSupportGemplus;
