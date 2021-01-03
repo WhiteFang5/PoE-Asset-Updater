@@ -1,8 +1,8 @@
-using LibDat;
-using LibGGPK;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PoEAssetReader;
+using PoEAssetReader.DatFiles;
+using PoEAssetReader.DatFiles.Definitions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -192,17 +192,18 @@ namespace PoEAssetUpdater
 			{
 				// Read the index
 				AssetIndex assetIndex = new AssetIndex(poeDirectory);
+				DatDefinitions datDefinitions = DatDefinitions.ParsePyPoE();
 
 				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
-				
-				ExportBaseItemTypeCategories(assetIndex, assetOutputDir);
-				ExportBaseItemTypes(assetIndex, assetOutputDir);
-				ExportClientStrings(assetIndex, assetOutputDir);
+
+				ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
+				ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
+				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				//maps.json -> Likely created/maintained manually.
-				ExportMods(assetIndex, assetOutputDir);
-				ExportStats(assetIndex, assetOutputDir);
+				ExportMods(assetIndex, datDefinitions, assetOutputDir);
+				ExportStats(assetIndex, datDefinitions, assetOutputDir);
 				//stats-local.json -> Likely/maintained created manually.
-				ExportWords(assetIndex, assetOutputDir);
+				ExportWords(assetIndex, datDefinitions, assetOutputDir);
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -224,7 +225,7 @@ namespace PoEAssetUpdater
 
 		#region Private Methods
 
-		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, RecordData recordData, List<AssetFile> languageFiles);
+		public delegate (string key, string value) GetKeyValuePairDelegate(int idx, DatRecord recordData, List<AssetFile> languageFiles);
 
 		private static void PrintUsage()
 		{
@@ -270,7 +271,7 @@ namespace PoEAssetUpdater
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
 		}
 
-		private static void ExportLanguageDataFile(List<AssetFile> assetFiles, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
+		private static void ExportLanguageDataFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
 		{
 			foreach(var language in AllLanguages)
 			{
@@ -285,7 +286,7 @@ namespace PoEAssetUpdater
 					foreach((var datFileName, var getKeyValuePair) in datFiles)
 					{
 						// Find the given datFile.
-						var datContainer = GetDatContainer(languageFiles, datFileName);
+						var datContainer = GetDatFile(languageFiles, datDefinitions, datFileName);
 						if(datContainer == null)
 						{
 							// An error was already logged.
@@ -329,13 +330,13 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportBaseItemTypes(AssetIndex assetIndex, string exportDir)
+		private static void ExportBaseItemTypes(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types.json"), WriteRecords, true);
 
 			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(assetFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(assetFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["BaseItemTypes.dat"] = GetBaseItemTypeKVP,
 					["Prophecies.dat"] = GetPropheciesKVP,
@@ -343,11 +344,11 @@ namespace PoEAssetUpdater
 				}, true);
 			}
 
-			static (string, string) GetBaseItemTypeKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetBaseItemTypeKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
-				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
-				string inheritsFrom = recordData.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
+				string id = recordData.GetValue<string>("Id").Split('/').Last();
+				string name = Escape(recordData.GetValue<string>("Name").Trim());
+				string inheritsFrom = recordData.GetValue<string>("InheritsFrom").Split('/').Last();
 				if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
 				{
 					return (null, null);
@@ -355,10 +356,10 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetPropheciesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			(string, string) GetPropheciesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = recordData.GetDataValueStringByFieldId("Name").Trim();
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Name").Trim();
 
 				if(IgnoredProphecyIds.Contains(id))
 				{
@@ -367,11 +368,11 @@ namespace PoEAssetUpdater
 
 				if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
 				{
-					DatContainer clientStringsDatContainer = GetDatContainer(languageFiles, "ClientStrings.dat");
-					RecordData clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetDataValueStringByFieldId("Id") == clientStringId);
+					var clientStringsDatContainer = GetDatFile(languageFiles, datDefinitions, "ClientStrings.dat");
+					var clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetValue<string>("Id") == clientStringId);
 					if(clientStringRecordData != null)
 					{
-						name += $" ({clientStringRecordData.GetDataValueStringByFieldId("Text")})";
+						name += $" ({clientStringRecordData.GetValue<string>("Text")})";
 					}
 					else
 					{
@@ -382,10 +383,10 @@ namespace PoEAssetUpdater
 				return (id, Escape(name));
 			}
 
-			static (string, string) GetMonsterVaritiesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetMonsterVaritiesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetDataValueStringByFieldId("Id").Split('/').Last();
-				string name = Escape(recordData.GetDataValueStringByFieldId("Name").Trim());
+				string id = recordData.GetValue<string>("Id").Split('/').Last();
+				string name = Escape(recordData.GetValue<string>("Name").Trim());
 				return (id, name);
 			}
 
@@ -399,13 +400,13 @@ namespace PoEAssetUpdater
 					.Replace("|", "\\|");
 		}
 
-		private static void ExportClientStrings(AssetIndex assetIndex, string exportDir)
+		private static void ExportClientStrings(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "client-strings.json"), WriteRecords, true);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(dataFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["ClientStrings.dat"] = GetClientStringKVP,
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
@@ -415,10 +416,10 @@ namespace PoEAssetUpdater
 				}, false);
 			}
 
-			static (string, string) GetClientStringKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetClientStringKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = recordData.GetDataValueStringByFieldId("Text").Trim();
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Text").Trim();
 
 				switch(id)
 				{
@@ -433,27 +434,27 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			static (string, string) GetAlternateQualityTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetAlternateQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int modsKey = int.Parse(recordData.GetDataValueStringByFieldId("ModsKey"));
+				var modsKey = recordData.GetValue<ulong>("ModsKey");
 				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
-				string name = recordData.GetDataValueStringByFieldId("Name");
+				string name = recordData.GetValue<string>("Description");
 				return (id, name);
 			}
 
-			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int index = int.Parse(recordData.GetDataValueStringByFieldId("Unknown8"));
+				int index = recordData.GetValue<int>("Unknown8");
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
-				string name = recordData.GetDataValueStringByFieldId("BodypartName").Trim();
+				string name = recordData.GetValue<string>("BodypartName").Trim();
 				return (id, name);
 			}
 
-			static (string, string) GetPropheciesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetPropheciesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetDataValueStringByFieldId("Id");
-				string name = recordData.GetDataValueStringByFieldId("PredictionText").Trim();
-				string name2 = recordData.GetDataValueStringByFieldId("PredictionText2").Trim();
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("PredictionText").Trim();
+				string name2 = recordData.GetValue<string>("PredictionText2").Trim();
 
 				if(IgnoredProphecyIds.Contains(id))
 				{
@@ -463,36 +464,36 @@ namespace PoEAssetUpdater
 				return ($"Prophecy{id}", string.IsNullOrEmpty(name2) ? name : name2);
 			}
 
-			static (string, string) GetAlternateGemQualityTypesKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetAlternateGemQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int qualityNum = int.Parse(recordData.GetDataValueStringByFieldId("Id"));
+				int qualityNum = recordData.GetValue<int>("Id");
 				string id = string.Concat("GemAlternateQuality", qualityNum.ToString(CultureInfo.InvariantCulture), "EffectName");
-				string name = recordData.GetDataValueStringByFieldId("Text");
+				string name = recordData.GetValue<string>("Text");
 				return (id, name);
 			}
 		}
 
-		private static void ExportWords(AssetIndex assetIndex, string exportDir)
+		private static void ExportWords(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "words.json"), WriteRecords, true);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				ExportLanguageDataFile(dataFiles, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
+				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["Words.dat"] = GetWordsKVP,
 				}, true);
 			}
 
-			static (string, string) GetWordsKVP(int idx, RecordData recordData, List<AssetFile> languageFiles)
+			static (string, string) GetWordsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetDataValueStringByFieldId("Text2").Trim();
+				string name = recordData.GetValue<string>("Text2").Trim();
 				return (id, name);
 			}
 		}
 
-		private static DatContainer GetDatContainer(List<AssetFile> assetFiles, string datFileName)
+		private static DatFile GetDatFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, string datFileName)
 		{
 			var assetFile = assetFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == datFileName);
 			if(assetFile == null)
@@ -501,20 +502,22 @@ namespace PoEAssetUpdater
 				return null;
 			}
 
-			using var dataStream = new MemoryStream(assetFile.GetFileContents());
-
-			// Read the MemoryStream and create a DatContainer
-			return new DatContainer(dataStream, datFileName);
+			var datFile = new DatFile(assetFile, datDefinitions);
+			if(datFile.Records.Count > 0 && datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+			{
+				PrintError($"Found {remainder.Length} Remainder Bytes in {datFileName}");
+			} 
+			return datFile;
 		}
 
-		private static void ExportMods(AssetIndex assetIndex, string exportDir)
+		private static void ExportMods(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "mods.json"), WriteRecords, false);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var modsDatContainer = GetDatContainer(dataFiles, "Mods.dat");
-				var statsDatContainer = GetDatContainer(dataFiles, "Stats.dat");
+				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
 
 				if(modsDatContainer == null || statsDatContainer == null)
 				{
@@ -537,7 +540,7 @@ namespace PoEAssetUpdater
 					foreach(var (recordData, statNames, lastValidStatNum) in recordGroup)
 					{
 						// Write the stat name excluding its group name
-						jsonWriter.WritePropertyName(recordData.GetDataValueStringByFieldId("Id").Replace(recordData.GetDataValueStringByFieldId("CorrectGroup"), ""));
+						jsonWriter.WritePropertyName(recordData.GetValue<string>("Id").Replace(recordData.GetValue<string>("CorrectGroup"), ""));
 						jsonWriter.WriteStartArray();
 
 						// Write all stats in the array
@@ -553,17 +556,17 @@ namespace PoEAssetUpdater
 				}
 				jsonWriter.WriteEndObject();
 
-				(RecordData recordData, string statNames, int lastValidStatNum) RecordSelector(RecordData recordData)
+				(DatRecord recordData, string statNames, int lastValidStatNum) RecordSelector(DatRecord recordData)
 				{
 					List<string> statNames = new List<string>();
 					int lastValidStatsKey = 0;
 					for(int i = 1; i <= TotalNumberOfStats; i++)
 					{
-						ulong statsKey = ulong.Parse(recordData.GetDataValueStringByFieldId(string.Concat("StatsKey", i.ToString(CultureInfo.InvariantCulture))));
+						ulong statsKey = recordData.GetValue<ulong>(string.Concat("StatsKey", i.ToString(CultureInfo.InvariantCulture)));
 
 						if(statsKey != UndefinedValue)
 						{
-							statNames.Add(statsDatContainer.Records[(int)statsKey].GetDataValueStringByFieldId("Id"));
+							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>("Id"));
 							lastValidStatsKey = i;
 						}
 					}
@@ -571,11 +574,11 @@ namespace PoEAssetUpdater
 				}
 			}
 
-			static void WriteMinMaxValues(RecordData recordData, JsonWriter jsonWriter, int statNum)
+			static void WriteMinMaxValues(DatRecord recordData, JsonWriter jsonWriter, int statNum)
 			{
 				string statPrefix = string.Concat("Stat", statNum.ToString(CultureInfo.InvariantCulture));
-				int minValue = int.Parse(recordData.GetDataValueStringByFieldId(string.Concat(statPrefix, "Min")));
-				int maxValue = int.Parse(recordData.GetDataValueStringByFieldId(string.Concat(statPrefix, "Max")));
+				int minValue = recordData.GetValue<int>(string.Concat(statPrefix, "Min"));
+				int maxValue = recordData.GetValue<int>(string.Concat(statPrefix, "Max"));
 
 				jsonWriter.WriteStartObject();
 				jsonWriter.WritePropertyName("min");
@@ -586,14 +589,14 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportStats(AssetIndex assetIndex, string exportDir)
+		private static void ExportStats(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, false);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var statsDatContainer = GetDatContainer(dataFiles, "Stats.dat");
-				var afflictionRewardTypeVisualsDatContainer = GetDatContainer(dataFiles, "AfflictionRewardTypeVisuals.dat");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
+				var afflictionRewardTypeVisualsDatContainer = GetDatFile(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat");
 
 				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
@@ -606,13 +609,13 @@ namespace PoEAssetUpdater
 					return;
 				}
 
-				Logger.WriteLine($"Parsing {statsDatContainer.DatName}...");
+				Logger.WriteLine($"Parsing {statsDatContainer.FileDefinition.Name}...");
 
-				string[] localStats = statsDatContainer.Records.Where(x => bool.Parse(x.GetDataValueStringByFieldId("IsLocal"))).Select(x => x.GetDataValueStringByFieldId("Id")).ToArray();
+				string[] localStats = statsDatContainer.Records.Where(x => x.GetValue<bool>("IsLocal")).Select(x => x.GetValue<string>("Id")).ToArray();
 
-				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.DatName}...");
+				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.FileDefinition.Name}...");
 
-				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetDataValueStringByFieldId("Name")).ToArray();
+				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetValue<string>("Name")).ToArray();
 
 				Logger.WriteLine($"Parsing Stat Description Files...");
 
@@ -728,7 +731,7 @@ namespace PoEAssetUpdater
 
 				static string GetLabel(JToken token) => ((string)token["label"]).ToLowerInvariant();
 
-				static string GetTradeID(JToken token, string label) => ((string)token["id"]).Substring(label.Length + 1);
+				static string GetTradeID(JToken token, string label) => ((string)token["id"])[(label.Length + 1)..];
 
 				static (string modlessText, string modValue) GetTradeMod(string tradeAPIStatDescription)
 				{
@@ -872,15 +875,15 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportBaseItemTypeCategories(AssetIndex assetIndex, string exportDir)
+		private static void ExportBaseItemTypeCategories(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-type-categories.json"), WriteRecords, false);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatContainer(dataFiles, "BaseItemTypes.dat");
-				var propheciesDatContainer = GetDatContainer(dataFiles, "Prophecies.dat");
-				var monsterVarietiesDatContainer = GetDatContainer(dataFiles, "MonsterVarieties.dat");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
+				var propheciesDatContainer = GetDatFile(dataFiles, datDefinitions, "Prophecies.dat");
+				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat");
 
 				if(baseItemTypesDatContainer == null)
 				{
@@ -895,13 +898,13 @@ namespace PoEAssetUpdater
 				for(int i = 0, recordCount = baseItemTypesDatContainer.Records.Count; i < recordCount; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
-					string id = baseItemType.GetDataValueStringByFieldId("Id").Split('/').Last();
-					string inheritsFrom = baseItemType.GetDataValueStringByFieldId("InheritsFrom").Split('/').Last();
+					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
+					string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
 
 					// Check the inheritance mapping for a matching category.
 					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
 					{
-						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.DatName)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {i}");
+						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.FileDefinition.Name)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {i}");
 						continue;
 					}
 
@@ -930,7 +933,7 @@ namespace PoEAssetUpdater
 
 						// Special case for Harvest Seeds
 						case ItemCategory.CurrencySeed:
-							string seedName = baseItemType.GetDataValueStringByFieldId("Name").Split(' ').First();
+							string seedName = baseItemType.GetValue<string>("Name").Split(' ').First();
 							if (!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
 							{
 								PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
@@ -950,14 +953,14 @@ namespace PoEAssetUpdater
 				// Write the Prophecies
 				foreach(var prophecy in propheciesDatContainer.Records)
 				{
-					jsonWriter.WritePropertyName(prophecy.GetDataValueStringByFieldId("Id"));
+					jsonWriter.WritePropertyName(prophecy.GetValue<string>("Id"));
 					jsonWriter.WriteValue(ItemCategory.Prophecy);
 				}
 
 				// Write the Monster Varieties
 				foreach(var monsterVariety in monsterVarietiesDatContainer.Records)
 				{
-					jsonWriter.WritePropertyName(monsterVariety.GetDataValueStringByFieldId("Id").Split('/').Last());
+					jsonWriter.WritePropertyName(monsterVariety.GetValue<string>("Id").Split('/').Last());
 					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
 				}
 
