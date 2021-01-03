@@ -1,0 +1,60 @@
+<Window x:Class="PoEAssetVisualizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PoEAssetVisualizer" xmlns:WPFHexaEditor="clr-namespace:WpfHexaEditor;assembly=WPFHexaEditor"
+		mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800" Loaded="Window_Loaded">
+    <Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="2*"></ColumnDefinition>
+			<ColumnDefinition Width="6*"></ColumnDefinition>
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"></RowDefinition>
+			<RowDefinition Height="Auto"></RowDefinition>
+			<RowDefinition Height="*"></RowDefinition>
+		</Grid.RowDefinitions>
+		<DockPanel Grid.Column="0" Grid.Row="0" Margin="0,0,1,0">
+			<TextBlock Text="Search:"/>
+			<TextBox x:Name="SearchText" Text="" Margin="5,0,5,5" TextChanged="SearchTextBox_TextChanged"/>
+		</DockPanel>
+		<TreeView x:Name="AssetIndexTree" Width="Auto" Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Margin="0,0,2,0">
+			<TreeView.ItemContainerStyle>
+				<Style TargetType="Control">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding VisibleChildOrSelf}" Value="false">
+							<Setter Property="Visibility" Value="Collapsed"/>
+						</DataTrigger>
+						<DataTrigger Binding="{Binding VisibleSelf}" Value="false">
+							<Setter Property="Foreground" Value="Gray"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</TreeView.ItemContainerStyle>
+		</TreeView>
+		<DockPanel Grid.Column="2" Grid.Row="0" Margin="2,0,0,0">
+			<TextBlock x:Name="FileLabel" Text="File: "/>
+			<TextBlock x:Name="BundleLabel" Text="Bundle: " HorizontalAlignment="Center"/>
+		</DockPanel>
+		<StackPanel Grid.Column="2" Grid.Row="1" Margin="2,0,0,5">
+			<Button x:Name="ExportButton" Content="Export" HorizontalAlignment="Left" Click="ExportButton_Click" IsEnabled="false"/>
+		</StackPanel>
+		<TabControl x:Name="Viewers" Grid.Column="2" Grid.Row="2" Margin="2,0,0,0" Visibility="Hidden">
+			<TabItem Header="Text" Name="TextViewerTab">
+				<TextBox x:Name="TextViewer" ScrollViewer.HorizontalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
+			</TabItem>
+			<TabItem Header="Dat" Name="DatViewerTab">
+				<DataGrid x:Name="DatViewer" IsReadOnly="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+			</TabItem>
+			<TabItem Header="Dat" Name="DatViewerErrorTab">
+				<TextBlock x:Name="DatViewerError" Text="" Foreground="Red" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+			</TabItem>
+			<TabItem Header="Hex" Name="HexViewerTab">
+				<WPFHexaEditor:HexEditor x:Name="HexViewer"/>
+			</TabItem>
+		</TabControl>
+		<GridSplitter Grid.Column="0" Width="3" Grid.RowSpan="3"/>
+	</Grid>
+</Window>
