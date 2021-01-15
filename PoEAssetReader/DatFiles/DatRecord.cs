@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace PoEAssetReader.DatFiles
 {
@@ -52,6 +54,10 @@ namespace PoEAssetReader.DatFiles
 				if(objValue is List<object> objList)
 				{
 					return $"[{string.Join(",", objList.ToArray())}]";
+				}
+				else if(objValue is byte[] byteArray)
+				{
+					return string.Join(" ", byteArray);
 				}
 				return objValue.ToString();
 			}
