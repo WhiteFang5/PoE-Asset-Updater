@@ -130,6 +130,7 @@ namespace PoEAssetUpdater
 			["LabyrinthTrinket"] = null,
 			["AbstactPantheonSoul"] = null,
 			["HarvestInfrastructure"] = null,
+			["Item"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -681,25 +682,36 @@ namespace PoEAssetUpdater
 
 				// Download the PoE Trade Stats json
 				Dictionary<Language, JObject> poeTradeStats = new Dictionary<Language, JObject>();
-				using (WebClient wc = new WebClient())
+				foreach ((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
 				{
-					foreach ((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
+					try
 					{
-						wc.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
-						try
+						HttpWebRequest request = (HttpWebRequest)WebRequest.Create(tradeAPIUrl);
+						request.Timeout = 5*1000;
+						request.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
+						using var response = (HttpWebResponse)request.GetResponse();
+						if(response.StatusCode == HttpStatusCode.OK)
 						{
-							poeTradeStats[language] = JObject.Parse(wc.DownloadString(tradeAPIUrl));
+							using Stream dataStream = response.GetResponseStream();
+							using StreamReader reader = new StreamReader(dataStream);
+							poeTradeStats[language] = JObject.Parse(reader.ReadToEnd());
 						}
-						catch (Exception ex)
-						{
-							PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
-						}
-						// Sleep for a short time to avoid spamming the different trade APIs
-						Thread.Sleep(1000);
 					}
+					catch(Exception ex)
+					{
+						PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
+					}
+					// Sleep for a short time to avoid spamming the different trade APIs
+					Thread.Sleep(1000);
 				}
 
 				Logger.WriteLine("Parsing PoE Trade API Stats...");
+
+				if(!poeTradeStats.ContainsKey(Language.English))
+				{
+					PrintError($"Failed to parse PoE Trade API Stats.");
+					return;
+				}
 
 				// Parse the PoE Trade Stats
 				foreach(var result in poeTradeStats[Language.English]["result"])
