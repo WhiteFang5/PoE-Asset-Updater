@@ -15,16 +15,16 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		private static readonly Dictionary<string, TypeDefinition> TypeDefinitionMapping = (new List<TypeDefinition>()
 		{
-			new GenericTypeDefinition("bool", bs => bs.ReadBoolean()),
-			new GenericTypeDefinition("byte", bs => bs.ReadByte()),
-			new GenericTypeDefinition("short", bs => bs.ReadInt16()),
-			new GenericTypeDefinition("ushort", bs => bs.ReadUInt16()),
-			new GenericTypeDefinition("int", bs => bs.ReadInt32()),
-			new GenericTypeDefinition("uint", bs => bs.ReadUInt32()),
-			new GenericTypeDefinition("float", bs => bs.ReadSingle()),
-			new GenericTypeDefinition("long", bs => bs.ReadInt64()),
-			new GenericTypeDefinition("ulong", bs => bs.ReadUInt64()),
-			new GenericTypeDefinition("string", bs => {
+			new GenericTypeDefinition("bool", typeof(bool), bs => bs.ReadBoolean()),
+			new GenericTypeDefinition("byte", typeof(byte), bs => bs.ReadByte()),
+			new GenericTypeDefinition("short", typeof(short), bs => bs.ReadInt16()),
+			new GenericTypeDefinition("ushort", typeof(ushort), bs => bs.ReadUInt16()),
+			new GenericTypeDefinition("int", typeof(int), bs => bs.ReadInt32()),
+			new GenericTypeDefinition("uint", typeof(uint), bs => bs.ReadUInt32()),
+			new GenericTypeDefinition("float", typeof(float), bs => bs.ReadSingle()),
+			new GenericTypeDefinition("long", typeof(long), bs => bs.ReadInt64()),
+			new GenericTypeDefinition("ulong", typeof(ulong), bs => bs.ReadUInt64()),
+			new GenericTypeDefinition("string", typeof(string), bs => {
 				var sb = new StringBuilder();
 				char ch;
 				while ((ch = bs.ReadChar()) != 0)
@@ -39,21 +39,27 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				return sb.ToString();
 			}),
-			new GenericTypeDefinition("ref|generic", bs => bs.ReadInt32()),
+			new GenericTypeDefinition("ref|generic", typeof(int), bs => bs.ReadInt32()),
 		}).ToDictionary(x => x.Name, x => x);
 
 		private static readonly Dictionary<string, TypeDefinition> _types = new Dictionary<string, TypeDefinition>();
 
 		#endregion
 
-		public TypeDefinition(string name)
+		public TypeDefinition(string name, Type dataType)
 		{
 			Name = name;
+			DataType = dataType;
 		}
 
 		#region Properties
 
 		public string Name
+		{
+			get;
+		}
+
+		public Type DataType
 		{
 			get;
 		}
@@ -96,19 +102,6 @@ namespace PoEAssetReader.DatFiles.Definitions
 				_types[dataType] = typeDefinition;
 			}
 			return typeDefinition;
-		}
-
-		#endregion
-
-		#region Private Methods
-
-		private static TypeDefinition ParseValueType(string dataType)
-		{
-			if(TypeDefinitionMapping.TryGetValue(dataType, out var typeDefinition))
-			{
-				return typeDefinition;
-			}
-			throw new Exception($"Missing {nameof(TypeDefinitionMapping)} for '{dataType}'");
 		}
 
 		#endregion

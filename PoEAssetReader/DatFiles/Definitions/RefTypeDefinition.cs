@@ -5,7 +5,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 	public class RefTypeDefinition : TypeDefinition
 	{
 		public RefTypeDefinition(string name, TypeDefinition refType)
-			: base(name)
+			: base(name, refType.DataType)
 		{
 			RefType = refType;
 		}

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace PoEAssetReader.DatFiles.Definitions
@@ -10,8 +11,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#endregion
 
-		public GenericTypeDefinition(string name, ReadDataDelegate readData)
-			: base(name)
+		public GenericTypeDefinition(string name, Type dataType, ReadDataDelegate readData)
+			: base(name, dataType)
 		{
 			_readData = readData;
 		}
