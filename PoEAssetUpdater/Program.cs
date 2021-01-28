@@ -140,6 +140,22 @@ namespace PoEAssetUpdater
 			["Primal"] = ItemCategory.CurrencyPrimalSeed,
 		};
 
+		private static readonly Dictionary<ulong, string> HeistEquipmentTagsToItemCategoryMapping = new Dictionary<ulong, string>()
+		{
+			[651] = ItemCategory.HeistCloak,
+			[652] = ItemCategory.HeistBrooch,
+			[653] = ItemCategory.HeistGear,
+			[664] = ItemCategory.HeistTool,
+		};
+
+		private static readonly string[] IgnoredItemIds = new string[]
+		{
+			"HeistEquipmentWeaponTest",
+			"HeistEquipmentToolTest",
+			"HeistEquipmentUtilityTest",
+			"HeistEquipmentRewardTest",
+		};
+
 		private static readonly string[] IgnoredProphecyIds = new string[]
 		{
 			"MapExtraHaku",
@@ -913,6 +929,11 @@ namespace PoEAssetUpdater
 					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
 					string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
 
+					if(IgnoredItemIds.Contains(id))
+					{
+						continue;
+					}
+
 					// Check the inheritance mapping for a matching category.
 					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
 					{
@@ -952,6 +973,21 @@ namespace PoEAssetUpdater
 								category = ItemCategory.CurrencySeed;
 							}
 							break;
+
+						// Special case of Heist Equipment
+						case ItemCategory.HeistEquipment:
+							foreach(ulong tag in baseItemType.GetValue<List<ulong>>("TagsKeys"))
+							{
+								if(HeistEquipmentTagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
+								{
+									category = newCategory;
+								}
+							}
+							if(category == ItemCategory.HeistEquipment)
+							{
+								PrintWarning($"Missing Heist Equipment Tag in {HeistEquipmentTagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}')");
+							}
+							break;
 					}
 
 					// Only write to the json if an appropriate category was found.
@@ -977,15 +1013,6 @@ namespace PoEAssetUpdater
 				}
 
 				jsonWriter.WriteEndObject();
-
-				static List<string> ParseList(string stringifiedList)
-				{
-					return stringifiedList
-						[1..^1]// Remove the brackets
-						.Split(',')//Split the list
-						.Select(x => x.Trim())//Trim any spaces
-						.ToList();
-				}
 			}
 		}
 

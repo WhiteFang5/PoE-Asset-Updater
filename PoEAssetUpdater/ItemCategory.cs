@@ -55,7 +55,7 @@ namespace PoEAssetUpdater
 		public const string HeistGear = "heistequipment.heistweapon";
 		public const string HeistTool = "heistequipment.heisttool";
 		public const string HeistCloak = "heistequipment.heistutility";
-		public const string HeistUtility = "heistequipment.heistreward";
+		public const string HeistBrooch = "heistequipment.heistreward";
 		public const string HeistMission = "heistmission";
 		public const string HeistContract = "heistmission.contract";
 		public const string HeistBlueprint = "heistmission.blueprint";
