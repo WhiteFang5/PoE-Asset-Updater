@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,9 +52,10 @@ namespace PoEAssetReader.DatFiles
 		{
 			if(Values.TryGetValue(key, out object objValue))
 			{
-				if(objValue is List<object> objList)
+				var type = objValue.GetType();
+				if(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) && objValue is IEnumerable enumerable)
 				{
-					return $"[{string.Join(",", objList.ToArray())}]";
+					return $"[{string.Join(",", enumerable.Cast<object>())}]";
 				}
 				else if(objValue is byte[] byteArray)
 				{
