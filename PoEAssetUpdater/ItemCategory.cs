@@ -44,6 +44,7 @@ namespace PoEAssetUpdater
 		public const string Flask = "flask";
 		public const string Map = "map";
 		public const string MapFragment = "map.fragment";
+		public const string MapInvitation = "map.invitation";
 		public const string MapScarab = "map.scarab";
 		public const string Watchstone = "watchstone";
 		public const string Leaguestone = "leaguestone";

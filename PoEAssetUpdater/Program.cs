@@ -140,12 +140,13 @@ namespace PoEAssetUpdater
 			["Primal"] = ItemCategory.CurrencyPrimalSeed,
 		};
 
-		private static readonly Dictionary<ulong, string> HeistEquipmentTagsToItemCategoryMapping = new Dictionary<ulong, string>()
+		private static readonly Dictionary<ulong, string> TagsToItemCategoryMapping = new Dictionary<ulong, string>()
 		{
 			[651] = ItemCategory.HeistCloak,
 			[652] = ItemCategory.HeistBrooch,
 			[653] = ItemCategory.HeistGear,
 			[664] = ItemCategory.HeistTool,
+			[696] = ItemCategory.MapInvitation,
 		};
 
 		private static readonly string[] IgnoredItemIds = new string[]
@@ -974,18 +975,19 @@ namespace PoEAssetUpdater
 							}
 							break;
 
-						// Special case of Heist Equipment
+						// Special case of Heist Equipment & Map Fragments
 						case ItemCategory.HeistEquipment:
+						case ItemCategory.MapFragment:
 							foreach(ulong tag in baseItemType.GetValue<List<ulong>>("TagsKeys"))
 							{
-								if(HeistEquipmentTagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
+								if(TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
 								{
 									category = newCategory;
 								}
 							}
 							if(category == ItemCategory.HeistEquipment)
 							{
-								PrintWarning($"Missing Heist Equipment Tag in {HeistEquipmentTagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}')");
+								PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}')");
 							}
 							break;
 					}
