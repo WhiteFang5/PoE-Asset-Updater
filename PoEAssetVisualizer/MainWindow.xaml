@@ -35,12 +35,16 @@
 			</TreeView.ItemContainerStyle>
 		</TreeView>
 		<DockPanel Grid.Column="2" Grid.Row="0" Margin="2,0,0,0">
-			<TextBlock x:Name="FileLabel" Text="File: "/>
-			<TextBlock x:Name="BundleLabel" Text="Bundle: " HorizontalAlignment="Center"/>
-		</DockPanel>
-		<StackPanel Grid.Column="2" Grid.Row="1" Margin="2,0,0,5">
 			<Button x:Name="ExportButton" Content="Export" HorizontalAlignment="Left" Click="ExportButton_Click" IsEnabled="false"/>
-		</StackPanel>
+			<DockPanel Margin="2,4,0,0">
+				<TextBlock x:Name="FileLabel" Text="File: "/>
+				<TextBlock x:Name="BundleLabel" Text="Bundle: " HorizontalAlignment="Center"/>
+			</DockPanel>
+		</DockPanel>
+		<DockPanel Grid.Column="2" Grid.Row="1" Margin="2,0,0,0">
+			<TextBlock Text="Search:"/>
+			<TextBox x:Name="SearchInFileText" Text="" Margin="5,0,5,5" TextChanged="SearchInFileTextBox_TextChanged"/>
+		</DockPanel>
 		<TabControl x:Name="Viewers" Grid.Column="2" Grid.Row="2" Margin="2,0,0,0" Visibility="Hidden">
 			<TabItem Header="Text" Name="TextViewerTab">
 				<TextBox x:Name="TextViewer" ScrollViewer.HorizontalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollBarVisibility="Visible"/>

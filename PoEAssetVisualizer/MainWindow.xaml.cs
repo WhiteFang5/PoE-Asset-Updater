@@ -248,6 +248,40 @@ namespace PoEAssetVisualizer
 			Settings.Default.Save();
 		}
 
+		private void SearchInFileTextBox_TextChanged(object sender, TextChangedEventArgs e)
+		{
+			if(DatViewer.IsVisible)
+			{
+				ApplyDatViewerFilter();
+				DatViewer.Items.Refresh();
+			}
+		}
+
+		private void ApplyDatViewerFilter()
+		{
+			string searchText = SearchInFileText.Text;
+			if(string.IsNullOrEmpty(searchText))
+			{
+				DatViewer.Items.Filter = null;
+			}
+			else
+			{
+				Regex regex = new Regex(searchText, RegexOptions.IgnoreCase);
+				DatViewer.Items.Filter = o =>
+				{
+					IDictionary<string, object> row = (IDictionary<string, object>)(ExpandoObject)o;
+					foreach((_, object value) in row)
+					{
+						if(regex.IsMatch(value.ToString()))
+						{
+							return true;
+						}
+					}
+					return false;
+				};
+			}
+		}
+
 		private void FillDatViewer(AssetFile assetFile)
 		{
 			DatViewer.Columns.Clear();
@@ -295,6 +329,8 @@ namespace PoEAssetVisualizer
 					}
 					DatViewer.Items.Add(row);
 				}
+
+				ApplyDatViewerFilter();
 
 				DatViewerTab.Visibility = Visibility.Visible;
 			}
