@@ -222,6 +222,7 @@ namespace PoEAssetUpdater
 				ExportStats(assetIndex, datDefinitions, assetOutputDir);
 				//stats-local.json -> Likely/maintained created manually.
 				ExportWords(assetIndex, datDefinitions, assetOutputDir);
+				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -1012,6 +1013,60 @@ namespace PoEAssetUpdater
 				{
 					jsonWriter.WritePropertyName(monsterVariety.GetValue<string>("Id").Split('/').Last());
 					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
+				}
+
+				jsonWriter.WriteEndObject();
+			}
+		}
+
+		private static void ExportAnnointments(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "annointments.json"), WriteRecords, false);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
+				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat");
+				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat");
+				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat");
+				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat");
+
+				jsonWriter.WritePropertyName("annointments");
+				jsonWriter.WriteStartObject();
+
+				// Write the Base Item Types
+				for(int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
+				{
+					var craftingRecipe = craftingRecipesDatContainer.Records[i];
+					var craftingType = craftingRecipe.GetValue<ulong>("BlightCraftingTypesKey");
+
+					if(craftingType != 0)
+					{
+						continue;
+					}
+
+					var craftingItemKeys = craftingRecipe.GetValue<List<ulong>>("BlightCraftingItemsKeys");
+
+					var craftingResultsKey = (int)craftingRecipe.GetValue<ulong>("BlightCraftingResultsKey");
+					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
+
+					var passiveSkillsKey = (int)craftingResult.GetValue<ulong>("PassiveSkillsKey");
+					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
+
+					var statOptionID = passiveSkill.GetValue<int>("PassiveSkillGraphId");
+
+					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
+					jsonWriter.WriteStartArray();
+					foreach(var craftingItemKey in craftingItemKeys)
+					{
+						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
+						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>("BaseItemTypesKey");
+						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
+						var id = baseItemType.GetValue<string>("Id").Split('/').Last();
+
+						jsonWriter.WriteValue(id);
+					}
+					jsonWriter.WriteEndArray();
 				}
 
 				jsonWriter.WriteEndObject();
