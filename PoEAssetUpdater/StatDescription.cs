@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PoEAssetUpdater
 {
@@ -63,9 +64,9 @@ namespace PoEAssetUpdater
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
 
-			string numberPart = line.Substring(0, openQuoteIdx).Trim();
-			string statDescription = line.Substring(openQuoteIdx + 1,closeQuoteIdx - openQuoteIdx - 1);
-			string additionalData = line.Substring(closeQuoteIdx + 1);
+			string numberPart = line[..openQuoteIdx].Trim();
+			string statDescription = line[(openQuoteIdx + 1)..closeQuoteIdx];
+			string additionalData = line[(closeQuoteIdx + 1)..];
 			if(additionalData.Contains("negate 1"))
 			{
 				numberPart = string.Concat("N", numberPart);
@@ -81,16 +82,25 @@ namespace PoEAssetUpdater
 				}
 			}
 
-			// Replace all placeholders
-			for(int i = 0; i <= 9; i++)
+			var numberParts = numberPart.Split(' ');
+
+			// Replace all placeholders & remove redundant number parts
+			for(int i = 0; i < numberParts.Length; i++)
 			{
 				string num = i.ToString(CultureInfo.InvariantCulture);
+				var numPart = numberParts[i];
+				if(numPart.Contains('#') && !Regex.IsMatch(statDescription, string.Concat("\\{", (i == 0 ? "(0(:\\+?d)?|:\\+?d)" : $"{num}(:\\+?d)?"), "\\}")))
+				{
+					numberParts[i] = numPart.Replace("#", numPart.Contains('|') ? numPart.Split('|')[0] : string.Empty);
+				}
+
 				statDescription = statDescription
-					.Replace($"%{num}%", Placeholder)
 					.Replace($"{{{num}}}", Placeholder)
 					.Replace($"{{{num}:d}}", Placeholder)
 					.Replace($"{{{num}:+d}}", Placeholder);
 			}
+			numberPart = string.Join(' ', numberParts).Trim();
+
 			statDescription = statDescription
 				.Replace("%%", "%")
 				.Replace("\\n", "\n");

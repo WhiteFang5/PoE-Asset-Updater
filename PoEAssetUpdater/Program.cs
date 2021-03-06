@@ -658,7 +658,16 @@ namespace PoEAssetUpdater
 						}
 
 						// Strip the number indicating how many stats are present from the IDs
-						StatDescription statDescription = new StatDescription(ids.Skip(1).ToArray(), ids.Any(x => localStats.Contains(x)));
+						ids = ids.Skip(1).ToArray();
+						string fullID = string.Join(" ", ids);
+
+						// Find an existing stat in the list
+						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID);
+						if(statDescription == null)
+						{
+							statDescription = new StatDescription(ids, ids.Any(x => localStats.Contains(x)));
+							statDescriptions.Add(statDescription);
+						}
 
 						// Initial (first) language is always english
 						Language language = Language.English;
@@ -691,8 +700,6 @@ namespace PoEAssetUpdater
 								break;
 							}
 						}
-
-						statDescriptions.Add(statDescription);
 					}
 				}
 
