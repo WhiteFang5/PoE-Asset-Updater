@@ -804,14 +804,21 @@ namespace PoEAssetUpdater
 				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, Dictionary<string, string> options)
 				{
 					bool explicitLocal = mod == "local";
+					StatDescription statDescription = null;
 					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
-					StatDescription statDescription = label == "pseudo" ? null : statDescriptions.Find(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text));
-
-					if(statDescription == null)
+					if(label != "pseudo")
 					{
-						PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
-					}
+						statDescription = statDescriptions
+							.FindAll(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
+							.OrderBy(x => x.GetMatchingStatLineIndex(text))
+							.FirstOrDefault();
 
+						if(statDescription == null)
+						{
+							PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
+						}
+					}
+					
 					jsonWriter.WritePropertyName(tradeId);
 					jsonWriter.WriteStartObject();
 					{
@@ -840,7 +847,7 @@ namespace PoEAssetUpdater
 								Language language = AllLanguages[i];
 
 								jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
-								jsonWriter.WriteStartObject();
+								jsonWriter.WriteStartArray();
 								if (statDescription != null)
 								{
 									foreach (var statLine in statDescription.GetStatLines(language, text, options != null))
@@ -872,7 +879,7 @@ namespace PoEAssetUpdater
 									var statLine = new StatDescription.StatLine("#", otherLangText.Replace("\n", "\\n"));
 									WriteStatLine(statLine, options, label, jsonWriter);
 								}
-								jsonWriter.WriteEndObject();
+								jsonWriter.WriteEndArray();
 							}
 						}
 						jsonWriter.WriteEndObject();
@@ -896,8 +903,7 @@ namespace PoEAssetUpdater
 
 				if(options == null)
 				{
-					jsonWriter.WritePropertyName(statLine.NumberPart);
-					jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(desc, descSuffix)));
+					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(desc, descSuffix)));
 				}
 				else
 				{
@@ -905,9 +911,16 @@ namespace PoEAssetUpdater
 					{
 						// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
 						string optionDesc = string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
-						jsonWriter.WritePropertyName(id);
-						jsonWriter.WriteValue(StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(optionDesc, descSuffix)));
+						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(optionDesc, descSuffix)));
 					}
+				}
+
+				void WriteStatLine(string predicate, string regex)
+				{
+					jsonWriter.WriteStartObject();
+					jsonWriter.WritePropertyName(predicate);
+					jsonWriter.WriteValue(regex);
+					jsonWriter.WriteEndObject();
 				}
 			}
 		}

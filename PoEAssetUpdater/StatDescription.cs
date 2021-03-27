@@ -128,7 +128,6 @@ namespace PoEAssetUpdater
 					Logger.WriteLine($"ID '{FullIdentifier}' | Local: {LocalStat} | Desc: '{statLine.StatDescription}'");
 				}
 #endif
-
 				statLines.Add(statLine);
 			}
 		}
@@ -160,6 +159,15 @@ namespace PoEAssetUpdater
 				return false;
 			}
 			return statLines.Exists(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
+		}
+
+		public int GetMatchingStatLineIndex(string englishStatDescription)
+		{
+			if(!_statLines.TryGetValue(Language.English, out List<StatLine> statLines))
+			{
+				return -1;
+			}
+			return statLines.FindLastIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
 		}
 
 		public bool HasMatchingIdentifier(string identifier) => _identifiers.Contains(identifier);
