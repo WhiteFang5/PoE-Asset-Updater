@@ -660,13 +660,18 @@ namespace PoEAssetUpdater
 						// Strip the number indicating how many stats are present from the IDs
 						ids = ids.Skip(1).ToArray();
 						string fullID = string.Join(" ", ids);
+						bool isLocalStat = ids.Any(x => localStats.Contains(x));
 
 						// Find an existing stat in the list
-						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID);
+						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID && x.LocalStat == isLocalStat);
 						if(statDescription == null)
 						{
-							statDescription = new StatDescription(ids, ids.Any(x => localStats.Contains(x)));
+							statDescription = new StatDescription(ids, isLocalStat);
 							statDescriptions.Add(statDescription);
+						}
+						else
+						{
+							Logger.WriteLine($"Found existing stat description for '{fullID}'");
 						}
 
 						// Initial (first) language is always english
