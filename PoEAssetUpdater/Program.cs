@@ -97,8 +97,8 @@ namespace PoEAssetUpdater
 			["Leaguestone"] = ItemCategory.Leaguestone,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
+			["AbstractMiscMapItem"] = ItemCategory.Map,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
-			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
 			["OfferingToTheGoddess"] = ItemCategory.MapFragment,
 			// Metamorph Samples
 			["MetamorphosisDNA"] = ItemCategory.MonsterSample,
@@ -432,6 +432,8 @@ namespace PoEAssetUpdater
 					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
 					["Prophecies.dat"] = GetPropheciesKVP,
 					["GrantedEffectQualityTypes.dat"] = GetAlternateGemQualityTypesKVP,
+					["UltimatumEncounters.dat"] = GetUltimatumEncountersKVP,
+					["UltimatumItemisedRewards.dat"] = GetUltimatumItemisedRewardsKVP,
 				}, false);
 			}
 
@@ -488,6 +490,20 @@ namespace PoEAssetUpdater
 				int qualityNum = recordData.GetValue<int>("Id");
 				string id = string.Concat("GemAlternateQuality", qualityNum.ToString(CultureInfo.InvariantCulture), "EffectName");
 				string name = recordData.GetValue<string>("Text");
+				return (id, name);
+			}
+
+			static (string, string) GetUltimatumEncountersKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Text").Trim();
+				return (id, name);
+			}
+
+			static (string, string) GetUltimatumItemisedRewardsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Text").Trim();
 				return (id, name);
 			}
 		}
