@@ -2,7 +2,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 {
 	public class FileDefinition
 	{
-		public FileDefinition(string name, FieldDefinition[] fields)
+		public FileDefinition(string name, params FieldDefinition[] fields)
 		{
 			Name = name;
 			Fields = fields;

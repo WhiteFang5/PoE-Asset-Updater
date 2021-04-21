@@ -178,10 +178,6 @@ namespace PoEAssetVisualizer
 							{
 								case ".dat":
 								case ".dat64":
-									if(_datDefinitions == null)
-									{
-										_datDefinitions = DatDefinitions.ParsePyPoE();
-									}
 									FillDatViewer(_openedAssetFile);
 									/*_datDefinitionsWatcher = new FileSystemWatcher(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), DatDefinitionFileName)
 									{
@@ -235,6 +231,7 @@ namespace PoEAssetVisualizer
 			{
 				PushCursor(Cursors.Wait);
 
+				_datDefinitions = null;
 				FillDatViewer(_openedAssetFile);
 
 				PopCursor();
@@ -291,6 +288,10 @@ namespace PoEAssetVisualizer
 
 			try
 			{
+				if(_datDefinitions == null)
+				{
+					_datDefinitions = DatDefinitions.ParsePyPoE();
+				}
 				DatFile datFile = new DatFile(assetFile, _datDefinitions);
 
 				DatViewer.Columns.Add(new DataGridTextColumn()

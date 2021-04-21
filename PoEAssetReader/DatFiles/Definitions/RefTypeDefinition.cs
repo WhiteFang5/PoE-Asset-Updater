@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace PoEAssetReader.DatFiles.Definitions
@@ -25,7 +26,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 		{
 			var pointer = binaryReader.ReadUInt32();
 			var oldPos = binaryReader.BaseStream.Position;
-			binaryReader.BaseStream.Seek(dataSectionOffset + pointer, SeekOrigin.Begin);
+			binaryReader.BaseStream.Seek(Math.Min(binaryReader.BaseStream.Length, dataSectionOffset + pointer), SeekOrigin.Begin);
 			var value = RefType.ReadData(binaryReader, dataSectionOffset);
 			binaryReader.BaseStream.Seek(oldPos, SeekOrigin.Begin);
 			return value;

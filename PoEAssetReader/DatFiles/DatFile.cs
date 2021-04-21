@@ -16,7 +16,7 @@ namespace PoEAssetReader.DatFiles
 		#endregion
 
 		public DatFile(AssetFile assetFile, DatDefinitions datDefinitions)
-			: this(assetFile.GetFileContents(), datDefinitions.FileDefinitions.First(x => x.Name == Path.GetFileName(assetFile.Name)))
+			: this(assetFile.GetFileContents(), datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == Path.GetFileName(assetFile.Name)) ?? new FileDefinition($"[DUMMY] {assetFile.Name}"))
 		{
 		}
 
@@ -34,7 +34,7 @@ namespace PoEAssetReader.DatFiles
 			binaryReader.BaseStream.Seek(dataSectionOffset, SeekOrigin.Begin);
 			if(binaryReader.ReadUInt64() != MagicNumber)
 			{
-				throw new Exception("Missing magic number after records.");
+				throw new Exception($"Missing magic number after records.");
 			}
 
 			binaryReader.BaseStream.Seek(4, SeekOrigin.Begin);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,16 @@ namespace PoEAssetReader.DatFiles.Definitions
 	public abstract class TypeDefinition
 	{
 		#region Consts
+
+		static TypeDefinition()
+		{
+			for(int i = 1; i <= 100; i++)
+			{
+				string name = $"byte[{i.ToString(CultureInfo.InvariantCulture)}]";
+				int bytesToRead = i; // Explicitly capture the variable!
+				TypeDefinitionMapping.Add(name, new GenericTypeDefinition(name, typeof(byte[]), bs => bs.ReadBytes(bytesToRead)));
+			}
+		}
 
 		private const string RefDataTypeName = "ref|";
 		private const string ListDataTypeName = "list|";
@@ -25,17 +36,18 @@ namespace PoEAssetReader.DatFiles.Definitions
 			new GenericTypeDefinition("long", typeof(long), bs => bs.ReadInt64()),
 			new GenericTypeDefinition("ulong", typeof(ulong), bs => bs.ReadUInt64()),
 			new GenericTypeDefinition("string", typeof(string), bs => {
+				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
-				char ch;
-				while ((ch = bs.ReadChar()) != 0)
+				int ch;
+				while ((ch = bs.PeekChar()) > 0)
 				{
-					sb.Append(ch);
+					sb.Append(bs.ReadChar());
 				}
-				ch = bs.ReadChar();
 				// string should end with int(0)
 				if (ch != 0)
 				{
-					throw new Exception("Not found int(0) value at the end of the string");
+					bs.BaseStream.Seek(oldPos, SeekOrigin.Begin);
+					return $"[ERROR: Could not read string!] pointer: {(bs.PeekChar() != -1 ? bs.ReadInt32() : -1)}";
 				}
 				return sb.ToString();
 			}),
