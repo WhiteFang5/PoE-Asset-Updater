@@ -271,20 +271,39 @@ namespace PoEAssetUpdater
 
 			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("Data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "Data");
 
+			// Create a JSON writer with human-readable output.
 			using(var streamWriter = new StreamWriter(exportFilePath))
+			using(var jsonWriter = new JsonTextWriter(streamWriter)
 			{
-				// Create a JSON writer with human-readable output.
-				var jsonWriter = new JsonTextWriter(streamWriter)
-				{
-					Formatting = Formatting.Indented,
-					Indentation = 1,
-					IndentChar = '\t'
-				};
+				Formatting = Formatting.Indented,
+				Indentation = 1,
+				IndentChar = '\t',
+			})
+			{
 				jsonWriter.WriteStartObject();
 
 				writeData(dataFiles, jsonWriter);
 
 				jsonWriter.WriteEndObject();
+			}
+
+			var minifiedDir = Path.Combine(Path.GetDirectoryName(exportFilePath), "minified");
+			if(!Directory.Exists(minifiedDir))
+			{
+				Directory.CreateDirectory(minifiedDir);
+			}
+			var minifiedFilePath = Path.Combine(minifiedDir, Path.GetFileName(exportFilePath));
+
+			// Create a minified json.
+			using(var streamReader = new StreamReader(exportFilePath))
+			using(var streamWriter = new StreamWriter(minifiedFilePath))
+			using(JsonReader jsonReader = new JsonTextReader(streamReader))
+			using(JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
+			{
+				Formatting = Formatting.None,
+			})
+			{
+				jsonWriter.WriteToken(jsonReader);
 			}
 
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
@@ -434,6 +453,7 @@ namespace PoEAssetUpdater
 					["GrantedEffectQualityTypes.dat"] = GetAlternateGemQualityTypesKVP,
 					["UltimatumEncounters.dat"] = GetUltimatumEncountersKVP,
 					["UltimatumItemisedRewards.dat"] = GetUltimatumItemisedRewardsKVP,
+					["IncursionRooms.dat"] = GetIncursionRoomsKVP,
 				}, false);
 			}
 
@@ -505,6 +525,17 @@ namespace PoEAssetUpdater
 				string id = recordData.GetValue<string>("Id");
 				string name = recordData.GetValue<string>("Text").Trim();
 				return (id, name);
+			}
+
+			static (string, string) GetIncursionRoomsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Name").Trim();
+				if(string.IsNullOrEmpty(name))
+				{
+					return (null, null);
+				}
+				return ($"IncursionRoom{id}", name);
 			}
 		}
 
