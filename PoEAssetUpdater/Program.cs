@@ -97,7 +97,7 @@ namespace PoEAssetUpdater
 			["Leaguestone"] = ItemCategory.Leaguestone,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
-			["AbstractMiscMapItem"] = ItemCategory.Map,
+			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
 			["OfferingToTheGoddess"] = ItemCategory.MapFragment,
 			// Metamorph Samples
@@ -1046,6 +1046,11 @@ namespace PoEAssetUpdater
 								PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
 								category = ItemCategory.CurrencySeed;
 							}
+							break;
+
+						// Special case for Incursion Temple & Inscribed Ultimatums
+						case ItemCategory.MapFragment when id.StartsWith("Itemised"):
+							category = ItemCategory.Map;
 							break;
 
 						// Special case of Heist Equipment & Map Fragments
