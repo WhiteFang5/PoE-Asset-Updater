@@ -943,19 +943,15 @@ namespace PoEAssetUpdater
 			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, JsonWriter jsonWriter)
 			{
 				string desc = statLine.StatDescription;
-				string descSuffix;
+				string descSuffix = null;
 				if(LabelsWithSuffix.Contains(label))
 				{
 					descSuffix = $" \\({label}\\)";
 				}
-				else
-				{
-					descSuffix = string.Empty;
-				}
 
 				if(options == null)
 				{
-					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(desc, descSuffix)));
+					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(desc, descSuffix)));
 				}
 				else
 				{
@@ -963,8 +959,17 @@ namespace PoEAssetUpdater
 					{
 						// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
 						string optionDesc = string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
-						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(string.Concat(optionDesc, descSuffix)));
+						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(optionDesc, descSuffix)));
 					}
+				}
+
+				static string AppendSuffix(string text, string suffix)
+				{
+					if(string.IsNullOrEmpty(suffix))
+					{
+						return text;
+					}
+					return string.Join("\n", text.Split('\n').Select(x => string.Concat(x, suffix)).ToArray());
 				}
 
 				void WriteStatLine(string predicate, string regex)
