@@ -190,8 +190,8 @@ namespace PoEAssetUpdater
 			public StatLine(string numberPart, string statDescription)
 			{
 				NumberPart = numberPart;
-				StatDescription = statDescription;
-				_strippedTradeAPIStatDescription = StatDescription.Split('\n').First();
+				StatDescription = statDescription.Trim();
+				_strippedTradeAPIStatDescription = StatDescription.Split('\n').First().Trim();
 			}
 
 			#region Public Methods
@@ -203,11 +203,11 @@ namespace PoEAssetUpdater
 			{
 				if(statDescription.Contains("\n"))
 				{
-					return StatDescription == statDescription;
+					return StatDescription == statDescription.Trim();
 				}
 				else
 				{
-					return _strippedTradeAPIStatDescription == statDescription;
+					return _strippedTradeAPIStatDescription == statDescription.Trim();
 				}
 			}
 
