@@ -4,30 +4,8 @@ import io
 fileName = 'stats'
 
 def writeLog(logFile, log):
-    print(log)
+    print(log.encode("utf-8"))
     logFile.write(log + "\n")
-
-def checkExplicitStats(logFile, statKey, ogStat, newStat):
-    idMismatch = False
-    for key in ogStat:
-        if key not in newStat:
-            writeLog(logFile, statKey + ' is missing key: ' + key)
-        else:
-            originalWord = str(ogStat[key])
-            newWord = str(newStat[key])
-            if key != 'text' and originalWord != newWord:
-                writeLog(logFile, statKey + ' has mismatched: ' + key + ' (Original: ' + originalWord + ' | New: ' + newWord + ')')
-                if key == 'id':
-                    idMismatch = True
-            elif idMismatch is False and key == 'text' and '1' in ogStat[key]:
-                for desc in ogStat[key]['1']:
-                    if desc not in newStat[key]['1']:
-                        writeLog(logFile, statKey + ' is missing desc ' + desc + ' (Value: ' + ogStat[key]['1'][desc])
-                    else:
-                        originalDesc = ogStat[key]['1'][desc]
-                        newDesc = newStat[key]['1'][desc]
-                        if originalDesc != newDesc:
-                            writeLog(logFile, statKey + ' has mismatched desc: ' + desc + ' (Original: ' + originalDesc + ' | New: ' + newDesc + ')')
 
 #open stats files
 with open(fileName + '.json', 'r', encoding='utf-8') as f:
@@ -36,20 +14,81 @@ with open('newFiles/' + fileName + '.json', 'r', encoding='utf-8') as f:
     newStats = json.load(f)
 
 with io.open('validate-' + fileName + '.log', 'w', encoding='utf-8') as f:
-    for statType in originalStats:
-        writeLog(f, 'Checking stat type: ' + statType)
-        if statType not in newStats:
-            # check for stat type keys
-            writeLog(f, 'Missing: ' + statType)
-        else: 
-            # checks that all stat_x types match in explicit, implicit, etc
-            for stat_x in originalStats[statType]:
-                if stat_x not in newStats[statType]:
-                    if 'id' in originalStats[statType]:
-                        writeLog(f, 'Missing stat: ' + stat_x + ' (ID: ' + originalStats[statType]['id'] + ')')
-                    else:
-                        writeLog(f, 'Missing stat: ' + stat_x + ' (No ID)')
+    # check which data got removed or changed
+    for originalType in originalStats:
+        #writeLog(f, f'Checking {originalId}')
+        if originalType not in newStats:
+            writeLog(f, f'Missing {originalType}')
+        else:
+            for originalTradeId in originalStats[originalType]:
+                if originalTradeId not in newStats[originalType]:
+                    writeLog(f, f'Missing {originalType}.{originalTradeId}')
                 else:
-                    checkExplicitStats(f, stat_x, originalStats[statType][stat_x], newStats[statType][stat_x])
-        writeLog(f, '---')
-        writeLog(f, '')
+                    for originalKey in originalStats[originalType][originalTradeId]:
+                        if originalKey not in newStats[originalType][originalTradeId]:
+                            if originalKey != 'text':
+                                writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey} (Value: {originalStats[originalType][originalTradeId][originalKey]})')
+                            else:
+                                writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}')
+                        elif originalKey == 'text':
+                            originalLang = '1'
+                            if originalLang not in originalStats[originalType][originalTradeId][originalKey]:
+                                writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}')
+                            elif originalLang not in newStats[originalType][originalTradeId][originalKey]:
+                                writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}')
+                            else:
+                                for originalTextObj in originalStats[originalType][originalTradeId][originalKey][originalLang]:
+                                    newLang = newStats[originalType][originalTradeId][originalKey][originalLang]
+                                    for originalText in originalTextObj:
+                                        originalTextValue = originalTextObj[originalText]
+                                        exists = False
+                                        existsKeyMatch = False
+                                        existsNewText = None
+                                        for newTextObj in newLang:
+                                            for newText in newTextObj:
+                                                if originalTextValue == newTextObj[newText]:
+                                                    if not existsKeyMatch:
+                                                        existsNewText = newText
+                                                    existsKeyMatch |= (originalText == existsNewText)
+                                                    exists = True
+                                        if not exists:
+                                            writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}[].{originalText} (Value: {originalTextValue})')
+                                        elif originalText != existsNewText:
+                                            writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey}.{originalLang}[].{originalText} (Original: {originalText} | New {existsNewText})')
+                        else:
+                            originalValue = str(originalStats[originalType][originalTradeId][originalKey])
+                            newValue = str(newStats[originalType][originalTradeId][originalKey])
+                            if originalValue != newValue:
+                                writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey} (Original: {originalValue} | New {newValue})')
+
+    # check if which new data got added
+    for newType in newStats:
+        if newType not in originalStats:
+           writeLog(f, f'Added {newType}')
+        else:
+            for newTradeId in newStats[newType]:
+                if newTradeId not in originalStats[newType]:
+                    writeLog(f, f'Added {newType}.{newTradeId}')
+                else:
+                    for newKey in newStats[newType][newTradeId]:
+                        if newKey not in originalStats[newType][newTradeId]:
+                            writeLog(f, f'Added {newType}.{newTradeId}.{newKey}')
+                        elif newKey == 'text':
+                            for newLang in newStats[newType][newTradeId][newKey]:
+                                if newLang not in originalStats[newType][newTradeId][newKey]:
+                                    writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}')
+                                else:
+                                    for newTextObj in newStats[newType][newTradeId][newKey][newLang]:
+                                        originalLang = originalStats[newType][newTradeId][newKey][newLang]
+                                        for newText in newTextObj:
+                                            newTextValue = newTextObj[newText]
+                                            exists = False
+                                            for originalTextObj in originalLang:
+                                                for originalText in originalTextObj:
+                                                    if newTextValue == originalTextObj[originalText]:
+                                                        exists = True
+                                                        break
+                                                if exists:
+                                                    break
+                                            if not exists:
+                                                writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}[].{newText} (Value: {newTextValue})')
