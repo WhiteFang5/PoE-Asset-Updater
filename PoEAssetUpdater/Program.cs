@@ -47,6 +47,21 @@ namespace PoEAssetUpdater
 			[Language.TraditionalChinese] = "https://web.poe.garena.tw/api/trade/data/stats",
 		};
 
+		private const string CountryCachedFileNameFormat = "{0}.stats.json";
+		private static readonly Dictionary<Language, string> LanguageToPoETradeAPICachedFileNameMapping = new Dictionary<Language, string>()
+		{
+			[Language.English] = string.Format(CountryCachedFileNameFormat, "www"),
+			[Language.Portuguese] = string.Format(CountryCachedFileNameFormat, "br"),
+			[Language.Russian] = string.Format(CountryCachedFileNameFormat, "ru"),
+			[Language.Thai] = string.Format(CountryCachedFileNameFormat, "th"),
+			[Language.German] = string.Format(CountryCachedFileNameFormat, "de"),
+			[Language.French] = string.Format(CountryCachedFileNameFormat, "fr"),
+			[Language.Spanish] = string.Format(CountryCachedFileNameFormat, "es"),
+			[Language.Korean] = string.Format(CountryCachedFileNameFormat, "kr"),
+			[Language.SimplifiedChinese] = string.Format(CountryCachedFileNameFormat, "ch"),
+			[Language.TraditionalChinese] = string.Format(CountryCachedFileNameFormat, "tw"),
+		};
+
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
 		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant" };
@@ -183,9 +198,9 @@ namespace PoEAssetUpdater
 		public static void Main(string[] args)
 		{
 			// Validate args array size
-			if(args.Length != 2)
+			if(args.Length < 2)
 			{
-				Logger.WriteLine($"Invalid number of arguments. Found {args.Length}, expected 2.");
+				Logger.WriteLine($"Invalid number of arguments. Found {args.Length}, expected atleast 2.");
 				PrintUsage();
 				return;
 			}
@@ -205,6 +220,11 @@ namespace PoEAssetUpdater
 				PrintUsage();
 				return;
 			}
+			string tradeApiCacheDir = args.Length > 2 ? args[2] : null;
+			if(!string.IsNullOrEmpty(tradeApiCacheDir) && !Directory.Exists(tradeApiCacheDir))
+			{
+				Directory.CreateDirectory(tradeApiCacheDir);
+			}
 
 			try
 			{
@@ -220,7 +240,7 @@ namespace PoEAssetUpdater
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				//maps.json -> Likely created/maintained manually.
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
-				ExportStats(assetIndex, datDefinitions, assetOutputDir);
+				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
 				//stats-local.json -> Likely/maintained created manually.
 				ExportWords(assetIndex, datDefinitions, assetOutputDir);
 				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
@@ -250,7 +270,7 @@ namespace PoEAssetUpdater
 		private static void PrintUsage()
 		{
 			Logger.WriteLine("Usage:");
-			Logger.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir>");
+			Logger.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir> <optional:trade-api-cache-dir>");
 			Console.Read();
 		}
 
@@ -711,7 +731,7 @@ namespace PoEAssetUpdater
 			}
 		}
 
-		private static void ExportStats(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		private static void ExportStats(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir, string tradeApiCacheDir)
 		{
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, false);
 
@@ -815,24 +835,39 @@ namespace PoEAssetUpdater
 
 				// Download the PoE Trade Stats json
 				Dictionary<Language, JObject> poeTradeStats = new Dictionary<Language, JObject>();
+				Dictionary<Language, string> poeTradeSiteContent = new Dictionary<Language, string>();
+				bool retrievedAllContent = true;
 				foreach ((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
 				{
 					try
 					{
 						HttpWebRequest request = (HttpWebRequest)WebRequest.Create(tradeAPIUrl);
-						request.Timeout = 5*1000;
+						request.Timeout = 10*1000;
 						request.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
 						using var response = (HttpWebResponse)request.GetResponse();
 						if(response.StatusCode == HttpStatusCode.OK)
 						{
 							using Stream dataStream = response.GetResponseStream();
 							using StreamReader reader = new StreamReader(dataStream);
-							poeTradeStats[language] = JObject.Parse(reader.ReadToEnd());
+							string content = reader.ReadToEnd();
+							poeTradeSiteContent[language] = content;
+							poeTradeStats[language] = JObject.Parse(content);
 						}
 					}
 					catch(Exception ex)
 					{
+						retrievedAllContent = false;
 						PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
+						// Check if we have a cached file
+						if(!string.IsNullOrEmpty(tradeApiCacheDir))
+						{
+							string cachedFileName = Path.Combine(tradeApiCacheDir, LanguageToPoETradeAPICachedFileNameMapping[language]);
+							if(File.Exists(cachedFileName))
+							{
+								PrintWarning($"Using cached trade-api data for {language}");
+								poeTradeStats[language] = JObject.Parse(File.ReadAllText(cachedFileName));
+							}
+						}
 					}
 					// Sleep for a short time to avoid spamming the different trade APIs
 					Thread.Sleep(1000);
@@ -845,6 +880,20 @@ namespace PoEAssetUpdater
 					PrintError($"Failed to parse PoE Trade API Stats.");
 					return;
 				}
+
+				// Update the trade api cached files
+				if(retrievedAllContent && !string.IsNullOrEmpty(tradeApiCacheDir))
+				{
+					foreach((var language, string content) in poeTradeSiteContent)
+					{
+						if(LanguageToPoETradeAPICachedFileNameMapping.TryGetValue(language, out string fileName))
+						{
+							string cachedFileName = Path.Combine(tradeApiCacheDir, fileName);
+							File.WriteAllText(cachedFileName, content);
+						}
+					} 
+				}
+				poeTradeSiteContent.Clear();
 
 				// Parse the PoE Trade Stats
 				foreach(var result in poeTradeStats[Language.English]["result"])
