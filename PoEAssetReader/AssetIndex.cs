@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace PoEAssetReader
 {
@@ -57,6 +58,24 @@ namespace PoEAssetReader
 		}
 
 		public byte[] GetFileContents(AssetFile assetFile) => assetFile.Bundle.GetFileContents(assetFile);
+
+		public void ExportBundleTree(string path)
+		{
+			using StreamWriter stream = new StreamWriter(path);
+
+			stream.WriteLine("{");
+			foreach(AssetBundle bundle in Bundles.OrderBy(x => x.Name))
+			{
+				stream.WriteLine($"\t\"{bundle.Name}\" : [");
+				AssetFile lastFile = bundle.Files.Last();
+				foreach(AssetFile file in bundle.Files)
+				{
+					stream.WriteLine($"\t\t\"{file.Name}\"{(lastFile == file ? "" : ",")}");
+				}
+				stream.WriteLine("]");
+			}
+			stream.WriteLine("}");
+		}
 
 		#endregion
 
