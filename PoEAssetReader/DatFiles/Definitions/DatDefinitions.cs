@@ -53,6 +53,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 			return new DatDefinitions(fileDefinitions.ToArray());
 		}
 
+		public static DatDefinitions ParseLocalPyPoE(string fileName) => ParsePyPoE(File.ReadAllText(fileName));
+
 		public static DatDefinitions ParsePyPoE()
 		{
 			using WebClient wc = new WebClient();

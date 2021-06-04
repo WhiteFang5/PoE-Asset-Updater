@@ -225,12 +225,19 @@ namespace PoEAssetUpdater
 			{
 				Directory.CreateDirectory(tradeApiCacheDir);
 			}
+			string pyPoeFileName = args.Length > 3 ? args[3] : null;
+			if(!string.IsNullOrEmpty(pyPoeFileName) && !File.Exists(pyPoeFileName))
+			{
+				Logger.WriteLine($"File '{pyPoeFileName}' does not exist.");
+				PrintUsage();
+				return;
+			}
 
 			try
 			{
 				// Read the index
 				AssetIndex assetIndex = new AssetIndex(poeDirectory);
-				DatDefinitions datDefinitions = DatDefinitions.ParsePyPoE();
+				DatDefinitions datDefinitions = DatDefinitions.ParseLocalPyPoE(pyPoeFileName);
 
 				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
 
@@ -270,7 +277,7 @@ namespace PoEAssetUpdater
 		private static void PrintUsage()
 		{
 			Logger.WriteLine("Usage:");
-			Logger.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir> <optional:trade-api-cache-dir>");
+			Logger.WriteLine($"{ApplicationName} <path-to-Content.ggpk> <asset-output-dir> <optional:trade-api-cache-dir> <optional:py-poe-dat-definitions-file>");
 			Console.Read();
 		}
 
