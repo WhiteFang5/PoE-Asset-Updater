@@ -454,6 +454,8 @@ namespace PoEAssetUpdater
 					["UltimatumEncounters.dat"] = GetUltimatumEncountersKVP,
 					["UltimatumItemisedRewards.dat"] = GetUltimatumItemisedRewardsKVP,
 					["IncursionRooms.dat"] = GetIncursionRoomsKVP,
+					["HeistJobs.dat"] = GetHeistJobsKVP,
+					["HeistObjectiveValueDescriptions.dat"] = GetHeistObjectivesKVP,
 				}, false);
 			}
 
@@ -536,6 +538,28 @@ namespace PoEAssetUpdater
 					return (null, null);
 				}
 				return ($"IncursionRoom{id}", name);
+			}
+
+			static (string, string) GetHeistJobsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>("Id");
+				string name = recordData.GetValue<string>("Name").Trim();
+				if(string.IsNullOrEmpty(name))
+				{
+					return (null, null);
+				}
+				return ($"HeistJob{id}", name);
+			}
+
+			static (string, string) GetHeistObjectivesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<int>("Id").ToString(CultureInfo.InvariantCulture);
+				string name = recordData.GetValue<string>("Name").Trim();
+				if(string.IsNullOrEmpty(name))
+				{
+					return (null, null);
+				}
+				return ($"HeistObjectiveValue{id}", name);
 			}
 		}
 
