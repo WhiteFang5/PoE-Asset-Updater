@@ -216,6 +216,7 @@ namespace PoEAssetUpdater
 
 				ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
+				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				//maps.json -> Likely created/maintained manually.
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
@@ -307,6 +308,37 @@ namespace PoEAssetUpdater
 			}
 
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
+		}
+
+		private static Dictionary<Language, List<DatFile>> GetLanguageDataFiles(List<AssetFile> assetFiles, DatDefinitions datDefinitions, params string[] datFileNames)
+		{
+			Dictionary<Language, List<DatFile>> datFiles = new Dictionary<Language, List<DatFile>>();
+			foreach(var language in AllLanguages)
+			{
+				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
+				var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
+				var languageFiles = assetFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
+				if(languageFiles.Count > 0)
+				{
+					datFiles.Add(language, new List<DatFile>());
+
+					foreach(var datFileName in datFileNames)
+					{
+						var datContainer = GetDatFile(languageFiles, datDefinitions, datFileName);
+						if(datContainer == null)
+						{
+							// An error was already logged.
+							continue;
+						}
+						datFiles[language].Add(datContainer);
+					}
+				}
+				else
+				{
+					Logger.WriteLine($"\t{language} Language folder not found.");
+				}
+			}
+			return datFiles;
 		}
 
 		private static void ExportLanguageDataFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
@@ -1026,79 +1058,12 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteStartObject();
 
 				// Write the Base Item Types
-				for(int i = 0, recordCount = baseItemTypesDatContainer.Records.Count; i < recordCount; i++)
+				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
 					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
-					string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
-
-					if(IgnoredItemIds.Contains(id))
-					{
-						continue;
-					}
-
-					// Check the inheritance mapping for a matching category.
-					if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
-					{
-						PrintError($"Missing {Path.GetFileNameWithoutExtension(baseItemTypesDatContainer.FileDefinition.Name)} Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {i}");
-						continue;
-					}
-
-					// Special cases
-					switch (category)
-					{
-						// Special case for Fossils
-						case ItemCategory.Currency when id.StartsWith("CurrencyDelveCrafting"):
-							category = ItemCategory.CurrencyFossil;
-							break;
-
-						// Special case for Scarabs
-						case ItemCategory.MapFragment when id.StartsWith("Scarab"):
-							category = ItemCategory.MapScarab;
-							break;
-
-						// Special case for Awakened Support Gems
-						case ItemCategory.GemSupportGem when id.EndsWith("Plus"):
-							category = ItemCategory.GemSupportGemplus;
-							break;
-
-						// Special case for Cluster Jewels
-						case ItemCategory.Jewel when id.StartsWith("JewelPassiveTreeExpansion"):
-							category = ItemCategory.JewelCluster;
-							break;
-
-						// Special case for Harvest Seeds
-						case ItemCategory.CurrencySeed:
-							string seedName = baseItemType.GetValue<string>("Name").Split(' ').First();
-							if (!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
-							{
-								PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
-								category = ItemCategory.CurrencySeed;
-							}
-							break;
-
-						// Special case for Incursion Temple & Inscribed Ultimatums
-						case ItemCategory.MapFragment when id.StartsWith("Itemised"):
-							category = ItemCategory.Map;
-							break;
-
-						// Special case of Heist Equipment & Map Fragments
-						case ItemCategory.HeistEquipment:
-						case ItemCategory.MapFragment:
-							foreach(ulong tag in baseItemType.GetValue<List<ulong>>("TagsKeys"))
-							{
-								if(TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
-								{
-									category = newCategory;
-								}
-							}
-							if(category == ItemCategory.HeistEquipment)
-							{
-								PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}')");
-							}
-							break;
-					}
-
+					var category = GetItemCategory(baseItemType, i);
+					
 					// Only write to the json if an appropriate category was found.
 					if(category != null)
 					{
@@ -1177,6 +1142,202 @@ namespace PoEAssetUpdater
 
 				jsonWriter.WriteEndObject();
 			}
+		}
+
+		private static string GetItemCategory(DatRecord baseItemType, int rowIndex)
+		{
+			string id = baseItemType.GetValue<string>("Id").Split('/').Last();
+			string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
+
+			if(IgnoredItemIds.Contains(id))
+			{
+				return null;
+			}
+
+			// Check the inheritance mapping for a matching category.
+			if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
+			{
+				PrintError($"Missing BaseItemTypes Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {rowIndex}");
+				return null;
+			}
+
+			// Special cases
+			switch(category)
+			{
+				// Special case for Fossils
+				case ItemCategory.Currency when id.StartsWith("CurrencyDelveCrafting"):
+					category = ItemCategory.CurrencyFossil;
+					break;
+
+				// Special case for Scarabs
+				case ItemCategory.MapFragment when id.StartsWith("Scarab"):
+					category = ItemCategory.MapScarab;
+					break;
+
+				// Special case for Awakened Support Gems
+				case ItemCategory.GemSupportGem when id.EndsWith("Plus"):
+					category = ItemCategory.GemSupportGemplus;
+					break;
+
+				// Special case for Cluster Jewels
+				case ItemCategory.Jewel when id.StartsWith("JewelPassiveTreeExpansion"):
+					category = ItemCategory.JewelCluster;
+					break;
+
+				// Special case for Harvest Seeds
+				case ItemCategory.CurrencySeed:
+					string seedName = baseItemType.GetValue<string>("Name").Split(' ').First();
+					if(!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
+					{
+						PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
+						category = ItemCategory.CurrencySeed;
+					}
+					break;
+
+				// Special case for Incursion Temple & Inscribed Ultimatums
+				case ItemCategory.MapFragment when id.StartsWith("Itemised"):
+					category = ItemCategory.Map;
+					break;
+
+				// Special case of Heist Equipment & Map Fragments
+				case ItemCategory.HeistEquipment:
+				case ItemCategory.MapFragment:
+					foreach(ulong tag in baseItemType.GetValue<List<ulong>>("TagsKeys"))
+					{
+						if(TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
+						{
+							category = newCategory;
+						}
+					}
+					if(category == ItemCategory.HeistEquipment)
+					{
+						PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}')");
+					}
+					break;
+			}
+
+			return category;
+		}
+
+		private static void ExportBaseItemTypesV2(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types-v2.json"), WriteRecords, true);
+
+			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
+			{
+				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.dat");
+				var propheciesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Prophecies.dat");
+				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat");
+				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat");
+
+				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
+				var propheciesDatContainer = propheciesDatContainers[Language.English][0];
+				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
+
+				// Write the Base Item Types
+				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
+				{
+					var baseItemType = baseItemTypesDatContainer.Records[i];
+					string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
+					if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
+					{
+						continue;
+					}
+					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
+					string name = Escape(baseItemType.GetValue<string>("Name").Trim());
+
+					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+
+					WriteRecord(id, names, GetItemCategory(baseItemType, i), baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
+				}
+
+				// Write the Prophecies
+				for(int i = 0; i < propheciesDatContainer.Count; i++)
+				{
+					var prophecy = propheciesDatContainer.Records[i];
+					string id = prophecy.GetValue<string>("Id");
+
+					if(IgnoredProphecyIds.Contains(id))
+					{
+						continue;
+					}
+
+					var names = propheciesDatContainers.ToDictionary(kvp => kvp.Key, kvp =>
+					{
+						string name = kvp.Value[0].Records[i].GetValue<string>("Name").Trim();
+
+						if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
+						{
+							var clientStringsDatContainer = clientStringsDatContainers[kvp.Key][0];
+							var clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetValue<string>("Id") == clientStringId);
+							if(clientStringRecordData != null)
+							{
+								name += $" ({clientStringRecordData.GetValue<string>("Text")})";
+							}
+							else
+							{
+								PrintError($"Missing {nameof(clientStringId)} for '{clientStringId}'");
+							}
+						}
+
+						return Escape(name);
+					});
+
+					WriteRecord(id, names, ItemCategory.Prophecy, 1, 1);
+				}
+
+				// Write the Monster Varieties
+				for(int i = 0; i < monsterVarietiesDatContainer.Count; i++)
+				{
+					var monsterVariety = monsterVarietiesDatContainer.Records[i];
+					string id = monsterVariety.GetValue<string>("Id").Split('/').Last();
+
+					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+
+					WriteRecord(id, names, ItemCategory.MonsterBeast, 1, 1);
+				}
+
+				void WriteRecord(string id, Dictionary<Language, string> names, string category, int width, int height)
+				{
+					// Write ID
+					jsonWriter.WritePropertyName(id);
+					jsonWriter.WriteStartObject();
+
+					// Write Names
+					jsonWriter.WritePropertyName("names");
+					jsonWriter.WriteStartObject();
+					foreach((var language, var name) in names)
+					{
+						jsonWriter.WritePropertyName(((int)language).ToString(CultureInfo.InvariantCulture));
+						jsonWriter.WriteValue(name);
+					}
+					jsonWriter.WriteEndObject();
+
+					// Write Category
+					if(!string.IsNullOrEmpty(category))
+					{
+						jsonWriter.WritePropertyName("category");
+						jsonWriter.WriteValue(category);
+					}
+
+					// Write Size
+					jsonWriter.WritePropertyName("width");
+					jsonWriter.WriteValue(width);
+					jsonWriter.WritePropertyName("height");
+					jsonWriter.WriteValue(height);
+
+					jsonWriter.WriteEndObject();
+				}
+			}
+
+			static string Escape(string input)
+				=> input
+					.Replace("[", "\\[")
+					.Replace("]", "\\]")
+					.Replace("(", "\\(")
+					.Replace(")", "\\)")
+					.Replace(".", "\\.")
+					.Replace("|", "\\|");
 		}
 
 		#endregion
