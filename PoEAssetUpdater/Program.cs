@@ -1285,10 +1285,14 @@ namespace PoEAssetUpdater
 				var propheciesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Prophecies.dat");
 				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat");
 				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat");
+				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat");
+
+				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat");
 
 				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
 				var propheciesDatContainer = propheciesDatContainers[Language.English][0];
 				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
+				var uniqueMapsDatContainer = uniqueMapsDatContainers[Language.English][0];
 
 				// Write the Base Item Types
 				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
@@ -1302,9 +1306,18 @@ namespace PoEAssetUpdater
 					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
 					string name = Escape(baseItemType.GetValue<string>("Name").Trim());
 
+					var category = GetItemCategory(baseItemType, i);
+
+					// Explicitly exclude old maps from previous expansions.
+					if(ShouldExclude(id, category))
+					{
+						Logger.WriteLine($"[BITsV2] Excluded: '{id}' ('{name}')");
+						continue;
+					}
+
 					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
 
-					WriteRecord(id, names, GetItemCategory(baseItemType, i), baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
+					WriteRecord(id, names, GetArtNameById(id), category, baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
 				}
 
 				// Write the Prophecies
@@ -1339,7 +1352,7 @@ namespace PoEAssetUpdater
 						return Escape(name);
 					});
 
-					WriteRecord(id, names, ItemCategory.Prophecy, 1, 1);
+					WriteRecord(id, names, GetArtNameById(id), ItemCategory.Prophecy, 1, 1);
 				}
 
 				// Write the Monster Varieties
@@ -1350,10 +1363,49 @@ namespace PoEAssetUpdater
 
 					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
 
-					WriteRecord(id, names, ItemCategory.MonsterBeast, 1, 1);
+					WriteRecord(id, names, GetArtNameById(id), ItemCategory.MonsterBeast, 1, 1);
 				}
 
-				void WriteRecord(string id, Dictionary<Language, string> names, string category, int width, int height)
+				// Write the Unique Map Names
+				for(int i = 0; i < uniqueMapsDatContainer.Count; i++)
+				{
+					var uniqueMap = uniqueMapsDatContainer.Records[i];
+					var itemVisualIdentityKey = (int)uniqueMap.GetValue<ulong>("ItemVisualIdentityKey");
+					var itemVisualIdentity = itemVisualIdentityDatContainer.Records[itemVisualIdentityKey];
+
+					string id = itemVisualIdentity.GetValue<string>("Id");
+					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+
+					WriteRecord(id, names, GetArtName(itemVisualIdentity), ItemCategory.Map, 1, 1);
+				}
+
+				// Nested Method(s)
+				string GetArtNameById(string id) => GetArtName(itemVisualIdentityDatContainer.Records.FirstOrDefault(x => x.GetValue<string>("Id") == id));
+
+				string GetArtName(DatRecord itemVisualIdentity)
+				{
+					if(itemVisualIdentity == null)
+					{
+						return string.Empty;
+					}
+					string ddsFileName = itemVisualIdentity.GetValue<string>("DDSFile");
+					return ddsFileName.Substring(0, ddsFileName.Length - 4);
+				}
+
+				bool ShouldExclude(string id, string category)
+				{
+					if(category != ItemCategory.Map)
+					{
+						return false;
+					}
+					if(id.StartsWith("MapWorlds") || id.StartsWith("Itemised"))
+					{
+						return false;
+					}
+					return true;
+				}
+
+				void WriteRecord(string id, Dictionary<Language, string> names, string artName, string category, int width, int height)
 				{
 					// Write ID
 					jsonWriter.WritePropertyName(id);
@@ -1368,6 +1420,13 @@ namespace PoEAssetUpdater
 						jsonWriter.WriteValue(name);
 					}
 					jsonWriter.WriteEndObject();
+
+					// Write Art Name
+					if(!string.IsNullOrEmpty(artName))
+					{
+						jsonWriter.WritePropertyName("artName");
+						jsonWriter.WriteValue(artName);
+					}
 
 					// Write Category
 					if(!string.IsNullOrEmpty(category))
