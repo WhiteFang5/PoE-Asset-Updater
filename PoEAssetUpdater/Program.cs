@@ -1307,6 +1307,11 @@ namespace PoEAssetUpdater
 					string name = Escape(baseItemType.GetValue<string>("Name").Trim());
 
 					var category = GetItemCategory(baseItemType, i);
+					if(string.IsNullOrEmpty(category))
+					{
+						// Ignore items without an appropriate category.
+						continue;
+					} 
 
 					// Explicitly exclude old maps from previous expansions.
 					if(ShouldExclude(id, category))
