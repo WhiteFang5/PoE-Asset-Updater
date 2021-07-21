@@ -245,7 +245,7 @@ namespace PoEAssetUpdater
 				ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
-				//maps.json -> Likely created/maintained manually.
+				ExportMaps(assetIndex, datDefinitions, assetOutputDir);
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
 				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
 				//stats-local.json -> Likely/maintained created manually.
@@ -293,15 +293,11 @@ namespace PoEAssetUpdater
 			Logger.WriteLine($"!! WARNING: {message}");
 		}
 
-		private static void ExportDataFile(AssetIndex assetIndex, string exportFilePath, Action<List<AssetFile>, JsonWriter> writeData, bool includeLanguageFolders)
+		private static void WriteJsonFile(string exportFilePath, Action<JsonWriter> writeData)
 		{
-			Logger.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
-
-			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("Data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "Data");
-
 			// Create a JSON writer with human-readable output.
-			using(var streamWriter = new StreamWriter(exportFilePath))
-			using(var jsonWriter = new JsonTextWriter(streamWriter)
+			using(StreamWriter streamWriter = new StreamWriter(exportFilePath))
+			using(JsonTextWriter jsonWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.Indented,
 				Indentation = 1,
@@ -310,21 +306,21 @@ namespace PoEAssetUpdater
 			{
 				jsonWriter.WriteStartObject();
 
-				writeData(dataFiles, jsonWriter);
+				writeData(jsonWriter);
 
 				jsonWriter.WriteEndObject();
 			}
 
-			var minifiedDir = Path.Combine(Path.GetDirectoryName(exportFilePath), "minified");
+			// Create a minified json.
+			string minifiedDir = Path.Combine(Path.GetDirectoryName(exportFilePath), "minified");
 			if(!Directory.Exists(minifiedDir))
 			{
 				Directory.CreateDirectory(minifiedDir);
 			}
-			var minifiedFilePath = Path.Combine(minifiedDir, Path.GetFileName(exportFilePath));
+			string minifiedFilePath = Path.Combine(minifiedDir, Path.GetFileName(exportFilePath));
 
-			// Create a minified json.
-			using(var streamReader = new StreamReader(exportFilePath))
-			using(var streamWriter = new StreamWriter(minifiedFilePath))
+			using(StreamReader streamReader = new StreamReader(exportFilePath))
+			using(StreamWriter streamWriter = new StreamWriter(minifiedFilePath))
 			using(JsonReader jsonReader = new JsonTextReader(streamReader))
 			using(JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
 			{
@@ -333,6 +329,15 @@ namespace PoEAssetUpdater
 			{
 				jsonWriter.WriteToken(jsonReader);
 			}
+		}
+
+		private static void ExportDataFile(AssetIndex assetIndex, string exportFilePath, Action<List<AssetFile>, JsonWriter> writeData, bool includeLanguageFolders)
+		{
+			Logger.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
+
+			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("Data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "Data");
+
+			WriteJsonFile(exportFilePath, jsonWriter => writeData(dataFiles, jsonWriter));
 
 			Logger.WriteLine($"Exported '{exportFilePath}'.");
 		}
@@ -1458,6 +1463,288 @@ namespace PoEAssetUpdater
 					.Replace(")", "\\)")
 					.Replace(".", "\\.")
 					.Replace("|", "\\|");
+		}
+
+		private static void ExportMaps(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			WriteJsonFile(Path.Combine(exportDir, "maps.json"), WriteRecords);
+
+			static string GetContent(string url)
+			{
+				try
+				{
+					HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+					request.Timeout = 10 * 1000;
+					request.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
+					using var response = (HttpWebResponse)request.GetResponse();
+					if(response.StatusCode == HttpStatusCode.OK)
+					{
+						using Stream dataStream = response.GetResponseStream();
+						using StreamReader reader = new StreamReader(dataStream);
+						return reader.ReadToEnd();
+					}
+				}
+				catch(Exception ex)
+				{
+					PrintError($"Failed to connect to '{url}': {ex.Message}");
+				}
+				return null;
+			}
+
+			static string StripWikiMarkdown(string input)
+			{
+				if(!string.IsNullOrEmpty(input))
+				{
+					input = Regex.Replace(input, "<.*?>", string.Empty);
+					input = Regex.Replace(input, "{{c\\|mod\\|(.*?)}}", "$1");
+					input = Regex.Replace(input, "{{il\\|page=(.*?)}}", "$1");
+					input = Regex.Replace(input, "{{il\\|(.*?)}}", "$1");
+					input = Regex.Replace(input, "{{Il\\|(.*?)}}", "$1");
+					input = Regex.Replace(input, "{{.*?}}", string.Empty);
+					input = Regex.Replace(input, "\\[\\[([^\\|]*?)(\\]|\\|.*?\\])\\]", "$1");
+					input = Regex.Replace(input, "'''(.*?)'''", "$1");
+					input = Regex.Replace(input, "''(.*?)''", "$1");
+				}
+				return input;
+			}
+
+			static void WriteRecords(JsonWriter jsonWriter)
+			{
+				string mapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
+
+				int maxLimit = 500; // 500 is the max records per cargo-query for the Wiki API
+				int titleLimit = 50; // 50 is the max titles per query for the Wiki API
+
+				IEnumerable<JToken> items = null;
+
+				string mapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{mapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
+				if(string.IsNullOrEmpty(mapsJson))
+					return;
+
+				string uniqueMapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{mapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
+				if(string.IsNullOrEmpty(uniqueMapsJson))
+					return;
+
+				string bossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{mapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
+				if(string.IsNullOrEmpty(mapsJson))
+					return;
+
+				string uniqueMapBossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{mapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
+				if(string.IsNullOrEmpty(uniqueMapBossesJson))
+					return;
+
+				for(int i = 0; i < 3; i++)
+				{
+					int offset = i * maxLimit;
+					string itemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{mapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+					if(string.IsNullOrEmpty(itemsJson))
+						return;
+
+					var parsed = JObject.Parse(itemsJson)["cargoquery"].Select(x => x["title"]);
+
+					items = items?.Concat(parsed) ?? parsed;
+				}
+
+				string uniqueMapItemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{mapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+				if(string.IsNullOrEmpty(uniqueMapItemsJson))
+					return;
+
+				var maps = JObject.Parse(mapsJson)["cargoquery"].Select(x => x["title"]);
+				var uniqueMaps = JObject.Parse(uniqueMapsJson)["cargoquery"].Select(x => x["title"]);
+				var bosses = JObject.Parse(bossesJson)["cargoquery"].Select(x => x["title"]);
+				var uniqueMapBosses = JObject.Parse(uniqueMapBossesJson)["cargoquery"].Select(x => x["title"]);
+				var uniqueMapItems = JObject.Parse(uniqueMapItemsJson)["cargoquery"].Select(x => x["title"]);
+
+				maps = maps.Concat(uniqueMaps).OrderBy(x => (string)x["page"]).GroupBy(x => (string)x["page"]).Select(x => x.First());
+				bosses = bosses.Concat(uniqueMapBosses).OrderBy(x => (string)x["page"]);
+				items = items.Concat(uniqueMapItems).OrderBy(x => (string)x["page"]);
+
+				int mapCount = maps.Count();
+				IEnumerable<(string, string)> mapContents = null;
+
+				var mapTitles = maps.Select(x => (string)x["page"]);
+
+				for(int i = 0, c = (int)Math.Ceiling((decimal)mapCount / titleLimit); i < c; i++)
+				{
+					int skip = i * titleLimit;
+					int remaining = mapCount - skip;
+					string mapsContentsJson = GetContent($"https://pathofexile.fandom.com/api.php?action=query&format=json&prop=revisions&titles={string.Join("|", mapTitles.Skip(skip).Take(Math.Min(titleLimit, remaining)))}&redirects=1&rvprop=content&rvslots=main");
+					if(string.IsNullOrEmpty(mapsContentsJson))
+						return;
+
+					var parsed = JObject.Parse(mapsContentsJson)["query"]["pages"].Select(x => ((string)x.First["title"], (string)x.First["revisions"][0]["slots"]["main"]["*"]));
+					mapContents = mapContents?.Concat(parsed) ?? parsed;
+				}
+
+				string mapContentsJson = GetContent("https://pathofexile.fandom.com/api.php?action=query&format=json&prop=revisions&titles=Map&redirects=1&rvprop=content&rvslots=main&rvsection=9");
+				if(string.IsNullOrEmpty(mapContentsJson))
+					return;
+
+				string mapcontents = (string)JObject.Parse(mapContentsJson)["query"]["pages"]["1010"]["revisions"][0]["slots"]["main"]["*"];
+				int mapTableStartIndex = mapcontents.IndexOf("{|");
+				mapcontents = mapcontents.Substring(mapTableStartIndex, mapcontents.IndexOf("|}") - mapTableStartIndex);
+				if(string.IsNullOrEmpty(mapcontents))
+				{
+					PrintError("[Maps] Can't find map table in the Maps wiki page.");
+					return;
+				}
+				var rowSplitters = new string[] { "\n|-\n!", "\n|-\n|" };
+				var columnSplitters = new string[] { "!!", "||" };
+				var mapRecords = mapcontents.Split(rowSplitters, StringSplitOptions.RemoveEmptyEntries)
+					.Skip(1)
+					.Select(x => x.Split(columnSplitters, StringSplitOptions.RemoveEmptyEntries).Select(y => StripWikiMarkdown(y.Trim()).Replace("n/a", string.Empty)).ToList()).ToList();
+				int mapNameIdx = mapRecords[0].FindIndex(x => x == "Map");
+				int layoutRatingIdx = mapRecords[0].FindIndex(x => x == "LayoutRating");
+				int bossRatingIdx = mapRecords[0].FindIndex(x => x == "BossRating");
+				int numberOfBossesIdx = mapRecords[0].FindIndex(x => x == "Numberof Bosses");
+				if(mapNameIdx == -1)
+				{
+					PrintError("[Maps] Missing 'Map' (name) in Maps wiki table.");
+					return;
+				}
+				if(layoutRatingIdx == -1)
+				{
+					PrintError("[Maps] Missing 'Layout Rating' in Maps wiki table.");
+					return;
+				}
+				if(bossRatingIdx == -1)
+				{
+					PrintError("[Maps] Missing 'Boss Rating' in Maps wiki table.");
+					return;
+				}
+				if(numberOfBossesIdx == -1)
+				{
+					PrintError("[Maps] Missing 'Number of Bosses' in Maps wiki table.");
+					return;
+				}
+
+				jsonWriter.WritePropertyName("Default");
+				jsonWriter.WriteStartObject();
+
+				foreach(var map in maps)
+				{
+					string pageTitle = (string)map["page"];
+					string areaId = (string)map["area_id"];
+
+					var bossNames = bosses.Where(x => (string)x["area_id"] == areaId).Select(x => (string)x["monster_name"]).Distinct();
+					var itemNames = items.Where(x => (string)x["area_id"] == areaId).OrderBy(x => (string)x["item_drop_level"]).ThenBy(x => (string)x["item_name"]).Select(x => ((string)x["item_name"], (string)x["item_drop_level"])).Distinct();
+					var content = mapContents.FirstOrDefault(x => x.Item1 == pageTitle).Item2 ?? string.Empty;
+					var mapRecord = mapRecords.FirstOrDefault(x => x[mapNameIdx] == pageTitle);
+
+					//==Layout==(?<layout>.*?)(<section end=\\"layout\\" \/>|==)
+					var layout = Regex.Match(content, "==Layout==(?<layout>.*?)(<section end=\\\"layout\\\" \\/>|==)", RegexOptions.Singleline).Groups.Values.FirstOrDefault(x => x.Name == "layout")?.Value.Trim();
+
+					//==Encounters==(\\n)*===Boss===(\\n)*(?<encounter>.*?)(<section end=\\"encounters\\" \/>|(\\n)*==)
+					var encounter = Regex.Match(content, "==Encounters==(\\n)*===Boss===(\\n)*(?<encounter>.*?)(<section end=\\\"encounters\\\" \\/>|(\\n)*==)", RegexOptions.Singleline).Groups.Values.FirstOrDefault(x => x.Name == "encounter")?.Value.Trim();
+
+					layout = StripWikiMarkdown(layout);
+					encounter = StripWikiMarkdown(encounter);
+
+					jsonWriter.WritePropertyName(pageTitle);
+					jsonWriter.WriteStartObject();
+
+					jsonWriter.WritePropertyName("items");
+					jsonWriter.WriteStartArray();
+
+					foreach(var itemName in itemNames)
+					{
+						jsonWriter.WriteStartObject();
+						jsonWriter.WritePropertyName("item");
+						jsonWriter.WriteValue(itemName.Item1);
+						jsonWriter.WritePropertyName("dropLevel");
+						if(string.IsNullOrEmpty(itemName.Item2))
+						{
+							jsonWriter.WriteValue(1);
+						}
+						else
+						{
+							jsonWriter.WriteValue(int.Parse(itemName.Item2));
+						}
+						jsonWriter.WriteEndObject();
+					}
+
+					jsonWriter.WriteEndArray();
+
+					if(mapRecord == null)
+					{
+						PrintWarning($"[Maps] Missing Map Record for '{pageTitle}'.");
+					}
+					else
+					{
+						string layoutRating = mapRecord[layoutRatingIdx];
+						string bossCount = mapRecord[numberOfBossesIdx];
+						string bossRating = mapRecord[bossRatingIdx];
+
+						if(!string.IsNullOrEmpty(layoutRating))
+						{
+							jsonWriter.WritePropertyName("layoutRating");
+							jsonWriter.WriteValue(layoutRating);
+						}
+
+						if(!string.IsNullOrEmpty(bossRating))
+						{
+							jsonWriter.WritePropertyName("bossRating");
+							jsonWriter.WriteValue(bossRating);
+						}
+
+						if(!string.IsNullOrEmpty(bossCount))
+						{
+							jsonWriter.WritePropertyName("bossCount");
+							jsonWriter.WriteValue(int.Parse(bossCount));
+						}
+
+					}
+
+					jsonWriter.WritePropertyName("bosses");
+					jsonWriter.WriteStartArray();
+
+					foreach(var bossName in bossNames)
+					{
+						jsonWriter.WriteValue(bossName);
+					}
+
+					jsonWriter.WriteEndArray();
+
+					jsonWriter.WritePropertyName("url");
+					jsonWriter.WriteValue($"https://pathofexile.fandom.com/wiki/{pageTitle.Replace(" ", "_")}");
+
+					if(!string.IsNullOrEmpty(encounter))
+					{
+						jsonWriter.WritePropertyName("encounter");
+						jsonWriter.WriteValue(encounter);
+					}
+
+					if(!string.IsNullOrEmpty(layout))
+					{
+						jsonWriter.WritePropertyName("layout");
+						jsonWriter.WriteValue(layout);
+					}
+
+					/*
+						"Beach Map": {
+						  "items": [
+							"Hope",
+							"The Gambler",
+							"Her Mask",
+							"Gripped Gloves",
+							"Spiked Gloves",
+							"Cerulean Ring"
+						  ],
+						  "layoutRating": "A",
+						  "bosses": ["Glace"],
+						  "bossRating": "2",
+						  "bossCount": 1,
+						  "url": "https://pathofexile.gamepedia.com/Beach_Map",
+						  "encounter": "Glace (Based on Hailrake of The Tidal Island (Act 1))",
+						  "layout": "The layout is similar to The Beacon in Act 6, but the map and map boss is a heavily modified version of The Tidal Island (Act 1). In fact, Part 2 of the campaign released after the first version of Beach Map."
+						},
+					 * */
+
+					jsonWriter.WriteEndObject();
+				}
+
+				jsonWriter.WriteEndObject();
+			}
 		}
 
 		#endregion
