@@ -23,6 +23,8 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
+		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
+
 		private const int TotalNumberOfStats = 6;
 
 		private const ulong UndefinedValue = 18374403900871474942L;
@@ -1510,33 +1512,31 @@ namespace PoEAssetUpdater
 
 			static void WriteRecords(JsonWriter jsonWriter)
 			{
-				string mapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
-
 				int maxLimit = 500; // 500 is the max records per cargo-query for the Wiki API
 				int titleLimit = 50; // 50 is the max titles per query for the Wiki API
 
 				IEnumerable<JToken> items = null;
 
-				string mapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{mapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
+				string mapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
 				if(string.IsNullOrEmpty(mapsJson))
 					return;
 
-				string uniqueMapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{mapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
+				string uniqueMapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
 				if(string.IsNullOrEmpty(uniqueMapsJson))
 					return;
 
-				string bossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{mapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
+				string bossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
 				if(string.IsNullOrEmpty(mapsJson))
 					return;
 
-				string uniqueMapBossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{mapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
+				string uniqueMapBossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
 				if(string.IsNullOrEmpty(uniqueMapBossesJson))
 					return;
 
 				for(int i = 0; i < 3; i++)
 				{
 					int offset = i * maxLimit;
-					string itemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{mapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+					string itemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
 					if(string.IsNullOrEmpty(itemsJson))
 						return;
 
@@ -1545,7 +1545,7 @@ namespace PoEAssetUpdater
 					items = items?.Concat(parsed) ?? parsed;
 				}
 
-				string uniqueMapItemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{mapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+				string uniqueMapItemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
 				if(string.IsNullOrEmpty(uniqueMapItemsJson))
 					return;
 
