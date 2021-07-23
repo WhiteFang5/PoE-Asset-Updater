@@ -60,6 +60,7 @@ namespace PoEAssetUpdater
 		public const string HeistMission = "heistmission";
 		public const string HeistContract = "heistmission.contract";
 		public const string HeistBlueprint = "heistmission.blueprint";
+		public const string ExpeditionLogbook = "logbook";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";

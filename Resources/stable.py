@@ -2320,6 +2320,11 @@ specification = Specification({
                 name='Key2',
                 type='ulong',
             ),
+            # 3.15
+            Field(
+                name='IsSpecialVendorCurrency',
+                type='bool',
+            ),
         ),
         virtual_fields=(
             VirtualField(
@@ -14934,48 +14939,16 @@ specification = Specification({
                 type='ref|list|uint',
             ),
             Field(
-                name='BuffDefinitionsKey',
-                type='ulong',
-                key='BuffDefinitions.dat',
-            ),
-            Field(
-                name='BuffValue',
-                type='int',
-            ),
-            Field(
-                name='TagsKeys',
-                type='ref|list|ulong',
-                key='Tags.dat',
-            ),
-            Field(
-                name='GrantedEffectsPerLevelKeys',
-                type='ref|list|ulong',
-                key='GrantedEffectsPerLevel.dat',
-            ),
-            Field(
-                name='Data1',
-                type='ref|list|uint',
-            ),
-            Field(
-                name='Data2',
-                type='ref|list|uint',
+                name='OLDFields',
+                type='byte[24]',#changed in 3.15
             ),
             Field(
                 name='MonsterMetadata',
-                type='ref|string',
+                type='ref|string',#changed in 3.15
             ),
             Field(
-                name='Data3',
-                type='ref|list|int',
-            ),
-            Field(
-                name='Data4',
-                type='ref|list|int',
-            ),
-            Field(
-                name='BuffVisualsKey',
-                type='ulong',
-                key='BuffVisuals.dat',
+                name='OLDFields2',
+                type='byte[16]',#changed in 3.15
             ),
             Field(
                 name='Stat5Min',
@@ -15010,8 +14983,8 @@ specification = Specification({
                 type='ref|list|int',
             ),
             Field(
-                name='Data5',
-                type='ref|list|int',
+                name='OLDFields3',
+                type='byte[8]',#changed in 3.15
             ),
             Field(
                 name='IsEssenceOnlyModifier',
@@ -15035,70 +15008,15 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Unknown67',
-                type='byte',
-            ),
-            Field(
-                name='Keys0',
-                type='ref|list|ulong',
+                name='OLDFields4',
+                type='byte[9]',
             ),
             # 3.10
             Field(
                 name='MonsterOnDeath',
                 type='ref|string',
             ),
-            Field(
-                name='Unknown2',
-                type='int',
-            ),
-            # 3.11
-            Field(
-                name='Unknown3',
-                type='ref|list|int',
-            ),
-            # TODO 3.12
-            Field(
-                name='Keys1',
-                type='ref|list|ulong',
-            ),
-            # 3.12.2
-            Field(
-                name='Heist_SubStatValue1',
-                type='int',
-            ),
-            Field(
-                name='Heist_SubStatValue2',
-                type='int',
-            ),
-            Field(
-                name='Heist_StatsKey0',
-                type='ulong',
-                key='Stats.dat',
-            ),
-            Field(
-                name='Heist_StatsKey1',
-                type='ulong',
-                key='Stats.dat',
-            ),
-            Field(
-                name='Heist_AddStatValue1',
-                type='int',
-            ),
-            Field(
-                name='Heist_AddStatValue2',
-                type='int',
-            ),
-            # TODO 3.13
-            Field(
-                name='InfluenceTypes',
-                type='int',
-            ),
-            # TODO 3.14?
-            Field(
-                name='ImplicitTagsKeys',
-                type='ref|list|ulong',
-                key='Tags.dat',
-            ),
+            # Remainder... 3.15 changes delete more fields
         ),
         virtual_fields=(
             VirtualField(

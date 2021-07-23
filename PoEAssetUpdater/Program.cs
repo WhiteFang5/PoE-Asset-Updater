@@ -112,6 +112,8 @@ namespace PoEAssetUpdater
 			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
 			// Leaguestones
 			["Leaguestone"] = ItemCategory.Leaguestone,
+			// Logbook
+			["ExpeditionSaga"] = ItemCategory.ExpeditionLogbook,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
