@@ -102,6 +102,9 @@ namespace PoEAssetUpdater
 			numberPart = string.Join(' ', numberParts).Trim();
 
 			statDescription = statDescription
+				.Replace("{}", Placeholder)
+				.Replace("{:d}", Placeholder)
+				.Replace("{:+d}", Placeholder)
 				.Replace("%%", "%")
 				.Replace("\\n", "\n");
 
