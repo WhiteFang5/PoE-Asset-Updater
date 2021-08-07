@@ -49,6 +49,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool ContainsConqueredPassivesText
+		{
+			get; private set;
+		}
+
 		#endregion
 
 		#region Lifecycle
@@ -85,7 +90,10 @@ namespace PoEAssetUpdater
 				{
 					Negated = true;
 				}
+
 			}
+
+			ContainsConqueredPassivesText = additionalData.Contains("ReminderTextConqueredPassives");
 
 			var numberParts = numberPart.Split(' ');
 
@@ -126,7 +134,7 @@ namespace PoEAssetUpdater
 					CreateAndAddStatLine(new StatLine(i.ToString(CultureInfo.InvariantCulture), statDescription.Replace(Placeholder, afflictionRewardTypes[i])));
 				}
 			}
-			if(additionalData.Contains("display_indexable_support"))
+			else if(additionalData.Contains("display_indexable_support"))
 			{
 				ContainsIndexableSupportGem = true;
 				var splittedAdditionalData = additionalData.Split(' ').ToList();
@@ -141,8 +149,10 @@ namespace PoEAssetUpdater
 					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSupportGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
 				}
 			}
-
-			CreateAndAddStatLine(new StatLine(numberPart, statDescription));
+			else
+			{
+				CreateAndAddStatLine(new StatLine(numberPart, statDescription));
+			}
 
 			void CreateAndAddStatLine(StatLine statLine)
 			{
@@ -164,7 +174,7 @@ namespace PoEAssetUpdater
 			}
 
 			// Check if an english stat description is provided, if so, the matching index should be returned as only result.
-			if(singleMatchOnly || ContainsAfflictionRewardType || ContainsIndexableSupportGem)
+			if(singleMatchOnly || ContainsAfflictionRewardType || ContainsIndexableSupportGem || ContainsConqueredPassivesText)
 			{
 				if(!_statLines.TryGetValue(Language.English, out List<StatLine> englishStatLines))
 				{
