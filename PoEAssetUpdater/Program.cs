@@ -925,10 +925,15 @@ namespace PoEAssetUpdater
 				}
 				poeTradeSiteContent.Clear();
 
+				var indistuingishableStats = new Dictionary<string, Dictionary<string, List<string>>>();
+
 				// Parse the PoE Trade Stats
-				foreach(var result in poeTradeStats[Language.English]["result"])
+				foreach (var result in poeTradeStats[Language.English]["result"])
 				{
 					var label = GetLabel(result);
+
+					var tradeStatsData = new Dictionary<string, List<string>>();
+
 					jsonWriter.WritePropertyName(label);
 					jsonWriter.WriteStartObject();
 					foreach(var entry in result["entries"])
@@ -948,11 +953,57 @@ namespace PoEAssetUpdater
 							optionValues = options.ToDictionary(option => option["id"].ToString(), option => option["text"].ToString());
 						}
 
-						FindAndWriteStatDescription(label, tradeId, modValue, text, optionValues);
+						FindAndWriteStatDescription(label, tradeId, modValue, text, optionValues, tradeStatsData);
 					}
 					jsonWriter.WriteEndObject();
+
+					indistuingishableStats[label] = tradeStatsData;
 				}
 
+				// Write the ingistinguishale stats json
+				WriteJsonFile(Path.Combine(exportDir, "stats-indistinguisable.json"), jsonWriter =>
+				{
+					jsonWriter.WritePropertyName("indistinguishableStats");
+					jsonWriter.WriteStartObject();
+					foreach ((var label, var tradeStatsData) in indistuingishableStats)
+					{
+						jsonWriter.WritePropertyName(label);
+						jsonWriter.WriteStartObject();
+						var usedTradeIds = new List<string>();
+						foreach ((string statDesc, List<string> tradeIds) in tradeStatsData)
+						{
+							if (tradeIds.Count > 1)
+							{
+#if DEBUG
+								Logger.WriteLine($"[{label}] Indistinguishable Desc '{statDesc}' for Trade Stat IDs: {string.Join(", ", tradeIds.Select(x => $"'{x}'"))}");
+#endif
+								for(int i = 0; i < tradeIds.Count; i++)
+								{
+									string tradeId = tradeIds[i];
+									if(usedTradeIds.Contains(tradeId))
+									{
+										continue;
+									}
+									for(int j = 0; j < tradeIds.Count; j++)
+									{
+										if(i == j)
+										{
+											continue;
+										}
+										jsonWriter.WritePropertyName(tradeId);
+										jsonWriter.WriteValue(tradeIds[j]);
+									}
+
+									usedTradeIds.Add(tradeId);
+								}
+							}
+						}
+						jsonWriter.WriteEndObject();
+					}
+					jsonWriter.WriteEndObject();
+				});
+
+				// Nested Method(s)
 				static string GetLabel(JToken token) => ((string)token["label"]).ToLowerInvariant();
 
 				static string GetTradeID(JToken token, string label) => ((string)token["id"])[(label.Length + 1)..];
@@ -988,15 +1039,18 @@ namespace PoEAssetUpdater
 						.Where(x => x.Length > 0).ToArray();
 				}
 
-				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, Dictionary<string, string> options)
+				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, Dictionary<string, string> options, Dictionary<string, List<string>> tradeStatsData)
 				{
 					bool explicitLocal = mod == "local";
 					StatDescription statDescription = null;
+					bool expandOptions = false;
+					bool addTradeStatData = false;
 					if (TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
 					{
 						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
 						if(statDescription != null)
 						{
+							addTradeStatData = true;
 							if(mapping.clearOptions)
 							{
 								options = null;
@@ -1006,14 +1060,34 @@ namespace PoEAssetUpdater
 					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
 					if (statDescription == null && label != "pseudo")
 					{
-						statDescription = statDescriptions
-							.FindAll(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
+						var candidateStatDescs = statDescriptions
+							.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
 							.OrderBy(x => x.GetMatchingStatLineIndex(text))
-							.FirstOrDefault();
+							.ToList();
 
-						if(statDescription == null)
+						// When no regular stat descs were found, and options are present, try to split them out and find matching stat descs.
+						if(candidateStatDescs.Count == 0 && options != null)
+						{
+							expandOptions = true;
+
+							string[] searchTexts = options.Select(x => GetOptionStatDesc(text, x.Value)).ToArray();
+
+							candidateStatDescs = statDescriptions
+								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.Any(y => x.HasMatchingStatLine(y)))
+								.OrderBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
+								.ToList();
+						}
+
+						if(candidateStatDescs.Count == 0)
 						{
 							PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
+						}
+						else
+						{
+							// Only add trade data for candidates that have equal "local stat" values because instinguishable stats always occur between different "local stat" values, but are properly dstinguished by the app.
+							addTradeStatData = candidateStatDescs.All(x => x.LocalStat == candidateStatDescs[0].LocalStat);
+
+							statDescription = candidateStatDescs.First();
 						}
 					}
 					
@@ -1048,9 +1122,22 @@ namespace PoEAssetUpdater
 								jsonWriter.WriteStartArray();
 								if (statDescription != null)
 								{
-									foreach (var statLine in statDescription.GetStatLines(language, text, options != null))
+									if(expandOptions)
 									{
-										WriteStatLine(statLine, options, label, jsonWriter);
+										foreach((_, var optionValue) in options)
+										{
+											foreach (var statLine in statDescription.GetStatLines(language, GetOptionStatDesc(text, optionValue), true))
+											{
+												WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+											}
+										}
+									}
+									else
+									{
+										foreach (var statLine in statDescription.GetStatLines(language, text, false))
+										{
+											WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+										}
 									}
 								}
 								else
@@ -1075,7 +1162,7 @@ namespace PoEAssetUpdater
 									}
 
 									var statLine = new StatDescription.StatLine("#", otherLangText.Replace("\n", "\\n"));
-									WriteStatLine(statLine, options, label, jsonWriter);
+									WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
 								}
 								jsonWriter.WriteEndArray();
 							}
@@ -1086,7 +1173,7 @@ namespace PoEAssetUpdater
 				}
 			}
 
-			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, JsonWriter jsonWriter)
+			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, Dictionary<string, List<string>> tradeStatsData, string tradeId, Language language, JsonWriter jsonWriter)
 			{
 				string desc = statLine.StatDescription;
 				string descSuffix = null;
@@ -1098,14 +1185,21 @@ namespace PoEAssetUpdater
 				if(options == null)
 				{
 					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(desc, descSuffix)));
+					if(language == Language.English)
+					{
+						AddTradeStatData(tradeStatsData, desc, tradeId);
+					}
 				}
 				else
 				{
 					foreach((var id, var optionValue) in options)
 					{
-						// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
-						string optionDesc = string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
+						string optionDesc = GetOptionStatDesc(desc, optionValue);
 						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(optionDesc, descSuffix)));
+						if (language == Language.English)
+						{
+							AddTradeStatData(tradeStatsData, optionDesc, tradeId);
+						}
 					}
 				}
 
@@ -1124,6 +1218,28 @@ namespace PoEAssetUpdater
 					jsonWriter.WritePropertyName(predicate);
 					jsonWriter.WriteValue(regex);
 					jsonWriter.WriteEndObject();
+				}
+			}
+
+			static string GetOptionStatDesc(string desc, string optionValue)
+			{
+				// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
+				return string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
+			}
+
+			static void AddTradeStatData(Dictionary<string, List<string>> tradeStatsData, string desc, string tradeId)
+			{
+				if(tradeStatsData == null)
+				{
+					return;
+				}
+				if (!tradeStatsData.TryGetValue(desc, out var tradeData))
+				{
+					tradeStatsData[desc] = tradeData = new List<string>();
+				}
+				if(!tradeData.Contains(tradeId))
+				{
+					tradeData.Add(tradeId);
 				}
 			}
 		}
