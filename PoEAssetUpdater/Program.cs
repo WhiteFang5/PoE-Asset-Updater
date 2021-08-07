@@ -961,7 +961,7 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the ingistinguishale stats json
-				WriteJsonFile(Path.Combine(exportDir, "stats-indistinguisable.json"), jsonWriter =>
+				WriteJsonFile(Path.Combine(exportDir, "stats-indistinguishable.json"), jsonWriter =>
 				{
 					jsonWriter.WritePropertyName("indistinguishableStats");
 					jsonWriter.WriteStartObject();
@@ -984,15 +984,17 @@ namespace PoEAssetUpdater
 									{
 										continue;
 									}
-									for(int j = 0; j < tradeIds.Count; j++)
+									jsonWriter.WritePropertyName(tradeId);
+									jsonWriter.WriteStartArray();
+									for (int j = 0; j < tradeIds.Count; j++)
 									{
 										if(i == j)
 										{
 											continue;
 										}
-										jsonWriter.WritePropertyName(tradeId);
 										jsonWriter.WriteValue(tradeIds[j]);
 									}
+									jsonWriter.WriteEndArray();
 
 									usedTradeIds.Add(tradeId);
 								}
