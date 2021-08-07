@@ -252,8 +252,10 @@ namespace PoEAssetUpdater
 
 				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
 
-				ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
-				ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
+				// Legacy: replaced by Base Item Types v2
+				//ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
+				// Legacy: replaced by Base Item Types v2
+				//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				ExportMaps(assetIndex, datDefinitions, assetOutputDir);
