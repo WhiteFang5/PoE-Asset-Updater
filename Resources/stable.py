@@ -11418,7 +11418,7 @@ specification = Specification({
     'IndexableSupportGems.dat': File(
         fields=(
             Field(
-                name='Unknown0',
+                name='Index',
                 type='int',
             ),
             Field(
