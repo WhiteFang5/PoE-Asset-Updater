@@ -102,7 +102,7 @@ namespace PoEAssetUpdater
 			{
 				string num = i.ToString(CultureInfo.InvariantCulture);
 				var numPart = numberParts[i];
-				if(numPart.Contains('#') && !Regex.IsMatch(statDescription, string.Concat("\\{", (i == 0 ? "(0(:\\+?d)?|:\\+?d)" : $"{num}(:\\+?d)?"), "\\}")))
+				if(numPart.Contains('#') && !Regex.IsMatch(statDescription, string.Concat("\\{", (i == 0 ? "(0(:\\+?d)?|:\\+?d)?" : $"{num}(:\\+?d)?"), "\\}")))
 				{
 					numberParts[i] = numPart.Replace("#", numPart.Contains('|') ? numPart.Split('|')[0] : string.Empty);
 				}
