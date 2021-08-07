@@ -44,6 +44,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool ContainsIndexableSupportGem
+		{
+			get; private set;
+		}
+
 		#endregion
 
 		#region Lifecycle
@@ -59,7 +64,7 @@ namespace PoEAssetUpdater
 
 		#region Public Methods
 
-		public void ParseAndAddStatLine(Language language, string line, string[] afflictionRewardTypes)
+		public void ParseAndAddStatLine(Language language, string line, string[] afflictionRewardTypes, string[] indexableSupportGems)
 		{
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
@@ -121,6 +126,22 @@ namespace PoEAssetUpdater
 					CreateAndAddStatLine(new StatLine(i.ToString(CultureInfo.InvariantCulture), statDescription.Replace(Placeholder, afflictionRewardTypes[i])));
 				}
 			}
+			if(additionalData.Contains("display_indexable_support"))
+			{
+				ContainsIndexableSupportGem = true;
+				var splittedAdditionalData = additionalData.Split(' ').ToList();
+				int indexableSupportNameIdx = int.Parse(splittedAdditionalData[splittedAdditionalData.IndexOf("display_indexable_support") + 1]);
+				var placeholderIdx = statDescription.IndexOf(Placeholder);
+				for(int i = 1; i < indexableSupportNameIdx; i++)
+				{
+					placeholderIdx = statDescription.IndexOf(Placeholder, placeholderIdx + Placeholder.Length);
+				}
+				for (int i = 0; i < indexableSupportGems.Length; i++)
+				{
+					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSupportGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
+				}
+			}
+
 			CreateAndAddStatLine(new StatLine(numberPart, statDescription));
 
 			void CreateAndAddStatLine(StatLine statLine)
@@ -143,7 +164,7 @@ namespace PoEAssetUpdater
 			}
 
 			// Check if an english stat description is provided, if so, the matching index should be returned as only result.
-			if(singleMatchOnly || ContainsAfflictionRewardType)
+			if(singleMatchOnly || ContainsAfflictionRewardType || ContainsIndexableSupportGem)
 			{
 				if(!_statLines.TryGetValue(Language.English, out List<StatLine> englishStatLines))
 				{

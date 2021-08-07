@@ -755,6 +755,7 @@ namespace PoEAssetUpdater
 			{
 				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
 				var afflictionRewardTypeVisualsDatContainer = GetDatFile(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat");
+				var indexableSupportGemsDatContainer = GetDatFile(dataFiles, datDefinitions, "IndexableSupportGems.dat");
 
 				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
@@ -774,6 +775,10 @@ namespace PoEAssetUpdater
 				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.FileDefinition.Name}...");
 
 				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetValue<string>("Name")).ToArray();
+
+				Logger.WriteLine($"Parsing {indexableSupportGemsDatContainer.FileDefinition.Name}...");
+
+				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>("Name")).ToArray();
 
 				Logger.WriteLine($"Parsing Stat Description Files...");
 
@@ -822,7 +827,7 @@ namespace PoEAssetUpdater
 							int textCount = int.Parse(line);
 							for(int i = 0; i < textCount; i++)
 							{
-								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], afflictionRewardTypes);
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], afflictionRewardTypes, indexableSupportGems);
 							}
 							if(lineIdx < lastLineIdx)
 							{
