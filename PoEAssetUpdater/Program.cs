@@ -195,6 +195,13 @@ namespace PoEAssetUpdater
 			["MapExtraJun"] = "MasterNameJun",
 		};
 
+		// Manually matched trade stat IDs to Stat IDs (because there is no generic way to match them up accordingly)
+		private static readonly Dictionary<string, (string statId, bool clearOptions)> TradeStatIdManualMapping = new Dictionary<string, (string, bool)>()
+		{
+			//Area contains an Expedition Boss (#) -> Area contains [BOSS NAME]
+			["implicit.stat_3159649981"] = ("map_expedition_saga_contains_boss", true)
+		};
+
 		#endregion
 
 		#region Public Methods
@@ -983,8 +990,19 @@ namespace PoEAssetUpdater
 				{
 					bool explicitLocal = mod == "local";
 					StatDescription statDescription = null;
+					if (TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
+					{
+						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
+						if(statDescription != null)
+						{
+							if(mapping.clearOptions)
+							{
+								options = null;
+							}
+						}
+					}
 					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
-					if(label != "pseudo")
+					if (statDescription == null && label != "pseudo")
 					{
 						statDescription = statDescriptions
 							.FindAll(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
