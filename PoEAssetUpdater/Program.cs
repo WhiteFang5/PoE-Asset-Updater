@@ -670,10 +670,22 @@ namespace PoEAssetUpdater
 			}
 
 			var datFile = new DatFile(assetFile, datDefinitions);
-			if(datFile.Records.Count > 0 && datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+			if(datFile.Records.Count > 0)
 			{
-				PrintError($"Found {remainder.Length} Remainder Bytes in {datFileName}");
-			} 
+				if(datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+				{
+					PrintError($"Found {remainder.Length} Remainder Bytes in {datFileName}");
+				}
+				for(int i = 0; i < datFile.Records.Count; i++)
+				{
+					var record = datFile.Records[i];
+					var remarks = string.Join("; ", record.Values.Where(x => !string.IsNullOrEmpty(x.Value.Remark)).Select(x => $"{x.Key}: {x.Value.Remark}"));
+					if(!string.IsNullOrEmpty(remarks))
+					{
+						PrintError($"{datFileName}[{i}] Remarks: {remarks}");
+					}
+				}
+			}
 			return datFile;
 		}
 
