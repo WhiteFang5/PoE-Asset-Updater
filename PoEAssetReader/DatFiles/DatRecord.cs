@@ -2,20 +2,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace PoEAssetReader.DatFiles
 {
 	public class DatRecord
 	{
-		public DatRecord(Dictionary<string, object> values)
+		public DatRecord(Dictionary<string, DatData> values)
 		{
 			Values = values;
 		}
 
 		#region Properties
 
-		public IReadOnlyDictionary<string, object> Values
+		public IReadOnlyDictionary<string, DatData> Values
 		{
 			get;
 		}
@@ -26,20 +25,25 @@ namespace PoEAssetReader.DatFiles
 
 		public T GetValue<T>(string key)
 		{
-			if(!Values.TryGetValue(key, out object objValue))
+			if(!Values.TryGetValue(key, out DatData data))
 			{
 				throw new KeyNotFoundException($"Key '{key}' was not found.");
 			}
-			if(objValue is T value)
+			if(data.Value is T value)
 			{
 				return value;
 			}
-			throw new Exception($"Value Type Mismatch. Expected '{objValue.GetType().Name}', provided '{typeof(T)}'");
+			throw new Exception($"Value Type Mismatch. Expected '{data.GetType().Name}', provided '{typeof(T)}'");
+		}
+
+		public bool HasValue(string key)
+		{
+			return Values.ContainsKey(key);
 		}
 
 		public bool TryGetValue<T>(string key, out T value)
 		{
-			if(Values.TryGetValue(key, out object objValue) && objValue is T val)
+			if(Values.TryGetValue(key, out DatData data) && data.Value is T val)
 			{
 				value = val;
 				return true;
@@ -50,18 +54,35 @@ namespace PoEAssetReader.DatFiles
 
 		public string GetStringValue(string key)
 		{
-			if(Values.TryGetValue(key, out object objValue))
+			if (Values.TryGetValue(key, out DatData data))
 			{
-				var type = objValue.GetType();
-				if(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) && objValue is IEnumerable enumerable)
+				object value = data.Value;
+				if (value == null)
 				{
-					return $"[{string.Join(",", enumerable.Cast<object>())}]";
+					return "NULL";
 				}
-				else if(objValue is byte[] byteArray)
+				else
 				{
-					return string.Join(" ", byteArray);
+					var type = value.GetType();
+					if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) && value is IEnumerable enumerable)
+					{
+						return $"[{string.Join(",", enumerable.Cast<object>())}]";
+					}
+					else if (value is byte[] byteArray)
+					{
+						return string.Join(" ", byteArray);
+					}
+					return value.ToString();
 				}
-				return objValue.ToString();
+			}
+			return $"Missing Key '{key}'";
+		}
+
+		public string GetRemark(string key)
+		{
+			if (Values.TryGetValue(key, out DatData data))
+			{
+				return data.Remark;
 			}
 			return $"Missing Key '{key}'";
 		}

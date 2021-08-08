@@ -19,9 +19,9 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#region Public Methods
 
-		public delegate object ReadDataDelegate(BinaryReader binaryReader);
+		public delegate DatData ReadDataDelegate(BinaryReader binaryReader);
 
-		public override object ReadData(BinaryReader binaryReader, long dataSectionOffset) => _readData(binaryReader);
+		public override DatData ReadData(BinaryReader binaryReader, long dataSectionOffset) => _readData(binaryReader);
 
 		#endregion
 	}

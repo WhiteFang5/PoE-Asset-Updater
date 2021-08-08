@@ -22,7 +22,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#region Public Methods
 
-		public override object ReadData(BinaryReader binaryReader, long dataSectionOffset)
+		public override DatData ReadData(BinaryReader binaryReader, long dataSectionOffset)
 		{
 			var pointer = binaryReader.ReadUInt32();
 			var oldPos = binaryReader.BaseStream.Position;

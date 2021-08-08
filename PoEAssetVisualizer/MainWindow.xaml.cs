@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -301,22 +302,45 @@ namespace PoEAssetVisualizer
 				});
 				foreach(var field in datFile.FileDefinition.Fields)
 				{
-					DatViewer.Columns.Add(new DataGridTextColumn()
-					{
-						Header = field.ID,
-						Binding = new Binding(field.ID)
-					});
+					AddColumn(field.ID);
 				}
-				if(datFile.Records.Count > 0 && datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+				TryAddColumn("_Remainder");
+				TryAddColumn("_RemainderBool");
+				TryAddColumn("_RemainderByte");
+				TryAddColumn("_RemainderInt");
+				TryAddColumn("_RemainderUInt");
+				TryAddColumn("_RemainderLong");
+				TryAddColumn("_RemainderULong");
+				TryAddColumn("_RemainderFloat");
+				TryAddColumn("_RemainderString");
+				TryAddColumn("_RemainderRefString");
+				TryAddColumn("_RemainderListULong");
+				TryAddColumn("_RemainderListInt");
+
+				void TryAddColumn(string columnName)
 				{
-					DatViewer.Columns.Add(new DataGridTextColumn()
+					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
 					{
-						Header = "_Remainder",
-						Binding = new Binding("_Remainder")
-					});
+						AddColumn(columnName);
+					}
 				}
 
-				for(int i = 0; i < datFile.Records.Count; i++)
+				void AddColumn(string columnName)
+				{
+					Style style = new Style(typeof(DataGridCell));
+					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
+
+					var column = new DataGridTextColumn()
+					{
+						Header = columnName,
+						Binding = new Binding(columnName),
+						CellStyle = style,
+					};
+
+					DatViewer.Columns.Add(column);
+				}
+
+				for (int i = 0; i < datFile.Records.Count; i++)
 				{
 					var record = datFile.Records[i];
 
@@ -327,6 +351,11 @@ namespace PoEAssetVisualizer
 					foreach(var key in record.Values.Keys)
 					{
 						rowDict[key] = record.GetStringValue(key);
+						string remark = record.GetRemark(key);
+						if(!string.IsNullOrEmpty(remark))
+						{
+							rowDict[$"{key}_Tooltip"] = remark;
+						}
 					}
 					DatViewer.Items.Add(row);
 				}
@@ -450,13 +479,31 @@ namespace PoEAssetVisualizer
 								sb.Append("\t");
 								sb.Append(field.ID);
 							}
-							if(datFile.Records.Count > 0 && datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+
+							TryAddColumn("_Remainder");
+							TryAddColumn("_RemainderBool");
+							TryAddColumn("_RemainderByte");
+							TryAddColumn("_RemainderInt");
+							TryAddColumn("_RemainderUInt");
+							TryAddColumn("_RemainderLong");
+							TryAddColumn("_RemainderULong");
+							TryAddColumn("_RemainderString");
+							TryAddColumn("_RemainderRefString");
+							TryAddColumn("_RemainderListULong");
+							TryAddColumn("_RemainderListInt");
+
+							void TryAddColumn(string columnName)
 							{
-								sb.Append("\t_Remainder");
+								if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
+								{
+									sb.Append("\t");
+									sb.Append(columnName);
+								}
 							}
+
 							sb.AppendLine();
 
-							for(int i = 0; i < datFile.Records.Count; i++)
+							for (int i = 0; i < datFile.Records.Count; i++)
 							{
 								var record = datFile.Records[i];
 

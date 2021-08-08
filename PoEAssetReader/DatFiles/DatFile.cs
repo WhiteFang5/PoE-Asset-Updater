@@ -41,7 +41,7 @@ namespace PoEAssetReader.DatFiles
 			var records = new List<DatRecord>(Count);
 			for(int i = 0; i < Count; i++)
 			{
-				Dictionary<string, object> values = new Dictionary<string, object>();
+				Dictionary<string, DatData> values = new Dictionary<string, DatData>();
 				for(int j = 0; j < fileDefinition.Fields.Length; j++)
 				{
 					FieldDefinition fieldDefinition = fileDefinition.Fields[j];
@@ -57,7 +57,34 @@ namespace PoEAssetReader.DatFiles
 				int remainder = (int)(((4 + (i * recordLength)) + recordLength) - binaryReader.BaseStream.Position);
 				if(remainder > 0)
 				{
-					values["_Remainder"] = binaryReader.ReadBytes(remainder);
+					var pos = binaryReader.BaseStream.Position;
+					values["_Remainder"] = new DatData(binaryReader.ReadBytes(remainder));
+
+					TryRead("bool", "_RemainderBool");
+					TryRead("byte", "_RemainderByte");
+					TryRead("int", "_RemainderInt");
+					TryRead("uint", "_RemainderUInt");
+					TryRead("long", "_RemainderLong");
+					TryRead("ulong", "_RemainderULong");
+					TryRead("float", "_RemainderFloat");
+					TryRead("string", "_RemainderString");
+					TryRead("ref|string", "_RemainderRefString");
+					TryRead("ref|list|ulong", "_RemainderListULong");
+					TryRead("ref|list|int", "_RemainderListInt");
+
+					void TryRead(string dataType, string valuesKey)
+					{
+						binaryReader.BaseStream.Seek(pos, SeekOrigin.Begin);
+						try
+						{
+							values[valuesKey] = TypeDefinition.Parse(dataType).ReadData(binaryReader, dataSectionOffset);
+						}
+						catch (Exception)
+						{
+						}
+					}
+
+					binaryReader.BaseStream.Seek(pos + remainder, SeekOrigin.Begin);
 				}
 				records.Add(new DatRecord(values));
 			}

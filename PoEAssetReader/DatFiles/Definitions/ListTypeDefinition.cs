@@ -7,6 +7,12 @@ namespace PoEAssetReader.DatFiles.Definitions
 {
 	public class ListTypeDefinition : TypeDefinition
 	{
+		#region Consts
+
+		private const int ListCutOff = 10;
+
+		#endregion
+
 		public ListTypeDefinition(string name, TypeDefinition listType)
 			: base(name, typeof(List<>).MakeGenericType(listType.DataType))
 		{
@@ -24,22 +30,43 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#region Public Methods
 
-		public override object ReadData(BinaryReader binaryReader, long dataSectionOffset)
+		public override DatData ReadData(BinaryReader binaryReader, long dataSectionOffset)
 		{
+			string remark = null;
 			var count = binaryReader.ReadUInt32();
 			var pointer = binaryReader.ReadUInt32();
 			IList list = (IList)Activator.CreateInstance(DataType);
 			if(count > 0)
 			{
-				var oldPos = binaryReader.BaseStream.Position;
-				binaryReader.BaseStream.Seek(dataSectionOffset + pointer, SeekOrigin.Begin);
-				for(int i = 0; i < count; i++)
+				if(count > ListCutOff)
 				{
-					list.Add(ListType.ReadData(binaryReader, dataSectionOffset));
+					remark = $"Only showing first {ListCutOff}/{count} list items";
+					count = ListCutOff;
 				}
-				binaryReader.BaseStream.Seek(oldPos, SeekOrigin.Begin);
+				var dataPos = dataSectionOffset + pointer;
+				var streamLength = binaryReader.BaseStream.Length;
+				if (dataPos < streamLength)
+				{
+					var oldPos = binaryReader.BaseStream.Position;
+					binaryReader.BaseStream.Seek(dataPos, SeekOrigin.Begin);
+					for(int i = 0; i < count; i++)
+					{
+						DatData data = ListType.ReadData(binaryReader, dataSectionOffset);
+						list.Add(data.Value);
+						if (!string.IsNullOrEmpty(data.Remark))
+						{
+							remark = $"{(string.IsNullOrEmpty(remark) ? string.Empty : $"{remark}; ")}Item {i}: {data.Remark}";
+						}
+					}
+					binaryReader.BaseStream.Seek(oldPos, SeekOrigin.Begin);
+				}
+				else
+				{
+					list = null;
+					remark = $"Invalid data pointer: {dataPos} (stream length: {streamLength})";
+				}
 			}
-			return list;
+			return new DatData(list, remark);
 		}
 
 		#endregion
