@@ -3257,6 +3257,10 @@ specification = Specification({
                 type='ref|list|ulong',
                 key='AchievementItems.dat',
             ),
+            Field(
+                name='Unknown0',
+                type='bool',
+            ),
         ),
     ),
     'BlightCraftingRecipes.dat': File(
@@ -10361,6 +10365,14 @@ specification = Specification({
                 type='ulong',
                 key='Stats.dat',
             ),
+            Field(
+                name='ConsoleBlueprintLegend',
+                type='ref|string',
+            ),
+            Field(
+                name='ActionText',
+                type='ref|string',
+            ),
         ),
     ),
     'HeistJobsExperiencePerLevel.dat': File(
@@ -11333,7 +11345,7 @@ specification = Specification({
             ),
             Field(
                 name='RoomUpgrade_IncursionRoomsKey',
-                type='ref|generic',
+                type='uint',
                 key='IncursionRooms.dat',
             ),
             Field(
@@ -11397,8 +11409,12 @@ specification = Specification({
             ),
             Field(
                 name='RoomUpgradeFrom_IncursionRoomsKey',
-                type='ref|generic',
+                type='uint',
                 key='IncursionRooms.dat',
+            ),
+            Field(
+                name='Key0',
+                type='ulong',
             ),
         ),
     ),
@@ -12173,6 +12189,10 @@ specification = Specification({
             Field(
                 name='Unknown16',
                 type='ref|list|ulong',
+            ),
+            Field(
+                name='Unknown17',
+                type='int',
             ),
         ),
     ),
@@ -16205,7 +16225,6 @@ specification = Specification({
                 name='Name',
                 type='ref|string',
             ),
-            #file reading breaks beyond this point#),
             Field(
                 name='DamageMultiplier',
                 type='int',
@@ -16264,11 +16283,6 @@ specification = Specification({
                 name='KillSpecificMonsterCount_AchievementItemsKeys',
                 type='ref|list|ulong',
                 key='AchievementItems.dat',
-            ),
-            Field(
-                name='Special_ModsKeys',
-                type='ref|list|ulong',
-                key='Mods.dat',
             ),
             Field(
                 name='KillRare_AchievementItemsKeys',
@@ -16390,15 +16404,15 @@ specification = Specification({
             ),
             Field(
                 name='Flag3',
-                type='byte',
+                type='bool',
             ),
             Field(
                 name='Flag4',
-                type='byte',
+                type='bool',
             ),
             Field(
                 name='Flag5',
-                type='byte',
+                type='bool',
             ),
             Field(
                 name='Unknown100',
@@ -16410,7 +16424,7 @@ specification = Specification({
             ),
             Field(
                 name='Unknown102',
-                type='int',
+                type='float',
             ),
             Field(
                 name='Unknown103',
@@ -16418,8 +16432,8 @@ specification = Specification({
             ),
             # 3.11
             Field(
-                name='Unknown104',
-                type='int',
+                name='EPKFile',
+                type='ref|string',
             ),
             # 3.12
             Field(
@@ -16427,13 +16441,13 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Key3',
+                name='MonsterConditionalEffectPacksKey',
                 type='ulong',
             ),
             # TODO 3.13
             Field(
                 name='Flag6',
-                type='byte',
+                type='bool',
             ),
             # TODO 3.14
             Field(
@@ -21453,11 +21467,39 @@ specification = Specification({
             ),
             Field(
                 name='Unk1',
-                type='byte[4]',
+                type='int',
             ),
             Field(
                 name='Text',
                 type='ref|string',
+            ),
+            Field(
+                name='UnusedKey0',
+                type='ulong',
+            ),
+            Field(
+                name='RewardType',
+                type='int',
+            ),
+            Field(
+                name='SacrificeItem',
+                type='ulong',
+            ),
+            Field(
+                name='SacrificeAmount',
+                type='int',
+            ),
+            Field(
+                name='SacrificeText',
+                type='ref|string',
+            ),
+            Field(
+                name='ConsumeInputItem',
+                type='bool',
+            ),
+            Field(
+                name='Unk4',
+                type='ref|list|ulong',
             ),
         ),
     ),
