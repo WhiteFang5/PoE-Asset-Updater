@@ -9,7 +9,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 	{
 		#region Consts
 
-		private const int ListCutOff = 10;
+		private const int ListCutOff = 100;
 
 		#endregion
 

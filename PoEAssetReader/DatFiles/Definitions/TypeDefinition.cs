@@ -38,6 +38,22 @@ namespace PoEAssetReader.DatFiles.Definitions
 			new GenericTypeDefinition("string", typeof(string), bs => {
 				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
+				int ch;
+				while ((ch = bs.PeekChar()) > 0)
+				{
+					sb.Append(bs.ReadChar());
+				}
+				// string should end with int(0)
+				if (ch != 0)
+				{
+					bs.BaseStream.Seek(oldPos, SeekOrigin.Begin);
+					return new DatData("[ERROR: Could not read string!]", $"pointer: {(bs.PeekChar() != -1 ? bs.ReadInt32() : -1)}");
+				}
+				return new DatData(sb.ToString());
+			}),
+			new GenericTypeDefinition("string_utf8", typeof(string), bs => {
+				var oldPos = bs.BaseStream.Position;
+				var sb = new StringBuilder();
 				bool eos = false;
 				while (!eos) {
 					byte[] bytes = bs.ReadBytes(2);
