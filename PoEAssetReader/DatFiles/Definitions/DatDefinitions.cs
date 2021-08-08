@@ -62,7 +62,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 			wc.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetReader/" + ApplicationVersion;
 			try
 			{
-				return ParsePyPoE(wc.DownloadString("https://raw.githubusercontent.com/OmegaK2/PyPoE/dev/PyPoE/poe/file/specification/data/stable.py"));
+				return ParsePyPoE(wc.DownloadString("https://raw.githubusercontent.com/brather1ng/PyPoE/dev/PyPoE/poe/file/specification/data/stable.py"));
 			}
 			catch(Exception ex)
 			{
