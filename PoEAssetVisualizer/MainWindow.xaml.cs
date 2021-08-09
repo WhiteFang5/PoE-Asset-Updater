@@ -9,13 +9,11 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -29,6 +27,19 @@ namespace PoEAssetVisualizer
 
 		private const string DatDefinitionFileName = "DatDefinitions.xml";
 
+		private static readonly string[] CommonDatFiles = new string[] {
+			"BaseItemTypes",
+			"Stats",
+			"Mods",
+			"Tags",
+		};
+
+		private static readonly string[] ReferenceFields = new string[]
+		{
+			"Id",
+			"Name",
+		};
+
 		#endregion
 
 		#region Variables
@@ -40,10 +51,7 @@ namespace PoEAssetVisualizer
 		private DatDefinitions _datDefinitions;
 		private FileSystemWatcher _datDefinitionsWatcher;
 
-		private Dictionary<string, HashSet<string>> _fileDirectories
-		{
-			get;
-		} = new Dictionary<string, HashSet<string>>()
+		private readonly Dictionary<string, HashSet<string>> _fileDirectories = new Dictionary<string, HashSet<string>>()
 		{
 			{ RootNodeName, new HashSet<string>() }
 		};
@@ -303,6 +311,7 @@ namespace PoEAssetVisualizer
 				foreach(var field in datFile.FileDefinition.Fields)
 				{
 					AddColumn(field.ID);
+					TryAddRefColumn(field.ID, field.RefDatFileName);
 				}
 				TryAddColumn("_Remainder");
 				TryAddColumn("_RemainderBool");
@@ -316,29 +325,6 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_RemainderRefString");
 				TryAddColumn("_RemainderListULong");
 				TryAddColumn("_RemainderListInt");
-
-				void TryAddColumn(string columnName)
-				{
-					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
-					{
-						AddColumn(columnName);
-					}
-				}
-
-				void AddColumn(string columnName)
-				{
-					Style style = new Style(typeof(DataGridCell));
-					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
-
-					var column = new DataGridTextColumn()
-					{
-						Header = columnName,
-						Binding = new Binding(columnName),
-						CellStyle = style,
-					};
-
-					DatViewer.Columns.Add(column);
-				}
 
 				for (int i = 0; i < datFile.Records.Count; i++)
 				{
@@ -356,13 +342,79 @@ namespace PoEAssetVisualizer
 						{
 							rowDict[$"{key}_Tooltip"] = remark;
 						}
+
+						var field = datFile.FileDefinition.Fields.FirstOrDefault(x => x.ID == key);
+						TryAddRefColumnData(rowDict, record, key, field?.RefDatFileName);
 					}
+
+					void TryAddRefColumnData(IDictionary<string, object> rowDict, DatRecord record, string columnName, string refDatFileName)
+					{
+						if (!string.IsNullOrEmpty(refDatFileName) && record.TryGetValue(columnName, out ulong value))
+						{
+							var refDefintion = _datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == refDatFileName);
+							if (refDefintion != null)
+							{
+								foreach (var refFieldName in ReferenceFields)
+								{
+									var refField = refDefintion.Fields.FirstOrDefault(x => x.ID == refFieldName);
+									if (refField != null)
+									{
+										rowDict[$"{columnName}_{refDefintion.Name}_{refFieldName}"] = TODO
+									}
+								}
+							}
+						}
+					}
+
 					DatViewer.Items.Add(row);
 				}
 
 				ApplyDatViewerFilter();
 
 				DatViewerTab.Visibility = Visibility.Visible;
+
+				// Nested Method(s)
+				void AddColumn(string columnName)
+				{
+					Style style = new Style(typeof(DataGridCell));
+					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
+
+					var column = new DataGridTextColumn()
+					{
+						Header = columnName,
+						Binding = new Binding(columnName),
+						CellStyle = style,
+					};
+
+					DatViewer.Columns.Add(column);
+				}
+
+				void TryAddColumn(string columnName)
+				{
+					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
+					{
+						AddColumn(columnName);
+					}
+				}
+
+				void TryAddRefColumn(string columnName, string refDatFileName)
+				{
+					if (!string.IsNullOrEmpty(refDatFileName))
+					{
+						var refDefintion = _datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == refDatFileName);
+						if (refDefintion != null)
+						{
+							foreach (var refFieldName in ReferenceFields)
+							{
+								var refField = refDefintion.Fields.FirstOrDefault(x => x.ID == refFieldName);
+								if (refField != null)
+								{
+									AddColumn($"{columnName}_{refDefintion.Name}_{refFieldName}");
+								}
+							}
+						}
+					}
+				}
 			}
 			catch(Exception ex)
 			{
@@ -372,7 +424,7 @@ namespace PoEAssetVisualizer
 					message = $"{message} >> {ex.InnerException.Message}";
 					ex = ex.InnerException;
 				}
-				DatViewerError.Text = $"Failed to parse the .dat file: {message}";
+				DatViewerError.Text = $"Failed to parse the .dat file ({ex.GetType().FullName}): {message}";
 				DatViewerTab.Visibility = Visibility.Collapsed;
 				DatViewerErrorTab.Visibility = Visibility.Visible;
 			}

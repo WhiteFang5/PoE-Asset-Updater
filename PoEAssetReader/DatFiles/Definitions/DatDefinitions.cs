@@ -46,7 +46,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				{
 					string id = jsonFieldDefinition.Value<string>("id");
 					string dataType = jsonFieldDefinition.Value<string>("type");
-					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType)));
+					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), null));
 				}
 				fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
 			}
@@ -92,7 +92,10 @@ namespace PoEAssetReader.DatFiles.Definitions
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("type='"));
 							string dataType = line.Split("'")[1];
 
-							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType)));
+							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("key='"));
+							string refDatFileName = string.IsNullOrEmpty(line) ? null : line.Split("'")[1];
+
+							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName));
 
 							// Find the closing tag for this Field.
 							FindLine(ref lines, ref i, s => s.EndsWith("),"));
