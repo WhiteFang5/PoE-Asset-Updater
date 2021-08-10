@@ -1474,7 +1474,7 @@ namespace PoEAssetUpdater
 
 					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
 
-					WriteRecord(id, names, GetArtNameById(id), category, baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
+					WriteRecord(id, names, GetArtName(baseItemType), category, baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
 				}
 
 				// Write the Prophecies
@@ -1509,7 +1509,7 @@ namespace PoEAssetUpdater
 						return Escape(name);
 					});
 
-					WriteRecord(id, names, GetArtNameById(id), ItemCategory.Prophecy, 1, 1);
+					WriteRecord(id, names, GetArtName(prophecy), ItemCategory.Prophecy, 1, 1);
 				}
 
 				// Write the Monster Varieties
@@ -1520,7 +1520,7 @@ namespace PoEAssetUpdater
 
 					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
 
-					WriteRecord(id, names, GetArtNameById(id), ItemCategory.MonsterBeast, 1, 1);
+					WriteRecord(id, names, GetArtName(monsterVariety), ItemCategory.MonsterBeast, 1, 1);
 				}
 
 				// Write the Unique Map Names
@@ -1533,14 +1533,17 @@ namespace PoEAssetUpdater
 					string id = itemVisualIdentity.GetValue<string>("Id");
 					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
 
-					WriteRecord(id, names, GetArtName(itemVisualIdentity), ItemCategory.Map, 1, 1);
+					WriteRecord(id, names, GetArtName(uniqueMap), ItemCategory.Map, 1, 1);
 				}
 
-				// Nested Method(s)
-				string GetArtNameById(string id) => GetArtName(itemVisualIdentityDatContainer.Records.FirstOrDefault(x => x.GetValue<string>("Id") == id));
-
-				string GetArtName(DatRecord itemVisualIdentity)
+				string GetArtName(DatRecord record)
 				{
+					if(!record.TryGetValue<ulong>("ItemVisualIdentityKey", out ulong itemVisualIdentityKey))
+					{
+						return string.Empty;
+					}
+					var itemVisualIdentity = itemVisualIdentityDatContainer.Records[(int)itemVisualIdentityKey];
+
 					if(itemVisualIdentity == null)
 					{
 						return string.Empty;
