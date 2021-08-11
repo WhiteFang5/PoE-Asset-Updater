@@ -33,7 +33,7 @@ namespace PoEAssetReader.DatFiles
 			{
 				return value;
 			}
-			throw new Exception($"Value Type Mismatch. Expected '{data.GetType().Name}', provided '{typeof(T)}'");
+			throw new Exception($"Value Type Mismatch. Expected '{data.Value?.GetType().Name}', provided '{typeof(T)}'");
 		}
 
 		public bool HasValue(string key)

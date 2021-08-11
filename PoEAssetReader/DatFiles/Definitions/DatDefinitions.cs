@@ -86,19 +86,28 @@ namespace PoEAssetReader.DatFiles.Definitions
 						line = lines[i];
 						if(line.EndsWith("Field("))
 						{
+							bool findEnd = false;
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("name='"));
 							string id = line.Split("'")[1];
 
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("type='"));
 							string dataType = line.Split("'")[1];
 
-							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("key='"));
-							string refDatFileName = string.IsNullOrEmpty(line) ? null : line.Split("'")[1];
+							// Find the ref dat file or closing tag for this Field.
+							line = FindLine(ref lines, ref i, s => IsRefDataFileName(s) || s.EndsWith("),"));
+							string refDatFileName = null;
+							if(IsRefDataFileName(line))
+							{
+								refDatFileName = line.Split("'")[1];
+								findEnd = true;
+							}
 
 							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName));
 
-							// Find the closing tag for this Field.
-							FindLine(ref lines, ref i, s => s.EndsWith("),"));
+							if(findEnd)
+							{
+								FindLine(ref lines, ref i, s => s.EndsWith("),"));
+							}
 						}
 						else if(line.EndsWith("),"))
 						{
@@ -122,6 +131,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 					}
 				}
 				return string.Empty;
+			}
+
+			static bool IsRefDataFileName(string input)
+			{
+				return input.Trim().StartsWith("key='");
 			}
 		}
 

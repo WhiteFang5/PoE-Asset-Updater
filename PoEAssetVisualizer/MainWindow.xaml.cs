@@ -16,6 +16,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PoEAssetVisualizer
 {
@@ -40,6 +41,8 @@ namespace PoEAssetVisualizer
 			"Name",
 		};
 
+		private static readonly Color RefColumnColor = (Color)ColorConverter.ConvertFromString("#FFDEFADE");
+
 		#endregion
 
 		#region Variables
@@ -57,6 +60,8 @@ namespace PoEAssetVisualizer
 		};
 
 		private readonly Stack<Cursor> _cursorsStack = new Stack<Cursor>();
+
+		private readonly Dictionary<string, DatFile> _datFiles = new Dictionary<string, DatFile>();
 
 		#endregion
 
@@ -154,7 +159,7 @@ namespace PoEAssetVisualizer
 			}
 		}
 
-		private void Sub_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+		private void Sub_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 		{
 			if(sender is TreeViewItem item && item.Tag is string file)
 			{
@@ -291,17 +296,18 @@ namespace PoEAssetVisualizer
 		private void FillDatViewer(AssetFile assetFile)
 		{
 			DatViewer.Columns.Clear();
-			DatViewer.Items.Clear();
+			DatViewer.ItemsSource = null;
 			DatViewerError.Text = string.Empty;
 			DatViewerErrorTab.Visibility = Visibility.Collapsed;
+			List<object> items = new List<object>();
 
 			try
 			{
 				if(_datDefinitions == null)
 				{
-					_datDefinitions = DatDefinitions.ParsePyPoE();
+					_datDefinitions = DatDefinitions.ParseLocalPyPoE("H:\\Repos\\PoE-Asset-Updater\\Resources\\stable.py");
 				}
-				DatFile datFile = new DatFile(assetFile, _datDefinitions);
+				DatFile datFile = GetDatFile(assetFile);
 
 				DatViewer.Columns.Add(new DataGridTextColumn()
 				{
@@ -342,42 +348,107 @@ namespace PoEAssetVisualizer
 						{
 							rowDict[$"{key}_Tooltip"] = remark;
 						}
-
-						var field = datFile.FileDefinition.Fields.FirstOrDefault(x => x.ID == key);
-						TryAddRefColumnData(rowDict, record, key, field?.RefDatFileName);
 					}
 
-					void TryAddRefColumnData(IDictionary<string, object> rowDict, DatRecord record, string columnName, string refDatFileName)
+					items.Add(row);
+				}
+
+				var fieldsWithRefDatFile = datFile.FileDefinition.Fields.Where(x => !string.IsNullOrEmpty(x.RefDatFileName));
+				foreach(var field in fieldsWithRefDatFile)
+				{
+					DatFile refDatFile = GetDatFile($"Data/{field.RefDatFileName}");
+					if(refDatFile == null)
 					{
-						if (!string.IsNullOrEmpty(refDatFileName) && record.TryGetValue(columnName, out ulong value))
-						{
-							var refDefintion = _datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == refDatFileName);
-							if (refDefintion != null)
+						continue;
+					}
+					var columnName = $"{field.ID}_{Path.GetFileNameWithoutExtension(field.RefDatFileName)}";
+					var refDefintion = refDatFile.FileDefinition;
+					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
+					switch(field.DataType.Name)
+					{
+						case "int":
+							AddSingleRefValue(x => x.GetValue<int>(field.ID));
+							break;
+
+						case "ulong":
+							AddSingleRefValue(x => (int)x.GetValue<ulong>(field.ID));
+							break;
+
+						case "ref|list|int":
+							AddArrayRefValues(x =>
 							{
-								foreach (var refFieldName in ReferenceFields)
+								if(x.TryGetValue(field.ID, out List<int> idxs))
 								{
-									var refField = refDefintion.Fields.FirstOrDefault(x => x.ID == refFieldName);
-									if (refField != null)
-									{
-										rowDict[$"{columnName}_{refDefintion.Name}_{refFieldName}"] = TODO
-									}
+									return idxs;
 								}
+								return null;
+							});
+							break;
+
+						case "ref|list|ulong":
+							AddArrayRefValues(x =>
+							{
+								if(x.TryGetValue(field.ID, out List<ulong> idxs))
+								{
+									return idxs.Select(x => (int)x).ToList();
+								}
+								return null;
+							});
+							break;
+					}
+
+					void AddSingleRefValue(Func<DatRecord, int> getIdx)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idx = getIdx(record);
+							if(idx < 0 || idx >= refDatFile.Records.Count)
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnName}_{refField.ID}"] = refDatFile.Records[idx].GetStringValue(refField.ID);
 							}
 						}
 					}
 
-					DatViewer.Items.Add(row);
+					void AddArrayRefValues(Func<DatRecord, List<int>> getIdxs)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idxs = getIdxs(record);
+							if(idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
+							}
+						}
+					}
 				}
+
+				DatViewer.ItemsSource = items;
 
 				ApplyDatViewerFilter();
 
 				DatViewerTab.Visibility = Visibility.Visible;
 
 				// Nested Method(s)
-				void AddColumn(string columnName)
+				void AddColumn(string columnName, Color? bgColor = null)
 				{
 					Style style = new Style(typeof(DataGridCell));
 					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
+					if(bgColor.HasValue)
+					{
+						style.Setters.Add(new Setter(BackgroundProperty, new SolidColorBrush(bgColor.Value)));
+					}
 
 					var column = new DataGridTextColumn()
 					{
@@ -404,12 +475,13 @@ namespace PoEAssetVisualizer
 						var refDefintion = _datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == refDatFileName);
 						if (refDefintion != null)
 						{
+							columnName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDefintion.Name)}";
 							foreach (var refFieldName in ReferenceFields)
 							{
 								var refField = refDefintion.Fields.FirstOrDefault(x => x.ID == refFieldName);
 								if (refField != null)
 								{
-									AddColumn($"{columnName}_{refDefintion.Name}_{refFieldName}");
+									AddColumn($"{columnName}_{refFieldName}", RefColumnColor);
 								}
 							}
 						}
@@ -428,6 +500,28 @@ namespace PoEAssetVisualizer
 				DatViewerTab.Visibility = Visibility.Collapsed;
 				DatViewerErrorTab.Visibility = Visibility.Visible;
 			}
+		}
+
+		private DatFile GetDatFile(string fileName)
+		{
+			if(!_datFiles.TryGetValue(fileName, out DatFile datFile))
+			{
+				return GetDatFile(_assetIndex.FindFile(x => x.Name == fileName));
+			}
+			return datFile;
+		}
+
+		private DatFile GetDatFile(AssetFile assetFile)
+		{
+			if(assetFile == null)
+			{
+				return null;
+			}
+			if(!_datFiles.TryGetValue(assetFile.Name, out DatFile datFile))
+			{
+				_datFiles[assetFile.Name] = datFile = new DatFile(assetFile, _datDefinitions);
+			}
+			return datFile;
 		}
 
 		private void HideAllViewers()
