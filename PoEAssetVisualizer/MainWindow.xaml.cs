@@ -29,19 +29,20 @@ namespace PoEAssetVisualizer
 		private const string DatDefinitionFileName = "stable.py";
 
 		private static readonly string[] CommonDatFiles = new string[] {
-			"BaseItemTypes",
-			"Stats",
-			"Mods",
-			"Tags",
+			"BaseItemTypes.dat",
+			"Stats.dat",
+			"Mods.dat",
+			"Tags.dat",
 		};
 
 		private static readonly string[] ReferenceFields = new string[]
 		{
 			"Id",
 			"Name",
+			"Text",
 		};
 
-		private static readonly Color RefColumnColor = (Color)ColorConverter.ConvertFromString("#FFDEFADE");
+		private static readonly SolidColorBrush RefColumnColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFDEFADE"));
 
 		#endregion
 
@@ -246,6 +247,7 @@ namespace PoEAssetVisualizer
 				PushCursor(Cursors.Wait);
 
 				_datDefinitions = null;
+				_datFiles.Clear();
 				FillDatViewer(_openedAssetFile);
 
 				PopCursor();
@@ -299,7 +301,7 @@ namespace PoEAssetVisualizer
 			DatViewer.ItemsSource = null;
 			DatViewerError.Text = string.Empty;
 			DatViewerErrorTab.Visibility = Visibility.Collapsed;
-			List<object> items = new List<object>();
+			List<ExpandoObject> items = new List<ExpandoObject>();
 
 			try
 			{
@@ -325,11 +327,25 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_RemainderInt");
 				TryAddColumn("_RemainderUInt");
 				TryAddColumn("_RemainderLong");
-				TryAddColumn("_RemainderULong");
+				bool hasRemainderULong = TryAddColumn("_RemainderULong");
+				if(hasRemainderULong)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
+					{
+						TryAddRefColumn("_RemainderULong", commonDatFile);
+					}
+				}
 				TryAddColumn("_RemainderFloat");
 				TryAddColumn("_RemainderString");
 				TryAddColumn("_RemainderRefString");
-				TryAddColumn("_RemainderListULong");
+				bool hasRemainderListULong = TryAddColumn("_RemainderListULong");
+				if(hasRemainderListULong)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
+					{
+						TryAddRefColumn("_RemainderListULong", commonDatFile);
+					}
+				}
 				TryAddColumn("_RemainderListInt");
 
 				for (int i = 0; i < datFile.Records.Count; i++)
@@ -356,80 +372,20 @@ namespace PoEAssetVisualizer
 				var fieldsWithRefDatFile = datFile.FileDefinition.Fields.Where(x => !string.IsNullOrEmpty(x.RefDatFileName));
 				foreach(var field in fieldsWithRefDatFile)
 				{
-					DatFile refDatFile = GetDatFile($"Data/{field.RefDatFileName}");
-					if(refDatFile == null)
+					TryAddRefValues(field.ID, field.DataType.Name, field.RefDatFileName);
+				}
+
+				if(hasRemainderULong || hasRemainderListULong)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
 					{
-						continue;
-					}
-					var columnName = $"{field.ID}_{Path.GetFileNameWithoutExtension(field.RefDatFileName)}";
-					var refDefintion = refDatFile.FileDefinition;
-					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
-					switch(field.DataType.Name)
-					{
-						case "int":
-							AddSingleRefValue(x => x.GetValue<int>(field.ID));
-							break;
-
-						case "ulong":
-							AddSingleRefValue(x => (int)x.GetValue<ulong>(field.ID));
-							break;
-
-						case "ref|list|int":
-							AddArrayRefValues(x =>
-							{
-								if(x.TryGetValue(field.ID, out List<int> idxs))
-								{
-									return idxs;
-								}
-								return null;
-							});
-							break;
-
-						case "ref|list|ulong":
-							AddArrayRefValues(x =>
-							{
-								if(x.TryGetValue(field.ID, out List<ulong> idxs))
-								{
-									return idxs.Select(x => (int)x).ToList();
-								}
-								return null;
-							});
-							break;
-					}
-
-					void AddSingleRefValue(Func<DatRecord, int> getIdx)
-					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						if(hasRemainderULong)
 						{
-							var record = datFile.Records[i];
-							var idx = getIdx(record);
-							if(idx < 0 || idx >= refDatFile.Records.Count)
-							{
-								continue;
-							}
-							foreach(var refField in refFields)
-							{
-								var rowDict = (IDictionary<string, object>)items[i];
-								rowDict[$"{columnName}_{refField.ID}"] = refDatFile.Records[idx].GetStringValue(refField.ID);
-							}
+							TryAddRefValues("_RemainderULong", "ulong", commonDatFile);
 						}
-					}
-
-					void AddArrayRefValues(Func<DatRecord, List<int>> getIdxs)
-					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						if(hasRemainderListULong)
 						{
-							var record = datFile.Records[i];
-							var idxs = getIdxs(record);
-							if(idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
-							{
-								continue;
-							}
-							foreach(var refField in refFields)
-							{
-								var rowDict = (IDictionary<string, object>)items[i];
-								rowDict[$"{columnName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
-							}
+							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile);
 						}
 					}
 				}
@@ -441,31 +397,33 @@ namespace PoEAssetVisualizer
 				DatViewerTab.Visibility = Visibility.Visible;
 
 				// Nested Method(s)
-				void AddColumn(string columnName, Color? bgColor = null)
+				void AddColumn(string columnName, Brush bgColor = null)
 				{
-					Style style = new Style(typeof(DataGridCell));
+					/*Style style = new Style(typeof(DataGridCell));
 					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
-					if(bgColor.HasValue)
+					if(bgColor != null)
 					{
-						style.Setters.Add(new Setter(BackgroundProperty, new SolidColorBrush(bgColor.Value)));
-					}
+						style.Setters.Add(new Setter(BackgroundProperty, bgColor));
+					}*/
 
 					var column = new DataGridTextColumn()
 					{
-						Header = columnName,
+						Header= columnName.Replace("_", "__"),
 						Binding = new Binding(columnName),
-						CellStyle = style,
+						//CellStyle = style, // Styling costs A LOT of performance. Disabled for now.
 					};
 
 					DatViewer.Columns.Add(column);
 				}
 
-				void TryAddColumn(string columnName)
+				bool TryAddColumn(string columnName)
 				{
 					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
 					{
 						AddColumn(columnName);
+						return true;
 					}
+					return false;
 				}
 
 				void TryAddRefColumn(string columnName, string refDatFileName)
@@ -483,6 +441,87 @@ namespace PoEAssetVisualizer
 								{
 									AddColumn($"{columnName}_{refFieldName}", RefColumnColor);
 								}
+							}
+						}
+					}
+				}
+
+				void TryAddRefValues(string columnName, string columnDataType, string refDatFileName)
+				{
+					DatFile refDatFile = GetDatFile($"Data/{refDatFileName}");
+					if(refDatFile == null)
+					{
+						return;
+					}
+					var columnBaseName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDatFileName)}";
+					var refDefintion = refDatFile.FileDefinition;
+					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
+					switch(columnDataType)
+					{
+						case "int":
+							AddSingleRefValue(columnBaseName, x => x.GetValue<int>(columnName));
+							break;
+
+						case "ulong":
+							AddSingleRefValue(columnBaseName, x => (int)x.GetValue<ulong>(columnName));
+							break;
+
+						case "ref|list|int":
+							AddArrayRefValues(columnBaseName, x =>
+							{
+								if(x.TryGetValue(columnName, out List<int> idxs))
+								{
+									return idxs;
+								}
+								return null;
+							});
+							break;
+
+						case "ref|list|ulong":
+							AddArrayRefValues(columnBaseName, x =>
+							{
+								if(x.TryGetValue(columnName, out List<ulong> idxs))
+								{
+									return idxs.Select(x => (int)x).ToList();
+								}
+								return null;
+							});
+							break;
+					}
+
+					void AddSingleRefValue(string columnBaseName, Func< DatRecord, int> getIdx)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idx = getIdx(record);
+
+							if(idx < 0 || idx >= refDatFile.Records.Count)
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = refDatFile.Records[idx].GetStringValue(refField.ID);
+							}
+						}
+					}
+
+					void AddArrayRefValues(string columnBaseName, Func<DatRecord, List<int>> getIdxs)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idxs = getIdxs(record);
+							if(idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
 							}
 						}
 					}
