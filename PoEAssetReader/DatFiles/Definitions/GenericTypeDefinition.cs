@@ -11,8 +11,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#endregion
 
-		public GenericTypeDefinition(string name, Type dataType, ReadDataDelegate readData)
-			: base(name, dataType)
+		public GenericTypeDefinition(string name, Type dataType, int dataSize, ReadDataDelegate readData)
+			: base(name, dataType, dataSize)
 		{
 			_readData = readData;
 		}

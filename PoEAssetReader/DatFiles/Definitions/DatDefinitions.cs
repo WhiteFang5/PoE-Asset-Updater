@@ -46,7 +46,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				{
 					string id = jsonFieldDefinition.Value<string>("id");
 					string dataType = jsonFieldDefinition.Value<string>("type");
-					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType)));
+					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), null));
 				}
 				fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
 			}
@@ -86,16 +86,28 @@ namespace PoEAssetReader.DatFiles.Definitions
 						line = lines[i];
 						if(line.EndsWith("Field("))
 						{
+							bool findEnd = false;
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("name='"));
 							string id = line.Split("'")[1];
 
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("type='"));
 							string dataType = line.Split("'")[1];
 
-							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType)));
+							// Find the ref dat file or closing tag for this Field.
+							line = FindLine(ref lines, ref i, s => IsRefDataFileName(s) || s.EndsWith("),"));
+							string refDatFileName = null;
+							if(IsRefDataFileName(line))
+							{
+								refDatFileName = line.Split("'")[1];
+								findEnd = true;
+							}
 
-							// Find the closing tag for this Field.
-							FindLine(ref lines, ref i, s => s.EndsWith("),"));
+							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName));
+
+							if(findEnd)
+							{
+								FindLine(ref lines, ref i, s => s.EndsWith("),"));
+							}
 						}
 						else if(line.EndsWith("),"))
 						{
@@ -119,6 +131,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 					}
 				}
 				return string.Empty;
+			}
+
+			static bool IsRefDataFileName(string input)
+			{
+				return input.Trim().StartsWith("key='");
 			}
 		}
 

@@ -50,7 +50,23 @@
 				<TextBox x:Name="TextViewer" ScrollViewer.HorizontalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
 			</TabItem>
 			<TabItem Header="Dat" Name="DatViewerTab">
-				<DataGrid x:Name="DatViewer" IsReadOnly="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+				<DataGrid x:Name="DatViewer" IsReadOnly="True" FrozenColumnCount="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ColumnWidth="150"
+						  CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False"
+						  EnableRowVirtualization="True"
+						  VirtualizingPanel.ScrollUnit="Pixel"
+						  VirtualizingPanel.CacheLengthUnit="Pixel"
+						  VirtualizingPanel.VirtualizationMode="Recycling"
+						  VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+						  VirtualizingPanel.IsContainerVirtualizable="True"
+						  VirtualizingPanel.IsVirtualizing="True"
+						  />
+				<!--<DataGrid x:Name="DatViewer" IsReadOnly="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ColumnWidth="150"
+						  CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False"
+						  EnableRowVirtualization="True" EnableColumnVirtualization = "true"
+						  ScrollViewer.CanContentScroll="true"
+						  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.IsContainerVirtualizable="True" VirtualizingPanel.ScrollUnit="Pixel"
+						  VirtualizingPanel.CacheLengthUnit="Pixel" VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+						  />-->
 			</TabItem>
 			<TabItem Header="Dat" Name="DatViewerErrorTab">
 				<TextBlock x:Name="DatViewerError" Text="" Foreground="Red" VerticalAlignment="Center" HorizontalAlignment="Center"/>

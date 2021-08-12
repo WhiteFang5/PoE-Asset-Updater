@@ -14,7 +14,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 		#endregion
 
 		public ListTypeDefinition(string name, TypeDefinition listType)
-			: base(name, typeof(List<>).MakeGenericType(listType.DataType))
+			: base(name, typeof(List<>).MakeGenericType(listType.DataType), sizeof(uint) * 2)
 		{
 			ListType = listType;
 		}
@@ -45,7 +45,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				var dataPos = dataSectionOffset + pointer;
 				var streamLength = binaryReader.BaseStream.Length;
-				if (dataPos < streamLength)
+				var dataSize = Math.Max(0, ListType.DataSize);
+				if ((dataPos + (dataSize * count)) < streamLength)
 				{
 					var oldPos = binaryReader.BaseStream.Position;
 					binaryReader.BaseStream.Seek(dataPos, SeekOrigin.Begin);
@@ -63,7 +64,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				else
 				{
 					list = null;
-					remark = $"Invalid data pointer: {dataPos} (stream length: {streamLength})";
+					remark = $"Invalid data pointer: {dataPos} + ({dataSize} * {count}) (stream length: {streamLength})";
 				}
 			}
 			return new DatData(list, remark);

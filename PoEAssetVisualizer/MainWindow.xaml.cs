@@ -9,15 +9,14 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PoEAssetVisualizer
 {
@@ -28,6 +27,22 @@ namespace PoEAssetVisualizer
 		private const string RootNodeName = "ROOT";
 
 		private const string DatDefinitionFileName = "stable.py";
+
+		private static readonly string[] CommonDatFiles = new string[] {
+			"BaseItemTypes.dat",
+			"Stats.dat",
+			"Mods.dat",
+			"Tags.dat",
+		};
+
+		private static readonly string[] ReferenceFields = new string[]
+		{
+			"Id",
+			"Name",
+			"Text",
+		};
+
+		private static readonly SolidColorBrush RefColumnColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFDEFADE"));
 
 		#endregion
 
@@ -40,15 +55,14 @@ namespace PoEAssetVisualizer
 		private DatDefinitions _datDefinitions;
 		private FileSystemWatcher _datDefinitionsWatcher;
 
-		private Dictionary<string, HashSet<string>> _fileDirectories
-		{
-			get;
-		} = new Dictionary<string, HashSet<string>>()
+		private readonly Dictionary<string, HashSet<string>> _fileDirectories = new Dictionary<string, HashSet<string>>()
 		{
 			{ RootNodeName, new HashSet<string>() }
 		};
 
 		private readonly Stack<Cursor> _cursorsStack = new Stack<Cursor>();
+
+		private readonly Dictionary<string, DatFile> _datFiles = new Dictionary<string, DatFile>();
 
 		#endregion
 
@@ -146,7 +160,7 @@ namespace PoEAssetVisualizer
 			}
 		}
 
-		private void Sub_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+		private void Sub_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 		{
 			if(sender is TreeViewItem item && item.Tag is string file)
 			{
@@ -233,6 +247,7 @@ namespace PoEAssetVisualizer
 				PushCursor(Cursors.Wait);
 
 				_datDefinitions = null;
+				_datFiles.Clear();
 				FillDatViewer(_openedAssetFile);
 
 				PopCursor();
@@ -283,9 +298,10 @@ namespace PoEAssetVisualizer
 		private void FillDatViewer(AssetFile assetFile)
 		{
 			DatViewer.Columns.Clear();
-			DatViewer.Items.Clear();
+			DatViewer.ItemsSource = null;
 			DatViewerError.Text = string.Empty;
 			DatViewerErrorTab.Visibility = Visibility.Collapsed;
+			List<ExpandoObject> items = new List<ExpandoObject>();
 
 			try
 			{
@@ -293,16 +309,21 @@ namespace PoEAssetVisualizer
 				{
 					_datDefinitions = DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
 				}
-				DatFile datFile = new DatFile(assetFile, _datDefinitions);
+				DatFile datFile = GetDatFile(assetFile);
+
+				var firstField = datFile.FileDefinition.Fields.FirstOrDefault();
+				DatViewer.FrozenColumnCount = firstField != null && ReferenceFields.Contains(firstField.ID) ? 2 : 1;
 
 				DatViewer.Columns.Add(new DataGridTextColumn()
 				{
 					Header = "#",
-					Binding = new Binding("Index")
+					Binding = new Binding("Index"),
+					Width = 40,
 				});
 				foreach(var field in datFile.FileDefinition.Fields)
 				{
 					AddColumn(field.ID);
+					TryAddRefColumn(field.ID, field.RefDatFileName);
 				}
 				TryAddColumn("_Remainder");
 				TryAddColumn("_RemainderBool");
@@ -310,35 +331,26 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_RemainderInt");
 				TryAddColumn("_RemainderUInt");
 				TryAddColumn("_RemainderLong");
-				TryAddColumn("_RemainderULong");
+				bool hasRemainderULong = TryAddColumn("_RemainderULong");
+				if(hasRemainderULong)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
+					{
+						TryAddRefColumn("_RemainderULong", commonDatFile);
+					}
+				}
 				TryAddColumn("_RemainderFloat");
 				TryAddColumn("_RemainderString");
 				TryAddColumn("_RemainderRefString");
-				TryAddColumn("_RemainderListULong");
-				TryAddColumn("_RemainderListInt");
-
-				void TryAddColumn(string columnName)
+				bool hasRemainderListULong = TryAddColumn("_RemainderListULong");
+				if(hasRemainderListULong)
 				{
-					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
+					foreach(var commonDatFile in CommonDatFiles)
 					{
-						AddColumn(columnName);
+						TryAddRefColumn("_RemainderListULong", commonDatFile);
 					}
 				}
-
-				void AddColumn(string columnName)
-				{
-					Style style = new Style(typeof(DataGridCell));
-					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
-
-					var column = new DataGridTextColumn()
-					{
-						Header = columnName,
-						Binding = new Binding(columnName),
-						CellStyle = style,
-					};
-
-					DatViewer.Columns.Add(column);
-				}
+				TryAddColumn("_RemainderListInt");
 
 				for (int i = 0; i < datFile.Records.Count; i++)
 				{
@@ -357,12 +369,167 @@ namespace PoEAssetVisualizer
 							rowDict[$"{key}_Tooltip"] = remark;
 						}
 					}
-					DatViewer.Items.Add(row);
+
+					items.Add(row);
 				}
+
+				var fieldsWithRefDatFile = datFile.FileDefinition.Fields.Where(x => !string.IsNullOrEmpty(x.RefDatFileName));
+				foreach(var field in fieldsWithRefDatFile)
+				{
+					TryAddRefValues(field.ID, field.DataType.Name, field.RefDatFileName);
+				}
+
+				if(hasRemainderULong || hasRemainderListULong)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
+					{
+						if(hasRemainderULong)
+						{
+							TryAddRefValues("_RemainderULong", "ulong", commonDatFile);
+						}
+						if(hasRemainderListULong)
+						{
+							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile);
+						}
+					}
+				}
+
+				DatViewer.ItemsSource = items;
 
 				ApplyDatViewerFilter();
 
 				DatViewerTab.Visibility = Visibility.Visible;
+
+				// Nested Method(s)
+				void AddColumn(string columnName, Brush bgColor = null)
+				{
+					/*Style style = new Style(typeof(DataGridCell));
+					style.Setters.Add(new Setter(ToolTipService.ToolTipProperty, new Binding($"{columnName}_Tooltip")));
+					if(bgColor != null)
+					{
+						style.Setters.Add(new Setter(BackgroundProperty, bgColor));
+					}*/
+
+					var column = new DataGridTextColumn()
+					{
+						Header= columnName.Replace("_", "__"),
+						Binding = new Binding(columnName),
+						//CellStyle = style, // Styling costs A LOT of performance. Disabled for now.
+					};
+
+					DatViewer.Columns.Add(column);
+				}
+
+				bool TryAddColumn(string columnName)
+				{
+					if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
+					{
+						AddColumn(columnName);
+						return true;
+					}
+					return false;
+				}
+
+				void TryAddRefColumn(string columnName, string refDatFileName)
+				{
+					if (!string.IsNullOrEmpty(refDatFileName))
+					{
+						var refDefintion = _datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == refDatFileName);
+						if (refDefintion != null)
+						{
+							columnName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDefintion.Name)}";
+							foreach (var refFieldName in ReferenceFields)
+							{
+								var refField = refDefintion.Fields.FirstOrDefault(x => x.ID == refFieldName);
+								if (refField != null)
+								{
+									AddColumn($"{columnName}_{refFieldName}", RefColumnColor);
+								}
+							}
+						}
+					}
+				}
+
+				void TryAddRefValues(string columnName, string columnDataType, string refDatFileName)
+				{
+					DatFile refDatFile = GetDatFile($"Data/{refDatFileName}");
+					if(refDatFile == null)
+					{
+						return;
+					}
+					var columnBaseName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDatFileName)}";
+					var refDefintion = refDatFile.FileDefinition;
+					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
+					switch(columnDataType)
+					{
+						case "int":
+							AddSingleRefValue(columnBaseName, x => x.GetValue<int>(columnName));
+							break;
+
+						case "ulong":
+							AddSingleRefValue(columnBaseName, x => (int)x.GetValue<ulong>(columnName));
+							break;
+
+						case "ref|list|int":
+							AddArrayRefValues(columnBaseName, x =>
+							{
+								if(x.TryGetValue(columnName, out List<int> idxs))
+								{
+									return idxs;
+								}
+								return null;
+							});
+							break;
+
+						case "ref|list|ulong":
+							AddArrayRefValues(columnBaseName, x =>
+							{
+								if(x.TryGetValue(columnName, out List<ulong> idxs))
+								{
+									return idxs.Select(x => (int)x).ToList();
+								}
+								return null;
+							});
+							break;
+					}
+
+					void AddSingleRefValue(string columnBaseName, Func< DatRecord, int> getIdx)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idx = getIdx(record);
+
+							if(idx < 0 || idx >= refDatFile.Records.Count)
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = refDatFile.Records[idx].GetStringValue(refField.ID);
+							}
+						}
+					}
+
+					void AddArrayRefValues(string columnBaseName, Func<DatRecord, List<int>> getIdxs)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							var idxs = getIdxs(record);
+							if(idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
+							}
+						}
+					}
+				}
 			}
 			catch(Exception ex)
 			{
@@ -372,10 +539,32 @@ namespace PoEAssetVisualizer
 					message = $"{message} >> {ex.InnerException.Message}";
 					ex = ex.InnerException;
 				}
-				DatViewerError.Text = $"Failed to parse the .dat file: {message}";
+				DatViewerError.Text = $"Failed to parse the .dat file ({ex.GetType().FullName}): {message}";
 				DatViewerTab.Visibility = Visibility.Collapsed;
 				DatViewerErrorTab.Visibility = Visibility.Visible;
 			}
+		}
+
+		private DatFile GetDatFile(string fileName)
+		{
+			if(!_datFiles.TryGetValue(fileName, out DatFile datFile))
+			{
+				return GetDatFile(_assetIndex.FindFile(x => x.Name == fileName));
+			}
+			return datFile;
+		}
+
+		private DatFile GetDatFile(AssetFile assetFile)
+		{
+			if(assetFile == null)
+			{
+				return null;
+			}
+			if(!_datFiles.TryGetValue(assetFile.Name, out DatFile datFile))
+			{
+				_datFiles[assetFile.Name] = datFile = new DatFile(assetFile, _datDefinitions);
+			}
+			return datFile;
 		}
 
 		private void HideAllViewers()
