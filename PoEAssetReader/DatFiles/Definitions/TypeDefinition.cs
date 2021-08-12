@@ -17,7 +17,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 			{
 				string name = $"byte[{i.ToString(CultureInfo.InvariantCulture)}]";
 				int bytesToRead = i; // Explicitly capture the variable!
-				TypeDefinitionMapping.Add(name, new GenericTypeDefinition(name, typeof(byte[]), bs => new DatData(bs.ReadBytes(bytesToRead))));
+				TypeDefinitionMapping.Add(name, new GenericTypeDefinition(name, typeof(byte[]), i, bs => new DatData(bs.ReadBytes(bytesToRead))));
 			}
 		}
 
@@ -26,16 +26,16 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		private static readonly Dictionary<string, TypeDefinition> TypeDefinitionMapping = (new List<TypeDefinition>()
 		{
-			new GenericTypeDefinition("bool", typeof(bool), bs => new DatData(bs.ReadBoolean())),
-			new GenericTypeDefinition("byte", typeof(byte), bs => new DatData(bs.ReadByte())),
-			new GenericTypeDefinition("short", typeof(short), bs => new DatData(bs.ReadInt16())),
-			new GenericTypeDefinition("ushort", typeof(ushort), bs => new DatData(bs.ReadUInt16())),
-			new GenericTypeDefinition("int", typeof(int), bs => new DatData(bs.ReadInt32())),
-			new GenericTypeDefinition("uint", typeof(uint), bs => new DatData(bs.ReadUInt32())),
-			new GenericTypeDefinition("float", typeof(float), bs => new DatData(bs.ReadSingle())),
-			new GenericTypeDefinition("long", typeof(long), bs => new DatData(bs.ReadInt64())),
-			new GenericTypeDefinition("ulong", typeof(ulong), bs => new DatData(bs.ReadUInt64())),
-			new GenericTypeDefinition("string", typeof(string), bs => {
+			new GenericTypeDefinition("bool", typeof(bool), sizeof(bool), bs => new DatData(bs.ReadBoolean())),
+			new GenericTypeDefinition("byte", typeof(byte), sizeof(byte), bs => new DatData(bs.ReadByte())),
+			new GenericTypeDefinition("short", typeof(short), sizeof(short), bs => new DatData(bs.ReadInt16())),
+			new GenericTypeDefinition("ushort", typeof(ushort), sizeof(ushort), bs => new DatData(bs.ReadUInt16())),
+			new GenericTypeDefinition("int", typeof(int), sizeof(int), bs => new DatData(bs.ReadInt32())),
+			new GenericTypeDefinition("uint", typeof(uint), sizeof(uint), bs => new DatData(bs.ReadUInt32())),
+			new GenericTypeDefinition("float", typeof(float), sizeof(float), bs => new DatData(bs.ReadSingle())),
+			new GenericTypeDefinition("long", typeof(long), sizeof(long), bs => new DatData(bs.ReadInt64())),
+			new GenericTypeDefinition("ulong", typeof(ulong), sizeof(ulong), bs => new DatData(bs.ReadUInt64())),
+			new GenericTypeDefinition("string", typeof(string), -1, bs => {
 				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
 				int ch;
@@ -51,7 +51,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				return new DatData(sb.ToString());
 			}),
-			new GenericTypeDefinition("string_utf8", typeof(string), bs => {
+			new GenericTypeDefinition("string_utf8", typeof(string), -1, bs => {
 				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
 				bool eos = false;
@@ -78,17 +78,18 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				return new DatData(sb.ToString());
 			}),
-			new GenericTypeDefinition("ref|generic", typeof(int), bs => new DatData(bs.ReadInt32())),
+			new GenericTypeDefinition("ref|generic", typeof(int), sizeof(int), bs => new DatData(bs.ReadInt32())),
 		}).ToDictionary(x => x.Name, x => x);
 
 		private static readonly Dictionary<string, TypeDefinition> _types = new Dictionary<string, TypeDefinition>();
 
 		#endregion
 
-		public TypeDefinition(string name, Type dataType)
+		public TypeDefinition(string name, Type dataType, int dataSize)
 		{
 			Name = name;
 			DataType = dataType;
+			DataSize = dataSize;
 		}
 
 		#region Properties
@@ -99,6 +100,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 		}
 
 		public Type DataType
+		{
+			get;
+		}
+
+		public int DataSize
 		{
 			get;
 		}
