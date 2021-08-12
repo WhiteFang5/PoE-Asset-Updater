@@ -55,3 +55,4 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 * [libOoz](https://github.com/zao/ooz) parsing PoE's Bundle format
 * [Omega2K - PyPoE](https://github.com/OmegaK2/PyPoE) for providing the initial .dat definitions
 * [brather1ng - PyPoE fork](https://github.com/brather1ng/PyPoE) for providing .dat definitions
+* [PoE Tool Devs](https://github.com/poe-tool-dev/dat-schema) for providing .dat definitions
