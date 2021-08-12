@@ -14961,6 +14961,7 @@ specification = Specification({
             Field(
                 name='TagsKeys',
                 type='ref|list|ulong',
+                key='Tags.dat',
             ),
             Field(
                 name='GrantedEffectsPerLevelKeys',
