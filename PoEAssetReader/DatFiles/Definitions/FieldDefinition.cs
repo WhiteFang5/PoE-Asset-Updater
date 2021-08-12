@@ -2,11 +2,12 @@ namespace PoEAssetReader.DatFiles.Definitions
 {
 	public class FieldDefinition
 	{
-		public FieldDefinition(string id, TypeDefinition dataType, string refDatFileName)
+		public FieldDefinition(string id, TypeDefinition dataType, string refDatFileName, string refDatFieldID)
 		{
 			ID = id;
 			DataType = dataType;
 			RefDatFileName = refDatFileName;
+			RefDatFieldID = refDatFieldID;
 		}
 
 		#region Properties
@@ -22,6 +23,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 		}
 
 		public string RefDatFileName
+		{
+			get;
+		}
+
+		public string RefDatFieldID
 		{
 			get;
 		}

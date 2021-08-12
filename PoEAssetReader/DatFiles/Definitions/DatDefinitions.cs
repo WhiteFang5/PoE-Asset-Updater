@@ -46,7 +46,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				{
 					string id = jsonFieldDefinition.Value<string>("id");
 					string dataType = jsonFieldDefinition.Value<string>("type");
-					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), null));
+					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), null, null));
 				}
 				fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
 			}
@@ -94,22 +94,29 @@ namespace PoEAssetReader.DatFiles.Definitions
 							string dataType = line.Split("'")[1];
 
 							// Find the ref dat file or closing tag for this Field.
-							line = FindLine(ref lines, ref i, s => IsRefDataFileName(s) || s.EndsWith("),"));
+							line = FindLine(ref lines, ref i, s => IsRefDatFileName(s) || IsEndOfSection(s));
 							string refDatFileName = null;
-							if(IsRefDataFileName(line))
+							string refDatFieldID = null;
+							if(IsRefDatFileName(line))
 							{
 								refDatFileName = line.Split("'")[1];
-								findEnd = true;
+
+								line = FindLine(ref lines, ref i, s => IsRefDataFieldID(s) || IsEndOfSection(s));
+								if(IsRefDataFieldID(line))
+								{
+									refDatFieldID = line.Split("'")[1];
+									findEnd = true;
+								}
 							}
 
-							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName));
+							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName, refDatFieldID));
 
 							if(findEnd)
 							{
-								FindLine(ref lines, ref i, s => s.EndsWith("),"));
+								FindLine(ref lines, ref i, IsEndOfSection);
 							}
 						}
-						else if(line.EndsWith("),"))
+						else if(IsEndOfSection(line))
 						{
 							break;
 						}
@@ -133,9 +140,19 @@ namespace PoEAssetReader.DatFiles.Definitions
 				return string.Empty;
 			}
 
-			static bool IsRefDataFileName(string input)
+			static bool IsEndOfSection(string input)
+			{
+				return input.Trim().EndsWith("),");
+			}
+
+			static bool IsRefDatFileName(string input)
 			{
 				return input.Trim().StartsWith("key='");
+			}
+
+			static bool IsRefDataFieldID(string input)
+			{
+				return input.Trim().StartsWith("key_id='");
 			}
 		}
 

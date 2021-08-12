@@ -376,7 +376,7 @@ namespace PoEAssetVisualizer
 				var fieldsWithRefDatFile = datFile.FileDefinition.Fields.Where(x => !string.IsNullOrEmpty(x.RefDatFileName));
 				foreach(var field in fieldsWithRefDatFile)
 				{
-					TryAddRefValues(field.ID, field.DataType.Name, field.RefDatFileName);
+					TryAddRefValues(field.ID, field.DataType.Name, field.RefDatFileName, field.RefDatFieldID);
 				}
 
 				if(hasRemainderULong || hasRemainderListULong)
@@ -385,11 +385,11 @@ namespace PoEAssetVisualizer
 					{
 						if(hasRemainderULong)
 						{
-							TryAddRefValues("_RemainderULong", "ulong", commonDatFile);
+							TryAddRefValues("_RemainderULong", "ulong", commonDatFile, null);
 						}
 						if(hasRemainderListULong)
 						{
-							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile);
+							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile, null);
 						}
 					}
 				}
@@ -450,7 +450,7 @@ namespace PoEAssetVisualizer
 					}
 				}
 
-				void TryAddRefValues(string columnName, string columnDataType, string refDatFileName)
+				void TryAddRefValues(string columnName, string columnDataType, string refDatFileName, string refDatFieldID)
 				{
 					DatFile refDatFile = GetDatFile($"Data/{refDatFileName}");
 					if(refDatFile == null)
@@ -460,59 +460,103 @@ namespace PoEAssetVisualizer
 					var columnBaseName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDatFileName)}";
 					var refDefintion = refDatFile.FileDefinition;
 					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
-					switch(columnDataType)
+					if(string.IsNullOrEmpty(refDatFieldID))
 					{
-						case "int":
-							AddSingleRefValue(columnBaseName, x => x.GetValue<int>(columnName));
-							break;
+						switch(columnDataType)
+						{
+							case "int":
+								AddSingleRefValueByIdx(columnBaseName, x => x.GetValue<int>(columnName));
+								break;
 
-						case "ulong":
-							AddSingleRefValue(columnBaseName, x => (int)x.GetValue<ulong>(columnName));
-							break;
+							case "ulong":
+								AddSingleRefValueByIdx(columnBaseName, x => (int)x.GetValue<ulong>(columnName));
+								break;
 
-						case "ref|list|int":
-							AddArrayRefValues(columnBaseName, x =>
-							{
-								if(x.TryGetValue(columnName, out List<int> idxs))
-								{
-									return idxs;
-								}
-								return null;
-							});
-							break;
+							case "ref|list|int":
+								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<int> idxs) ? idxs : null);
+								break;
 
-						case "ref|list|ulong":
-							AddArrayRefValues(columnBaseName, x =>
-							{
-								if(x.TryGetValue(columnName, out List<ulong> idxs))
-								{
-									return idxs.Select(x => (int)x).ToList();
-								}
-								return null;
-							});
-							break;
+							case "ref|list|ulong":
+								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<ulong> idxs) ? idxs.Select(x => (int)x).ToList() : null);
+								break;
+
+							default:
+								throw new Exception($"Unsupported ref data type {columnDataType} (by index)");
+						}
+					}
+					else
+					{
+						switch(columnDataType)
+						{
+							case "int":
+								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<int>(columnName), (a, b) => a == b);
+								break;
+
+							case "ulong":
+								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<ulong>(columnName), (a, b) => a == b);
+								break;
+
+							case "ref|string":
+								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<string>(columnName), (a, b) => a == b);
+								break;
+
+							case "ref|list|int":
+								AddArrayRefValuesByFieldID(columnBaseName, x => x.TryGetValue(columnName, out List<int> values) ? values : null, (a, b) => a == b);
+								break;
+
+							case "ref|list|ulong":
+								AddArrayRefValuesByFieldID(columnBaseName, x => x.TryGetValue(columnName, out List<ulong> values) ? values : null, (a, b) => a == b);
+								break;
+
+							case "ref|list|ref|string":
+								AddArrayRefValuesByFieldID(columnBaseName, x => x.TryGetValue(columnName, out List<string> values) ? values : null, (a, b) => a == b);
+								break;
+
+							default:
+								throw new Exception($"Unsupported ref data type {columnDataType} (by {refDatFieldID})");
+						}
 					}
 
-					void AddSingleRefValue(string columnBaseName, Func< DatRecord, int> getIdx)
+					void AddSingleRefValueByIdx(string columnBaseName, Func<DatRecord, int> getIdx)
 					{
 						for(int i = 0; i < datFile.Records.Count; i++)
 						{
 							var record = datFile.Records[i];
-							var idx = getIdx(record);
+							var refValue = getIdx(record);
 
-							if(idx < 0 || idx >= refDatFile.Records.Count)
+							if(refValue < 0 || refValue >= refDatFile.Records.Count)
 							{
 								continue;
 							}
 							foreach(var refField in refFields)
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
-								rowDict[$"{columnBaseName}_{refField.ID}"] = refDatFile.Records[idx].GetStringValue(refField.ID);
+								rowDict[$"{columnBaseName}_{refField.ID}"] = refDatFile.Records[refValue].GetStringValue(refField.ID);
 							}
 						}
 					}
 
-					void AddArrayRefValues(string columnBaseName, Func<DatRecord, List<int>> getIdxs)
+					void AddSingleRefValueByFieldID<T>(string columnBaseName, Func<DatRecord, T> getRefValue, Func<T, T, bool> matchesRefValue)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							T refValue = getRefValue(record);
+
+							DatRecord refRecord = refDatFile.Records.FirstOrDefault(x => matchesRefValue(x.GetValue<T>(refDatFieldID), refValue));
+							if(refRecord == null)
+							{
+								continue;
+							}
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = refRecord.GetStringValue(refField.ID);
+							}
+						}
+					}
+
+					void AddArrayRefValuesByIdx(string columnBaseName, Func<DatRecord, List<int>> getIdxs)
 					{
 						for(int i = 0; i < datFile.Records.Count; i++)
 						{
@@ -526,6 +570,27 @@ namespace PoEAssetVisualizer
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
 								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
+							}
+						}
+					}
+
+					void AddArrayRefValuesByFieldID<T>(string columnBaseName, Func<DatRecord, List<T>> getRefValues, Func<T, T, bool> matchesRefValue)
+					{
+						for(int i = 0; i < datFile.Records.Count; i++)
+						{
+							var record = datFile.Records[i];
+							List<T> refValues = getRefValues(record);
+							if(refValues == null)
+							{
+								continue;
+							}
+
+							var refRecords = refValues.Select(x => refDatFile.Records.FirstOrDefault(y => matchesRefValue(y.GetValue<T>(refDatFieldID), x)));
+
+							foreach(var refField in refFields)
+							{
+								var rowDict = (IDictionary<string, object>)items[i];
+								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", refRecords.Select(x => x == null ? string.Empty : x.GetStringValue(refField.ID))), "]");
 							}
 						}
 					}
