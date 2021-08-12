@@ -26,7 +26,7 @@ namespace PoEAssetVisualizer
 
 		private const string RootNodeName = "ROOT";
 
-		private const string DatDefinitionFileName = "DatDefinitions.xml";
+		private const string DatDefinitionFileName = "stable.py";
 
 		private static readonly string[] CommonDatFiles = new string[] {
 			"BaseItemTypes",
@@ -193,12 +193,12 @@ namespace PoEAssetVisualizer
 								case ".dat":
 								case ".dat64":
 									FillDatViewer(_openedAssetFile);
-									/*_datDefinitionsWatcher = new FileSystemWatcher(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), DatDefinitionFileName)
+									_datDefinitionsWatcher = new FileSystemWatcher(Directory.GetCurrentDirectory(), DatDefinitionFileName)
 									{
 										NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
 									};
 									_datDefinitionsWatcher.Changed += OnDatDefinitionsFileChanged;
-									_datDefinitionsWatcher.EnableRaisingEvents = true;*/
+									_datDefinitionsWatcher.EnableRaisingEvents = true;
 
 									HexViewer.Stream = new MemoryStream(contents);
 									HexViewerTab.Visibility = Visibility.Visible;
@@ -305,7 +305,7 @@ namespace PoEAssetVisualizer
 			{
 				if(_datDefinitions == null)
 				{
-					_datDefinitions = DatDefinitions.ParseLocalPyPoE("H:\\Repos\\PoE-Asset-Updater\\Resources\\stable.py");
+					_datDefinitions = DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
 				}
 				DatFile datFile = GetDatFile(assetFile);
 
