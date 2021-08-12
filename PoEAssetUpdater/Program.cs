@@ -264,6 +264,8 @@ namespace PoEAssetUpdater
 				//stats-local.json -> Likely/maintained created manually.
 				ExportWords(assetIndex, datDefinitions, assetOutputDir);
 				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
+				
+				ExportUniqueArtNameMapping(assetIndex, datDefinitions, assetOutputDir);
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -1308,6 +1310,61 @@ namespace PoEAssetUpdater
 
 				jsonWriter.WriteEndObject();
 			}
+		}
+		
+		private static void ExportUniqueArtNameMapping(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "unique-artname-mapping.json"), WriteRecords, true);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				var wordsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "Words.dat");
+				
+				var uniqueStashLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "UniqueStashLayout.dat");
+				var itemVisualIdentityDatContainer = GetDatFile(dataFiles, datDefinitions, "ItemVisualIdentity.dat");
+
+				if(uniqueStashLayoutDatContainer == null)
+				{
+					return;
+				}
+
+				foreach(var language in AllLanguages)
+				{	
+					if (!wordsDatContainers.ContainsKey(language))
+					{
+						continue;
+					}
+
+					jsonWriter.WritePropertyName(language.ToString());
+					jsonWriter.WriteStartObject();
+					var wordsDatContainer = wordsDatContainers[language][0];
+
+					foreach(var record in uniqueStashLayoutDatContainer.Records){
+						var wordsKey = (int)record.GetValue<ulong>("WordsKey");
+						var artName = GetArtName(record);
+						var name = wordsDatContainer.Records[wordsKey].GetValue<string>("Text");
+						jsonWriter.WritePropertyName(name);
+						jsonWriter.WriteValue(artName);
+					}
+					jsonWriter.WriteEndObject();
+				}
+
+				string GetArtName(DatRecord record)
+				{
+					if(!record.TryGetValue<ulong>("ItemVisualIdentityKey", out ulong itemVisualIdentityKey))
+					{
+						return string.Empty;
+					}
+					var itemVisualIdentity = itemVisualIdentityDatContainer.Records[(int)itemVisualIdentityKey];
+
+					if(itemVisualIdentity == null)
+					{
+						return string.Empty;
+					}
+					string ddsFileName = itemVisualIdentity.GetValue<string>("DDSFile");
+					return ddsFileName.Substring(0, ddsFileName.Length - 4);
+				}				
+			}			
 		}
 
 		private static void ExportAnnointments(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
