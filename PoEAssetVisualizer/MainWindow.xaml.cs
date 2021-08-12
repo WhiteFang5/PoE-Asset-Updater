@@ -311,10 +311,14 @@ namespace PoEAssetVisualizer
 				}
 				DatFile datFile = GetDatFile(assetFile);
 
+				var firstField = datFile.FileDefinition.Fields.FirstOrDefault();
+				DatViewer.FrozenColumnCount = firstField != null && ReferenceFields.Contains(firstField.ID) ? 2 : 1;
+
 				DatViewer.Columns.Add(new DataGridTextColumn()
 				{
 					Header = "#",
-					Binding = new Binding("Index")
+					Binding = new Binding("Index"),
+					Width = 40,
 				});
 				foreach(var field in datFile.FileDefinition.Fields)
 				{
