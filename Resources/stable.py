@@ -14959,16 +14959,29 @@ specification = Specification({
                 type='ref|list|uint',
             ),
             Field(
-                name='OLDFields',
-                type='byte[24]',#changed in 3.15
+                name='TagsKeys',
+                type='ref|list|ulong',
+            ),
+            Field(
+                name='GrantedEffectsPerLevelKeys',
+                type='ref|list|ulong',
+                key='GrantedEffectsPerLevel.dat',
+            ),
+            Field(
+                name='AuraFlags',
+                type='ref|list|ulong',
             ),
             Field(
                 name='MonsterMetadata',
-                type='ref|string',#changed in 3.15
+                type='ref|string',
             ),
             Field(
-                name='OLDFields2',
-                type='byte[16]',#changed in 3.15
+                name='Keys0',
+                type='ref|list|ulong',
+            ),
+            Field(
+                name='Keys1',
+                type='ref|list|ulong',
             ),
             Field(
                 name='Stat5Min',
@@ -15003,8 +15016,8 @@ specification = Specification({
                 type='ref|list|int',
             ),
             Field(
-                name='OLDFields3',
-                type='byte[8]',#changed in 3.15
+                name='Data0',
+                type='ref|list|byte',
             ),
             Field(
                 name='IsEssenceOnlyModifier',
@@ -15028,15 +15041,134 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='OLDFields4',
-                type='byte[9]',
+                name='Flag0',
+                type='byte',
             ),
-            # 3.10
+            Field(
+                name='ItemClassesKeys',
+                type='ref|list|ulong',
+                key='ItemClasses.dat',
+            ),
             Field(
                 name='MonsterOnDeath',
                 type='ref|string',
             ),
-            # Remainder... 3.15 changes delete more fields
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='GrantedEffectsPerLevelKeys',
+                type='ref|list|ulong',
+                key='GrantedEffectsPerLevel.dat',
+            ),
+            Field(
+                name='Heist_SubStatValue1',
+                type='int',
+            ),
+            Field(
+                name='Heist_SubStatValue2',
+                type='int',
+            ),
+            Field(
+                name='Heist_StatsKey0',
+                type='ulong',
+                key='Stats.dat',
+            ),
+            Field(
+                name='Heist_StatsKey1',
+                type='ulong',
+                key='Stats.dat',
+            ),
+            Field(
+                name='Heist_AddStatValue1',
+                type='int',
+            ),
+            Field(
+                name='Heist_AddStatValue2',
+                type='int',
+            ),
+            Field(
+                name='InfluenceTypes',
+                type='int',
+            ),
+            Field(
+                name='ImplicitTagsKeys',
+                type='ref|list|ulong',
+                key='Tags.dat',
+            ),
+            Field(
+                name='Unknown1',
+                type='int',
+            ),
+            Field(
+                name='Flag1',
+                type='bool',
+            ),
+            Field(
+                name='Unknown2',
+                type='int',
+            ),
+            Field(
+                name='Unknown3',
+                type='int',
+            ),
+            Field(
+                name='Unknown4',
+                type='int',
+            ),
+            Field(
+                name='Unknown5',
+                type='int',
+            ),
+            Field(
+                name='Unknown6',
+                type='int',
+            ),
+            Field(
+                name='Unknown7',
+                type='int',
+            ),
+            Field(
+                name='Unknown8',
+                type='int',
+            ),
+            Field(
+                name='Unknown9',
+                type='int',
+            ),
+            Field(
+                name='Unknown10',
+                type='int',
+            ),
+            Field(
+                name='Unknown11',
+                type='int',
+            ),
+            Field(
+                name='Unknown12',
+                type='int',
+            ),
+            Field(
+                name='Unknown13',
+                type='int',
+            ),
+            Field(
+                name='Unknown14',
+                type='int',
+            ),
+            Field(
+                name='Unknown15',
+                type='int',
+            ),
+            Field(
+                name='Unknown16',
+                type='int',
+            ),
+            Field(
+                name='Key0',
+                type='ulong',
+            ),
         ),
         virtual_fields=(
             VirtualField(
