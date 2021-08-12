@@ -14852,11 +14852,6 @@ specification = Specification({
                 type='ref|list|ulong',
                 key='ModSellPriceTypes.dat',
             ),
-            Field(
-                name='TagsKeys',
-                type='ref|list|ulong',
-                key='Tags.dat',
-            ),
         ),
     ),
     'Mods.dat': File(
