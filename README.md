@@ -11,14 +11,17 @@ PoE Asset Updater is a CLI tool built specifically to update the PoE asset files
 
 ## Usage
 
+Use a Steam installation (because it has an unpacked Content.ggpk)
 Download the CLI tool and run it using the following command:  
-`PoEAssetUpdater <path-to-Content.ggpk> <asset-output-directory>`
+```powershell
+> PoEAssetUpdater.exe "C:\Steam PoE Folder\Bundles2" "C:\output" "C:\local-static-poe" "C:\Repos\PoE-Asset-Updater\Resources\stable.py"
+```
 
 ## Development
 
 The project is written in C# and outputs an executable CLI.
 
-You'll need Visual Studio or VSCode and .NET Core v3.1 (exactly this version),
+You'll need Visual Studio or VSCode and .NET 5 (exactly this version),
 which you can get [here](https://dotnet.microsoft.com/download/dotnet).
 Get the SDK, not the Runtime.
 
