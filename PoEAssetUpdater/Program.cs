@@ -533,6 +533,7 @@ namespace PoEAssetUpdater
 					["IncursionRooms.dat"] = GetIncursionRoomsKVP,
 					["HeistJobs.dat"] = GetHeistJobsKVP,
 					["HeistObjectiveValueDescriptions.dat"] = GetHeistObjectivesKVP,
+					["ExpeditionFactions.dat"] = GetExpeditionFactionsKVP,
 				}, false);
 			}
 
@@ -637,6 +638,17 @@ namespace PoEAssetUpdater
 					return (null, null);
 				}
 				return ($"HeistObjectiveValue{id}", name);
+			}
+
+			static (string, string) GetExpeditionFactionsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>("Id").ToString(CultureInfo.InvariantCulture);
+				string name = recordData.GetValue<string>("Name").Trim();
+				if(string.IsNullOrEmpty(name))
+				{
+					return (null, null);
+				}
+				return ($"Expedition{id}", name);
 			}
 		}
 
