@@ -465,6 +465,7 @@ namespace PoEAssetVisualizer
 						switch(columnDataType)
 						{
 							case "int":
+							case "ref|generic":
 								AddSingleRefValueByIdx(columnBaseName, x => x.GetValue<int>(columnName));
 								break;
 
@@ -645,7 +646,7 @@ namespace PoEAssetVisualizer
 		{
 			VistaFolderBrowserDialog folderBrowserDialog = new VistaFolderBrowserDialog();
 			var result = folderBrowserDialog.ShowDialog();
-			if(result.HasValue && result.Value == true)
+			if(result.HasValue && result.Value)
 			{
 				return folderBrowserDialog.SelectedPath;
 			}
