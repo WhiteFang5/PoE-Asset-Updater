@@ -99,6 +99,7 @@ namespace PoEAssetUpdater
 			["HarvestPlantBooster"] = ItemCategory.CurrencySeedBooster,
 			["HeistObjective"] = ItemCategory.CurrencyHeistTarget,
 			["Incubator"] = ItemCategory.CurrencyIncubator,
+			["IncubatorStackable"] = ItemCategory.CurrencyIncubator,
 			// Divination Cards
 			["AbstractDivinationCard"] = ItemCategory.Card,
 			// Flasks
@@ -168,11 +169,11 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<ulong, string> TagsToItemCategoryMapping = new Dictionary<ulong, string>()
 		{
-			[651] = ItemCategory.HeistCloak,
-			[652] = ItemCategory.HeistBrooch,
-			[653] = ItemCategory.HeistGear,
-			[664] = ItemCategory.HeistTool,
-			[696] = ItemCategory.MapInvitation,
+			[649] = ItemCategory.HeistCloak,
+			[650] = ItemCategory.HeistBrooch,
+			[651] = ItemCategory.HeistGear,
+			[662] = ItemCategory.HeistTool,
+			[694] = ItemCategory.MapInvitation,
 		};
 
 		private static readonly string[] IgnoredItemIds = new string[]
