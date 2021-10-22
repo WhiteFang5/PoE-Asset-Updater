@@ -74,6 +74,12 @@ namespace PoEAssetUpdater
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
 
+			if(closeQuoteIdx == -1)
+			{
+				// Invalid stat line detected -> do nothing & return.
+				return;
+			}
+
 			string numberPart = line[..openQuoteIdx].Trim();
 			string statDescription = line[(openQuoteIdx + 1)..closeQuoteIdx];
 			string additionalData = line[(closeQuoteIdx + 1)..];
