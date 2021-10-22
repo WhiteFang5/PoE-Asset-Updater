@@ -2193,24 +2193,6 @@ specification = Specification({
                 key='SoundEffects.dat',
             ),
             Field(
-                name='NormalPurchase_BaseItemTypesKeys',
-                type='ref|list|ref|generic',
-                key='BaseItemTypes.dat',
-            ),
-            Field(
-                name='NormalPurchase_Costs',
-                type='ref|list|int',
-            ),
-            Field(
-                name='MagicPurchase_BaseItemTypesKeys',
-                type='ref|list|ref|generic',
-                key='BaseItemTypes.dat',
-            ),
-            Field(
-                name='MagicPurchase_Costs',
-                type='ref|list|int',
-            ),
-            Field(
                 name='TagsKeys',
                 type='ref|list|ulong',
                 key='Tags.dat',
@@ -2232,7 +2214,7 @@ specification = Specification({
                 key='ItemVisualIdentity.dat',
             ),
             Field(
-                name='UnknownUnique',
+                name='Hash',
                 type='uint',
                 unique=True,
             ),
@@ -2242,24 +2224,6 @@ specification = Specification({
                 type='ref|list|ulong',
                 key='AchievementItems.dat',
                 description='Achievement check when selling this item to vendors',
-            ),
-            Field(
-                name='RarePurchase_BaseItemTypesKeys',
-                type='ref|list|ref|generic',
-                key='BaseItemTypes.dat',
-            ),
-            Field(
-                name='RarePurchase_Costs',
-                type='ref|list|int',
-            ),
-            Field(
-                name='UniquePurchase_BaseItemTypesKeys',
-                type='ref|list|ref|generic',
-                key='BaseItemTypes.dat',
-            ),
-            Field(
-                name='UniquePurchase_Costs',
-                type='ref|list|int',
             ),
             # see https://github.com/OmegaK2/PyPoE/pull/41 for further explanation
             Field(
@@ -4966,7 +4930,11 @@ specification = Specification({
                 type='ref|string',
             ),
             Field(
-                name='Unknown0',
+                name='XBoxText2',
+                type='ref|string',
+            ),
+            Field(
+                name='Hash',
                 type='int',
             ),
             Field(
@@ -7647,6 +7615,410 @@ specification = Specification({
             Field(
                 name='Flag0',
                 type='bool',
+            ),
+        ),
+    ),
+
+    'ExpeditionAreas.dat': File(
+        fields=(
+            Field(
+                name='Area',
+                type='ulong',
+                key='WorldAreas.dat',
+            ),
+            Field(
+                name='PosX',
+                type='int',
+            ),
+            Field(
+                name='PosY',
+                type='int',
+            ),
+            Field(
+                name='Tags',
+                type='ref|list|ulong',
+                key='Tags.dat',
+            ),
+            Field(
+                name='Data0',
+                type='ref|list|int',
+            ),
+            Field(
+                name='Flag0',
+                type='bool',
+            ),
+            Field(
+                name='TextAudio',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='CompletionAchievements',
+                type='ref|list|ulong',
+                key='AchievementItems.dat',
+            ),
+        ),
+    ),
+    'ExpeditionBalancePerLevel.dat': File(
+        fields=(
+            Field(
+                name='Level',
+                type='int',
+            ),
+            Field(
+                name='Flag0',
+                type='bool',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='Unknown1',
+                type='int',
+            ),
+            Field(
+                name='Unknown2',
+                type='int',
+            ),
+            Field(
+                name='Unknown3',
+                type='int',
+            ),
+            Field(
+                name='Unknown4',
+                type='int',
+            ),
+            Field(
+                name='Unknown5',
+                type='int',
+            ),
+            Field(
+                name='Unknown6',
+                type='int',
+            ),
+            Field(
+                name='Unknown7',
+                type='int',
+            ),
+            Field(
+                name='Unknown8',
+                type='int',
+            ),
+            Field(
+                name='Unknown9',
+                type='int',
+            ),
+            Field(
+                name='Unknown10',
+                type='int',
+            ),
+            Field(
+                name='Unknown11',
+                type='int',
+            ),
+            Field(
+                name='Unknown12',
+                type='int',
+            ),
+        ),
+    ),
+    'ExpeditionCurrency.dat': File(
+        fields=(
+            Field(
+                name='BaseItemType',
+                type='ulong',
+                key='BaseItemTypes.dat',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='NPC',
+                type='ulong',
+                key='ExpeditionNPCs.dat',
+            ),
+        ),
+    ),
+    'ExpeditionFactions.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='Name',
+                type='ref|string',
+            ),
+            Field(
+                name='FactionFlag',
+                type='ref|string',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='FactionIcon',
+                type='ref|string',
+            ),
+            Field(
+                name='MonsterVarieties',
+                type='ulong',
+                key='MonsterVarieties.dat',
+            ),
+            Field(
+                name='Progress1',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='Progress2Vaal',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='Progress3Final',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='Tags',
+                type='ulong',
+                key='Tags.dat',
+            ),
+        ),
+    ),
+    'ExpeditionMarkersCommon.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='AOFile',
+                type='ref|string',
+            ),
+        ),
+    ),
+    'ExpeditionNPCs.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='NPCs',
+                type='ref|list|ulong',
+                key='NPCs.dat',
+            ),
+            Field(
+                name='RerollItem',
+                type='ulong',
+                key='BaseItemTypes.dat',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='Unknown1',
+                type='int',
+            ),
+            Field(
+                name='Unknown2',
+                type='int',
+            ),
+            Field(
+                name='Faction',
+                type='ulong',
+                key='ExpeditionFactions.dat',
+            ),
+            Field(
+                name='Reroll',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='AllBombsPlaced',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='BombPlacedRemnant',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='BombPlacedTreasure',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='BombPlacedMonsters',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='BombPlacedGeneric',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+            Field(
+                name='EncounterComplete',
+                type='ulong',
+                key='NPCTextAudio.dat',
+            ),
+        ),
+    ),
+    'ExpeditionRelicMods.dat': File(
+        fields=(
+            Field(
+                name='Mod',
+                type='ulong',
+                key='Mods.dat',
+            ),
+            Field(
+                name='Categories',
+                type='ref|list|int',
+            ),
+            Field(
+                name='DestroyAchievements',
+                type='ref|list|ulong',
+                key='AchievementItems.dat',
+            ),
+        ),
+    ),
+    'ExpeditionRelics.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='Name',
+                type='ref|string',
+            ),
+            Field(
+                name='ItemTag',
+                type='ulong',
+                key='Tags.dat',
+            ),
+            Field(
+                name='AOFile',
+                type='ref|string',
+            ),
+            Field(
+                name='MinLevel',
+                type='int',
+            ),
+            Field(
+                name='MaxLevel',
+                type='int',
+            ),
+        ),
+    ),
+    'ExpeditionStorageLayout.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+            ),
+            Field(
+                name='BaseItemType',
+                type='ulong',
+                key='BaseItemTypes.dat',
+            ),
+            Field(
+                name='PosX',
+                type='int',
+            ),
+            Field(
+                name='PosY',
+                type='int',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='Unknown1',
+                type='int',
+            ),
+            Field(
+                name='Width',
+                type='int',
+            ),
+            Field(
+                name='Height',
+                type='int',
+            ),
+            Field(
+                name='Unknown2',
+                type='int',
+            ),
+            Field(
+                name='Flag0',
+                type='bool',
+            ),
+        ),
+    ),
+    'ExpeditionTerrainFeatures.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='ExtraFeature',
+                type='ulong',
+                key='ExtraTerrainFeatures.dat',
+            ),
+            Field(
+                name='ExpeditionFaction',
+                type='ulong',
+                key='ExpeditionFactions.dat',
+            ),
+            Field(
+                name='MinLevel',
+                type='int',
+            ),
+            Field(
+                name='MaxLevel',
+                type='int',
+            ),
+            Field(
+                name='Unknown0',
+                type='int',
+            ),
+            Field(
+                name='Area',
+                type='ulong',
+                key='WorldAreas.dat',
+            ),
+            Field(
+                name='ExpeditionAreas',
+                type='ref|list|ulong',
+                key='ExpeditionAreas.dat',
+            ),
+            Field(
+                name='Unknown1',
+                type='int',
+            ),
+            Field(
+                name='Flag0',
+                type='bool',
+            ),
+            Field(
+                name='UnearthAchievements',
+                type='ref|list|ulong',
+                key='AchievementItems.dat',
             ),
         ),
     ),
@@ -10937,6 +11309,58 @@ specification = Specification({
             Field(
                 name='Unknown2',
                 type='float',
+            ),
+        ),
+    ),
+    'HellscapeMods.dat': File(
+        fields=(
+            Field(
+                name='ModsKey',
+                type='ulong',
+                key='Mods.dat',
+                unique=True,
+            ),
+            Field(
+                name='Tier',
+                type='int',
+            ),
+            Field(
+                name='Unk0',
+                type='int',
+            ),
+            Field(
+                name='Key0',
+                type='ulong',
+            ),
+        ),
+    ),
+    'HellscapePassives.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique=True,
+            ),
+            Field(
+                name='Name',
+                type='ref|string',
+            ),
+            Field(
+                name='StatKeys',
+                type='ref|list|ulong',
+                key='Stats.dat',
+            ),
+            Field(
+                name='Unk0',
+                type='int',
+            ),
+            Field(
+                name='Unk1',
+                type='int',
+            ),
+            Field(
+                name='Unk2',
+                type='int',
             ),
         ),
     ),
