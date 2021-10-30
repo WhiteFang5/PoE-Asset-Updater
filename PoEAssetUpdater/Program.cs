@@ -1134,6 +1134,7 @@ namespace PoEAssetUpdater
 							addTradeStatData = candidateStatDescs.All(x => x.LocalStat == candidateStatDescs[0].LocalStat);
 
 							statDescription = candidateStatDescs.First();
+							mod ??= statDescription.LocalStat ? "local" : null;
 						}
 					}
 					
