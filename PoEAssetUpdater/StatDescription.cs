@@ -69,7 +69,7 @@ namespace PoEAssetUpdater
 
 		#region Public Methods
 
-		public void ParseAndAddStatLine(Language language, string line, string[] afflictionRewardTypes, string[] indexableSupportGems)
+		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems)
 		{
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
@@ -88,7 +88,7 @@ namespace PoEAssetUpdater
 				numberPart = string.Concat("N", numberPart);
 				if(additionalData.Contains("canonical_line"))
 				{
-					// Only mark this stat desc as negated when the 'canonical_line' occurs after to the 'negate'.
+					// Only mark this stat desc as negated when the 'canonical_line' occurs after the 'negate'.
 					Negated = additionalData.IndexOf("negate") < additionalData.IndexOf("canonical_line");
 				}
 				// The numberPart is negated, but expressed explicitly positive => mark the stat as negated.
@@ -96,7 +96,11 @@ namespace PoEAssetUpdater
 				{
 					Negated = true;
 				}
-
+				// The negated stat desc is at the first index, which means it is 'canonical' and should be negated.
+				else if(lineIdx == 0)
+				{
+					Negated = true;
+				}
 			}
 
 			ContainsConqueredPassivesText = additionalData.Contains("ReminderTextConqueredPassives");

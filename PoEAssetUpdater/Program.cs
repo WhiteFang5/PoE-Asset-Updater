@@ -889,7 +889,7 @@ namespace PoEAssetUpdater
 							int textCount = int.Parse(line);
 							for(int i = 0; i < textCount; i++)
 							{
-								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], afflictionRewardTypes, indexableSupportGems);
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems);
 							}
 							if(lineIdx < lastLineIdx)
 							{
