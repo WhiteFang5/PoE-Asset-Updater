@@ -48,7 +48,7 @@ namespace PoEAssetUpdater
 			[Language.French] = string.Format(CountryStatsURLFormat, "fr"),
 			[Language.Spanish] = string.Format(CountryStatsURLFormat, "es"),
 			[Language.Korean] = "https://poe.game.daum.net/api/trade/data/stats",
-			[Language.SimplifiedChinese] = "https://poe.game.qq.com/api/trade/data/stats",
+			//[Language.SimplifiedChinese] = "https://poe.game.qq.com/api/trade/data/stats",
 			[Language.TraditionalChinese] = "https://web.poe.garena.tw/api/trade/data/stats",
 		};
 
@@ -1175,7 +1175,7 @@ namespace PoEAssetUpdater
 										{
 											foreach (var statLine in statDescription.GetStatLines(language, GetOptionStatDesc(text, optionValue), true))
 											{
-												WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+												WriteStatLine(statLine, null, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
 											}
 										}
 									}
