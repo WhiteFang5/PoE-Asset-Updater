@@ -56,6 +56,11 @@ namespace PoEAssetUpdater
 
 		private static readonly string PoENinjaMapAPIUrl = string.Format("https://poe.ninja/api/data/itemoverview?league={0}&type=Map&language=en", CurrentLeagueName);
 
+		private const string PoEWikiUrl = "https://www.poewiki.net";//https://pathofexile.fandom.com
+		private static readonly string PoEWikiApiUrl = $"{PoEWikiUrl}/w";//https://pathofexile.fandom.com
+
+		private const string PoEWikiMapsPageId = "10735";//fandom wiki: 1010
+
 		private const string CountryCachedFileNameFormat = "{0}.stats.json";
 		private static readonly Dictionary<Language, string> LanguageToPoETradeAPICachedFileNameMapping = new Dictionary<Language, string>()
 		{
@@ -1779,26 +1784,26 @@ namespace PoEAssetUpdater
 
 				IEnumerable<JToken> items = null;
 
-				string mapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
+				string mapsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
 				if(string.IsNullOrEmpty(mapsJson))
 					return;
 
-				string uniqueMapsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
+				string uniqueMapsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
 				if(string.IsNullOrEmpty(uniqueMapsJson))
 					return;
 
-				string bossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
+				string bossesJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
 				if(string.IsNullOrEmpty(mapsJson))
 					return;
 
-				string uniqueMapBossesJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
+				string uniqueMapBossesJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
 				if(string.IsNullOrEmpty(uniqueMapBossesJson))
 					return;
 
 				for(int i = 0; i < 3; i++)
 				{
 					int offset = i * maxLimit;
-					string itemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+					string itemsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
 					if(string.IsNullOrEmpty(itemsJson))
 						return;
 
@@ -1807,7 +1812,7 @@ namespace PoEAssetUpdater
 					items = items?.Concat(parsed) ?? parsed;
 				}
 
-				string uniqueMapItemsJson = GetContent($"https://pathofexile.fandom.com/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
+				string uniqueMapItemsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
 				if(string.IsNullOrEmpty(uniqueMapItemsJson))
 					return;
 
@@ -1830,7 +1835,7 @@ namespace PoEAssetUpdater
 				{
 					int skip = i * titleLimit;
 					int remaining = mapCount - skip;
-					string mapsContentsJson = GetContent($"https://pathofexile.fandom.com/api.php?action=query&format=json&prop=revisions&titles={string.Join("|", mapTitles.Skip(skip).Take(Math.Min(titleLimit, remaining)))}&redirects=1&rvprop=content&rvslots=main");
+					string mapsContentsJson = GetContent($"{PoEWikiApiUrl}/api.php?action=query&format=json&prop=revisions&titles={string.Join("|", mapTitles.Skip(skip).Take(Math.Min(titleLimit, remaining)))}&redirects=1&rvprop=content&rvslots=main");
 					if(string.IsNullOrEmpty(mapsContentsJson))
 						return;
 
@@ -1838,11 +1843,11 @@ namespace PoEAssetUpdater
 					mapContents = mapContents?.Concat(parsed) ?? parsed;
 				}
 
-				string mapContentsJson = GetContent("https://pathofexile.fandom.com/api.php?action=query&format=json&prop=revisions&titles=Map&redirects=1&rvprop=content&rvslots=main&rvsection=9");
+				string mapContentsJson = GetContent($"{PoEWikiApiUrl}/api.php?action=query&format=json&prop=revisions&titles=Map&redirects=1&rvprop=content&rvslots=main&rvsection=9");
 				if(string.IsNullOrEmpty(mapContentsJson))
 					return;
 
-				string mapcontents = (string)JObject.Parse(mapContentsJson)["query"]["pages"]["1010"]["revisions"][0]["slots"]["main"]["*"];
+				string mapcontents = (string)JObject.Parse(mapContentsJson)["query"]["pages"][PoEWikiMapsPageId]["revisions"][0]["slots"]["main"]["*"];
 				int mapTableStartIndex = mapcontents.IndexOf("{|");
 				mapcontents = mapcontents.Substring(mapTableStartIndex, mapcontents.IndexOf("|}") - mapTableStartIndex);
 				if(string.IsNullOrEmpty(mapcontents))
@@ -1968,7 +1973,7 @@ namespace PoEAssetUpdater
 					jsonWriter.WriteEndArray();
 
 					jsonWriter.WritePropertyName("url");
-					jsonWriter.WriteValue($"https://pathofexile.fandom.com/wiki/{pageTitle.Replace(" ", "_")}");
+					jsonWriter.WriteValue($"{PoEWikiUrl}/wiki/{pageTitle.Replace(" ", "_")}");
 
 					if(!string.IsNullOrEmpty(encounter))
 					{
