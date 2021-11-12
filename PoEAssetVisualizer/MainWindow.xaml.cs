@@ -474,6 +474,7 @@ namespace PoEAssetVisualizer
 								break;
 
 							case "ref|list|int":
+							case "ref|list|ref|generic":
 								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<int> idxs) ? idxs : null);
 								break;
 
