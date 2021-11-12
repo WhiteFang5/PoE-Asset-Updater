@@ -12616,6 +12616,10 @@ specification = Specification({
             ),
             Field(
                 name='Unknown17',
+                type='ref|string',
+            ),
+            Field(
+                name='Unknown18',
                 type='int',
             ),
         ),
@@ -16608,11 +16612,6 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='TagsKeys',
-                type='ref|list|ulong',
-                key='Tags.dat',
-            ),
-            Field(
                 name='MonsterResistancesKey',
                 type='ulong',
                 key='MonsterResistances.dat',
@@ -16623,6 +16622,10 @@ specification = Specification({
             ),
             Field(
                 name='IsSmallAbyssMonster',
+                type='bool',
+            ),
+            Field(
+                name='Flag1',
                 type='bool',
             ),
         ),
@@ -17013,6 +17016,42 @@ specification = Specification({
             Field(
                 name='Flag8',
                 type='bool',
+            ),
+            Field(
+                name='Unknown106',
+                type='int',
+            ),
+            Field(
+                name='Unknown107',
+                type='int',
+            ),
+            Field(
+                name='Unknown108',
+                type='int',
+            ),
+            Field(
+                name='Unknown109',
+                type='int',
+            ),
+            Field(
+                name='Unknown110',
+                type='int',
+            ),
+            Field(
+                name='Unknown111',
+                type='int',
+            ),
+            Field(
+                name='Keys3',
+                type='ref|list|int',
+            ),
+            Field(
+                name='Unknown112',
+                type='int',
+            ),
+            Field(
+                name='Unknown113',
+                type='int',
             ),
         ),
     ),
@@ -18332,48 +18371,68 @@ specification = Specification({
             ),
         ),
     ),
-    'PassiveSkillTreeTutorial.dat': File(
+    'PassiveSkillMasteryEffects.dat': File(
         fields=(
             Field(
                 name='Id',
                 type='ref|string',
+                unique='True',
             ),
             Field(
-                name='CharactersKey',
-                type='ulong',
-                key='Characters.dat',
+                name='HASH16',
+                type='int',
             ),
             Field(
-                name='Key0',
-                type='ulong',
+                name='StatsKey',
+                type='ref|list|ulong',
+                key='Stats.dat',
             ),
             Field(
-                name='ChoiceA_Description',
+                name='Stat1Value',
+                type='int',
+            ),
+            Field(
+                name='Stat2Value',
+                type='int',
+            ),
+            Field(
+                name='Stat3Value',
+                type='int',
+            ),
+        ),
+    ),
+    'PassiveSkillMasteryGroups.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+                unique='True',
+            ),
+            Field(
+                name='MasteryEffectsKey',
+                type='ref|list|ulong',
+                key='PassiveSkillMasteryEffects.dat',
+            ),
+            Field(
+                name='InactiveIcon',
                 type='ref|string',
             ),
             Field(
-                name='ChoiceB_Description',
+                name='ActiveIcon',
                 type='ref|string',
             ),
             Field(
-                name='Key1',
-                type='ulong',
-            ),
-            Field(
-                name='ChoiceA_PassiveTreeURL',
+                name='ActiveEffectImage',
                 type='ref|string',
             ),
             Field(
-                name='ChoiceB_PassiveTreeURL',
-                type='ref|string',
+                name='Flag0',
+                type='bool',
             ),
             Field(
-                name='Key2',
+                name='SoundEffectsKey',
                 type='ulong',
-            ),
-            Field(
-                name='Key3',
-                type='ulong',
+                key='SoundEffects.dat'
             ),
         ),
     ),
@@ -18492,7 +18551,7 @@ specification = Specification({
                 key='GrantedEffectsPerLevel.dat',
             ),
             Field(
-                name='Flag0',
+                name='IsAnnointmentOnly',
                 type='bool',
             ),
             Field(
@@ -18500,17 +18559,21 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Flag1',
-                type='byte',
+                name='IsExpansion',
+                type='bool',
             ),
             Field(
                 name='IsProxyPassive',
                 type='byte',
             ),
-            # TODO 3.13
             Field(
-                name='Unknown1',
+                name='SkillType',
                 type='int',
+            ),
+            Field(
+                name='MasteryGroupKey',
+                type='ulong',
+                key='PassiveSkillMasteryGroups.dat',
             ),
         ),
         virtual_fields=(
@@ -18522,6 +18585,51 @@ specification = Specification({
                 name='Stats',
                 fields=('StatsKeys', 'StatValues'),
                 zip=True,
+            ),
+        ),
+    ),
+    'PassiveSkillTreeTutorial.dat': File(
+        fields=(
+            Field(
+                name='Id',
+                type='ref|string',
+            ),
+            Field(
+                name='CharactersKey',
+                type='ulong',
+                key='Characters.dat',
+            ),
+            Field(
+                name='Key0',
+                type='ulong',
+            ),
+            Field(
+                name='ChoiceA_Description',
+                type='ref|string',
+            ),
+            Field(
+                name='ChoiceB_Description',
+                type='ref|string',
+            ),
+            Field(
+                name='Key1',
+                type='ulong',
+            ),
+            Field(
+                name='ChoiceA_PassiveTreeURL',
+                type='ref|string',
+            ),
+            Field(
+                name='ChoiceB_PassiveTreeURL',
+                type='ref|string',
+            ),
+            Field(
+                name='Key2',
+                type='ulong',
+            ),
+            Field(
+                name='Key3',
+                type='ulong',
             ),
         ),
     ),
@@ -22252,6 +22360,10 @@ specification = Specification({
                 name='Name',
                 type='ref|string',
             ),
+            Field(
+                name='IsDropDisabled',
+                type='bool',
+            ),
         ),
     ),
     'UniqueSetNames.dat': File(
@@ -22782,12 +22894,7 @@ specification = Specification({
             ),
             Field(
                 name='Unknown32',
-                type='int',
-            ),
-            # TODO: Exile chance?
-            Field(
-                name='Unknown33',
-                type='int',
+                type='ulong',
             ),
             Field(
                 name='AchievementItemsKey',
@@ -22803,11 +22910,6 @@ specification = Specification({
                 name='Unknown38',
                 type='int',
             ),
-            # TODO: Spawn chances below this point?
-            Field(
-                name='Unknown39',
-                type='int',
-            ),
             Field(
                 name='VaalArea_WorldAreasKeys',
                 type='ref|list|ref|generic',
@@ -22818,25 +22920,8 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Strongbox_SpawnChance',
-                type='int',
-            ),
-            Field(
-                name='Strongbox_MaxCount',
-                type='int',
-            ),
-            Field(
-                name='Strongbox_RarityWeight',
-                type='ref|list|int',
-                description='Normal/Magic/Rare/Unique spawn distribution',
-            ),
-            Field(
                 name='Flag0',
                 type='byte',
-            ),
-            Field(
-                name='Unknown46',
-                type='int',
             ),
             Field(
                 name='MaxLevel',
@@ -22848,10 +22933,6 @@ specification = Specification({
                 key='Tags.dat',
             ),
             Field(
-                name='Unknown50',
-                type='int',
-            ),
-            Field(
                 name='Unknown51',
                 type='int',
             ),
@@ -22860,28 +22941,8 @@ specification = Specification({
                 type='bool',
             ),
             Field(
-                name='Unknown52',
-                type='int',
-            ),
-            Field(
-                name='Unknown53',
-                type='int',
-            ),
-            Field(
-                name='Unknown54',
-                type='int',
-            ),
-            Field(
-                name='Unknown55',
-                type='int',
-            ),
-            Field(
-                name='Unknown56',
-                type='int',
-            ),
-            Field(
-                name='Unknown57',
-                type='int',
+                name='Inflection',
+                type='ref|string',
             ),
             Field(
                 name='Unknown58',
@@ -22899,18 +22960,6 @@ specification = Specification({
             Field(
                 name='IsVaalArea',
                 type='bool',
-            ),
-            Field(
-                name='Unknown62',
-                type='int',
-            ),
-            Field(
-                name='Unknown63',
-                type='int',
-            ),
-            Field(
-                name='Unknown64',
-                type='int',
             ),
             Field(
                 name='IsLabyrinthAirlock',
@@ -22931,18 +22980,6 @@ specification = Specification({
                 key='AchievementItems.dat',
             ),
             Field(
-                name='Unknown69',
-                type='int',
-            ),
-            Field(
-                name='Unknown70',
-                type='int',
-            ),
-            Field(
-                name='Unknown71',
-                type='int',
-            ),
-            Field(
                 name='TSIFile',
                 type='ref|string',
                 file_ext='.tsi',
@@ -22957,14 +22994,6 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Unknown76',
-                type='int',
-            ),
-            Field(
-                name='Unknown77',
-                type='int',
-            ),
-            Field(
                 name='WaypointActivation_AchievementItemsKeys',
                 type='ref|list|ulong',
                 key='AchievementItems.dat',
@@ -22976,14 +23005,6 @@ specification = Specification({
             Field(
                 name='IsLabyrinthBossArea',
                 type='bool',
-            ),
-            Field(
-                name='Unknown80',
-                type='int',
-            ),
-            Field(
-                name='Unknown81',
-                type='int',
             ),
             Field(
                 name='FirstEntry_NPCTextAudioKey',
@@ -23003,27 +23024,6 @@ specification = Specification({
                 key_id='Id',
             ),
             Field(
-                name='Unknown87',
-                type='int',
-            ),
-            Field(
-                name='Unknown88',
-                type='int',
-            ),
-            Field(
-                name='Unknown89',
-                type='int',
-            ),
-            Field(
-                name='Unknown90',
-                type='int',
-            ),
-            Field(
-                name='Unknown91',
-                type='int',
-            ),
-            # this field added in 3.2.0
-            Field(
                 name='Unknown94',
                 type='int',
             ),
@@ -23038,7 +23038,7 @@ specification = Specification({
             ),
             Field(
                 name='Unknown86',
-                type='int',
+                type='ulong',
             ),
             Field(
                 name='Unknown87',
@@ -23059,6 +23059,14 @@ specification = Specification({
             Field(
                 name='Unknown91',
                 type='int',
+            ),
+            Field(
+                name='Flag1',
+                type='bool',
+            ),
+            Field(
+                name='Flag2',
+                type='bool',
             ),
             Field(
                 name='Unknown92',
@@ -23074,87 +23082,7 @@ specification = Specification({
             ),
             Field(
                 name='Unknown95',
-                type='int',
-            ),
-            Field(
-                name='Unknown96',
-                type='int',
-            ),
-            Field(
-                name='Unknown97',
-                type='int',
-            ),
-            Field(
-                name='Unknown98',
-                type='int',
-            ),
-            Field(
-                name='Unknown99',
-                type='int',
-            ),
-            Field(
-                name='Unknown100',
-                type='int',
-            ),
-            Field(
-                name='Unknown101',
-                type='int',
-            ),
-            Field(
-                name='Unknown102',
-                type='int',
-            ),
-            Field(
-                name='Flag1',
-                type='bool',
-            ),
-            Field(
-                name='Unknown103',
-                type='int',
-            ),
-            Field(
-                name='Unknown104',
-                type='int',
-            ),
-            Field(
-                name='Flag2',
-                type='byte',
-            ),
-            Field(
-                name='Unknown105',
-                type='int',
-            ),
-            Field(
-                name='Unknown106',
-                type='int',
-            ),
-            Field(
-                name='Unknown107',
-                type='int',
-            ),
-            Field(
-                name='Unknown108',
-                type='int',
-            ),
-            Field(
-                name='Unknown109',
-                type='int',
-            ),
-            Field(
-                name='MetamorphChance',
-                type='int',
-            ),
-            Field(
-                name='DeliriumChance',
-                type='int',
-            ),
-            Field(
-                name='HarvestChance',
-                type='int',
-            ),
-            Field(
-                name='HeistChance',
-                type='int',
+                type='ref|list|int',
             ),
         ),
     ),
