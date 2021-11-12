@@ -44,7 +44,7 @@ namespace PoEAssetReader
 				from assetFile in assetBundle.Files
 				where predicate(assetFile)
 				select assetFile
-			).First();
+			).FirstOrDefault();
 		}
 
 		public List<AssetFile> FindFiles(Predicate<AssetFile> predicate)
