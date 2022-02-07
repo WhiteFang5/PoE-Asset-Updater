@@ -163,6 +163,7 @@ namespace PoEAssetUpdater
 			["AbstactPantheonSoul"] = null,
 			["HarvestInfrastructure"] = null,
 			["Item"] = null,
+			["ArchnemesisMod"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -189,25 +190,6 @@ namespace PoEAssetUpdater
 			"HeistEquipmentRewardTest",
 		};
 
-		private static readonly string[] IgnoredProphecyIds = new string[]
-		{
-			"MapExtraHaku",
-			"MapExtraTora",
-			"MapExtraCatarina",
-			"MapExtraVagan",
-			"MapExtraElreon",
-			"MapExtraVorici",
-		};
-
-		private static readonly Dictionary<string, string> ProphecyIdToSuffixClientStringIdMapping = new Dictionary<string, string>()
-		{
-			["MapExtraZana"] = "MasterNameZana",
-			["MapExtraEinhar"] = "MasterNameEinhar",
-			["MapExtraAlva"] = "MasterNameAlva",
-			["MapExtraNiko"] = "MasterNameNiko",
-			["MapExtraJun"] = "MasterNameJun",
-		};
-
 		// Manually matched trade stat IDs to Stat IDs (because there is no generic way to match them up accordingly)
 		private static readonly Dictionary<string, (string statId, bool clearOptions)> TradeStatIdManualMapping = new Dictionary<string, (string, bool)>()
 		{
@@ -218,7 +200,6 @@ namespace PoEAssetUpdater
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
 		{
 			["Cards"] = "/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvRGl2aW5hdGlvbi9JbnZlbnRvcnlJY29uIiwidyI6MSwiaCI6MSwic2NhbGUiOjF9XQ/f34bf8cbb5/InventoryIcon.png",
-			["Prophecies"] = "/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvUHJvcGhlY3lPcmJSZWQiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MX1d/c45e04700d/ProphecyOrbRed.png",
 		};
 
 		#endregion
@@ -277,7 +258,7 @@ namespace PoEAssetUpdater
 				//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
-				ExportMaps(assetIndex, datDefinitions, assetOutputDir);
+				//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
 				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
 				//stats-local.json -> Likely/maintained created manually.
@@ -473,16 +454,15 @@ namespace PoEAssetUpdater
 				ExportLanguageDataFile(assetFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
 					["BaseItemTypes.dat"] = GetBaseItemTypeKVP,
-					["Prophecies.dat"] = GetPropheciesKVP,
 					["MonsterVarieties.dat"] = GetMonsterVaritiesKVP,
 				}, true);
 			}
 
 			static (string, string) GetBaseItemTypeKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id").Split('/').Last();
-				string name = Escape(recordData.GetValue<string>("Name").Trim());
-				string inheritsFrom = recordData.GetValue<string>("InheritsFrom").Split('/').Last();
+				string id = recordData.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+				string name = Escape(recordData.GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim());
+				string inheritsFrom = recordData.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
 				if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
 				{
 					return (null, null);
@@ -490,37 +470,10 @@ namespace PoEAssetUpdater
 				return (id, name);
 			}
 
-			(string, string) GetPropheciesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
-			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Name").Trim();
-
-				if(IgnoredProphecyIds.Contains(id))
-				{
-					return (null, null);
-				}
-
-				if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
-				{
-					var clientStringsDatContainer = GetDatFile(languageFiles, datDefinitions, "ClientStrings.dat");
-					var clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetValue<string>("Id") == clientStringId);
-					if(clientStringRecordData != null)
-					{
-						name += $" ({clientStringRecordData.GetValue<string>("Text")})";
-					}
-					else
-					{
-						PrintError($"Missing {nameof(clientStringId)} for '{clientStringId}'");
-					}
-				}
-
-				return (id, Escape(name));
-			}
-
 			static (string, string) GetMonsterVaritiesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id").Split('/').Last();
-				string name = Escape(recordData.GetValue<string>("Name").Trim());
+				string id = recordData.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last();
+				string name = Escape(recordData.GetValue<string>(DatSchemas.MonsterVarieties.Name).Trim());
 				return (id, name);
 			}
 
@@ -545,7 +498,6 @@ namespace PoEAssetUpdater
 					["ClientStrings.dat"] = GetClientStringKVP,
 					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
 					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
-					["Prophecies.dat"] = GetPropheciesKVP,
 					["GrantedEffectQualityTypes.dat"] = GetAlternateGemQualityTypesKVP,
 					["UltimatumEncounters.dat"] = GetUltimatumEncountersKVP,
 					["UltimatumItemisedRewards.dat"] = GetUltimatumItemisedRewardsKVP,
@@ -558,8 +510,8 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetClientStringKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Text").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.ClientStrings.Id);
+				string name = recordData.GetValue<string>(DatSchemas.ClientStrings.Text).Trim();
 
 				switch(id)
 				{
@@ -576,60 +528,46 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetAlternateQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				var modsKey = recordData.GetValue<ulong>("ModsKey");
+				var modsKey = recordData.GetValue<ulong>(DatSchemas.AlternateQualityTypes.ModsKey);
 				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
-				string name = recordData.GetValue<string>("Description");
+				string name = recordData.GetValue<string>(DatSchemas.AlternateQualityTypes.Description);
 				return (id, name);
 			}
 
 			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int index = recordData.GetValue<int>("Unknown8");
+				int index = recordData.GetValue<int>(DatSchemas.MetamorphosisMetaSkillTypes.Unknown8);
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
-				string name = recordData.GetValue<string>("BodypartName").Trim();
+				string name = recordData.GetValue<string>(DatSchemas.MetamorphosisMetaSkillTypes.BodypartName).Trim();
 				return (id, name);
-			}
-
-			static (string, string) GetPropheciesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
-			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("PredictionText").Trim();
-				string name2 = recordData.GetValue<string>("PredictionText2").Trim();
-
-				if(IgnoredProphecyIds.Contains(id))
-				{
-					return (null, null);
-				}
-
-				return ($"Prophecy{id}", string.IsNullOrEmpty(name2) ? name : name2);
 			}
 
 			static (string, string) GetAlternateGemQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int qualityNum = recordData.GetValue<int>("Id");
+				int qualityNum = recordData.GetValue<int>(DatSchemas.GrantedEffectQualityTypes.Id);
 				string id = string.Concat("GemAlternateQuality", qualityNum.ToString(CultureInfo.InvariantCulture), "EffectName");
-				string name = recordData.GetValue<string>("Text");
+				string name = recordData.GetValue<string>(DatSchemas.GrantedEffectQualityTypes.Text);
 				return (id, name);
 			}
 
 			static (string, string) GetUltimatumEncountersKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Text").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.UltimatumEncounters.Id);
+				string name = recordData.GetValue<string>(DatSchemas.UltimatumEncounters.Text).Trim();
 				return (id, name);
 			}
 
 			static (string, string) GetUltimatumItemisedRewardsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Text").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.UltimatumItemisedRewards.Id);
+				string name = recordData.GetValue<string>(DatSchemas.UltimatumItemisedRewards.Text).Trim();
 				return (id, name);
 			}
 
 			static (string, string) GetIncursionRoomsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Name").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.IncursionRooms.Id);
+				string name = recordData.GetValue<string>(DatSchemas.IncursionRooms.Name).Trim();
 				if(string.IsNullOrEmpty(name))
 				{
 					return (null, null);
@@ -639,8 +577,8 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetHeistJobsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id");
-				string name = recordData.GetValue<string>("Name").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.HeistJobs.Id);
+				string name = recordData.GetValue<string>(DatSchemas.HeistJobs.Name).Trim();
 				if(string.IsNullOrEmpty(name))
 				{
 					return (null, null);
@@ -650,8 +588,8 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetHeistObjectivesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<int>("Id").ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetValue<string>("Name").Trim();
+				string id = recordData.GetValue<int>(DatSchemas.HeistObjectiveValueDescriptions.Id).ToString(CultureInfo.InvariantCulture);
+				string name = recordData.GetValue<string>(DatSchemas.HeistObjectiveValueDescriptions.Name).Trim();
 				if(string.IsNullOrEmpty(name))
 				{
 					return (null, null);
@@ -661,8 +599,8 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetExpeditionFactionsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>("Id").ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetValue<string>("Name").Trim();
+				string id = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Id).ToString(CultureInfo.InvariantCulture);
+				string name = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Name).Trim();
 				if(string.IsNullOrEmpty(name))
 				{
 					return (null, null);
@@ -686,7 +624,7 @@ namespace PoEAssetUpdater
 			static (string, string) GetWordsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
 				string id = idx.ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetValue<string>("Text2").Trim();
+				string name = recordData.GetValue<string>(DatSchemas.Words.Text2).Trim();
 				return (id, name);
 			}
 		}
@@ -750,7 +688,7 @@ namespace PoEAssetUpdater
 					foreach(var (recordData, statNames, lastValidStatNum) in recordGroup)
 					{
 						// Write the stat name excluding its group name
-						jsonWriter.WritePropertyName(recordData.GetValue<string>("Id").Replace(recordData.GetValue<string>("CorrectGroup"), ""));
+						jsonWriter.WritePropertyName(recordData.GetValue<string>(DatSchemas.Mods.Id).Replace(recordData.GetValue<string>(DatSchemas.Mods.CorrectGroup), ""));
 						jsonWriter.WriteStartArray();
 
 						// Write all stats in the array
@@ -772,11 +710,11 @@ namespace PoEAssetUpdater
 					int lastValidStatsKey = 0;
 					for(int i = 1; i <= TotalNumberOfStats; i++)
 					{
-						ulong statsKey = recordData.GetValue<ulong>(string.Concat("StatsKey", i.ToString(CultureInfo.InvariantCulture)));
+						ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
 						if(statsKey != UndefinedValue)
 						{
-							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>("Id"));
+							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id));
 							lastValidStatsKey = i;
 						}
 					}
@@ -786,9 +724,9 @@ namespace PoEAssetUpdater
 
 			static void WriteMinMaxValues(DatRecord recordData, JsonWriter jsonWriter, int statNum)
 			{
-				string statPrefix = string.Concat("Stat", statNum.ToString(CultureInfo.InvariantCulture));
-				int minValue = recordData.GetValue<int>(string.Concat(statPrefix, "Min"));
-				int maxValue = recordData.GetValue<int>(string.Concat(statPrefix, "Max"));
+				string statPrefix = string.Concat(DatSchemas.Mods.StatPrefix, statNum.ToString(CultureInfo.InvariantCulture));
+				int minValue = recordData.GetValue<int>(string.Concat(statPrefix, DatSchemas.Mods.StatMinSuffix));
+				int maxValue = recordData.GetValue<int>(string.Concat(statPrefix, DatSchemas.Mods.StatMaxSuffix));
 
 				jsonWriter.WriteStartObject();
 				jsonWriter.WritePropertyName("min");
@@ -837,15 +775,15 @@ namespace PoEAssetUpdater
 
 				Logger.WriteLine($"Parsing {statsDatContainer.FileDefinition.Name}...");
 
-				string[] localStats = statsDatContainer.Records.Where(x => x.GetValue<bool>("IsLocal")).Select(x => x.GetValue<string>("Id")).ToArray();
+				string[] localStats = statsDatContainer.Records.Where(x => x.GetValue<bool>(DatSchemas.Stats.IsLocal)).Select(x => x.GetValue<string>(DatSchemas.Stats.Id)).ToArray();
 
 				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.FileDefinition.Name}...");
 
-				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetValue<string>("Name")).ToArray();
+				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.AfflictionRewardTypeVisuals.Name)).ToArray();
 
 				Logger.WriteLine($"Parsing {indexableSupportGemsDatContainer.FileDefinition.Name}...");
 
-				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>("Name")).ToArray();
+				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSupportGems.Name)).ToArray();
 
 				Logger.WriteLine($"Parsing Stat Description Files...");
 
@@ -1303,7 +1241,6 @@ namespace PoEAssetUpdater
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
 				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
-				var propheciesDatContainer = GetDatFile(dataFiles, datDefinitions, "Prophecies.dat");
 				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat");
 
 				if(baseItemTypesDatContainer == null)
@@ -1319,7 +1256,7 @@ namespace PoEAssetUpdater
 				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
-					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
+					string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 					var category = GetItemCategory(baseItemType, i);
 					
 					// Only write to the json if an appropriate category was found.
@@ -1330,17 +1267,10 @@ namespace PoEAssetUpdater
 					}
 				}
 
-				// Write the Prophecies
-				foreach(var prophecy in propheciesDatContainer.Records)
-				{
-					jsonWriter.WritePropertyName(prophecy.GetValue<string>("Id"));
-					jsonWriter.WriteValue(ItemCategory.Prophecy);
-				}
-
 				// Write the Monster Varieties
 				foreach(var monsterVariety in monsterVarietiesDatContainer.Records)
 				{
-					jsonWriter.WritePropertyName(monsterVariety.GetValue<string>("Id").Split('/').Last());
+					jsonWriter.WritePropertyName(monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last());
 					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
 				}
 
@@ -1367,31 +1297,31 @@ namespace PoEAssetUpdater
 				for(int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
 				{
 					var craftingRecipe = craftingRecipesDatContainer.Records[i];
-					var craftingType = craftingRecipe.GetValue<ulong>("BlightCraftingTypesKey");
+					var craftingType = craftingRecipe.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey);
 
 					if(craftingType != 0)
 					{
 						continue;
 					}
 
-					var craftingItemKeys = craftingRecipe.GetValue<List<ulong>>("BlightCraftingItemsKeys");
+					var craftingItemKeys = craftingRecipe.GetValue<List<ulong>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
 
-					var craftingResultsKey = (int)craftingRecipe.GetValue<ulong>("BlightCraftingResultsKey");
+					var craftingResultsKey = (int)craftingRecipe.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var passiveSkillsKey = (int)craftingResult.GetValue<ulong>("PassiveSkillsKey");
+					var passiveSkillsKey = (int)craftingResult.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.PassiveSkillsKey);
 					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
 
-					var statOptionID = passiveSkill.GetValue<int>("PassiveSkillGraphId");
+					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
 
 					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
 					jsonWriter.WriteStartArray();
 					foreach(var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
-						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>("BaseItemTypesKey");
+						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>(DatSchemas.BlightCraftingItems.BaseItemTypesKey);
 						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
-						var id = baseItemType.GetValue<string>("Id").Split('/').Last();
+						var id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 
 						jsonWriter.WriteValue(id);
 					}
@@ -1404,8 +1334,8 @@ namespace PoEAssetUpdater
 
 		private static string GetItemCategory(DatRecord baseItemType, int rowIndex)
 		{
-			string id = baseItemType.GetValue<string>("Id").Split('/').Last();
-			string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
+			string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+			string inheritsFrom = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
 
 			if(IgnoredItemIds.Contains(id))
 			{
@@ -1444,7 +1374,7 @@ namespace PoEAssetUpdater
 
 				// Special case for Harvest Seeds
 				case ItemCategory.CurrencySeed:
-					string seedName = baseItemType.GetValue<string>("Name").Split(' ').First();
+					string seedName = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name).Split(' ').First();
 					if(!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
 					{
 						PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
@@ -1460,7 +1390,7 @@ namespace PoEAssetUpdater
 				// Special case of Heist Equipment & Map Fragments
 				case ItemCategory.HeistEquipment:
 				case ItemCategory.MapFragment:
-					foreach(ulong tag in baseItemType.GetValue<List<ulong>>("TagsKeys"))
+					foreach(ulong tag in baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))
 					{
 						if(TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
 						{
@@ -1469,7 +1399,7 @@ namespace PoEAssetUpdater
 					}
 					if(category == ItemCategory.HeistEquipment)
 					{
-						PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>("Name")}') [Tags: {string.Join(',', baseItemType.GetValue<List<ulong>>("TagsKeys"))}]");
+						PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
 					}
 					break;
 			}
@@ -1507,7 +1437,6 @@ namespace PoEAssetUpdater
 			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
 				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.dat");
-				var propheciesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Prophecies.dat");
 				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat");
 				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat");
 				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat");
@@ -1515,7 +1444,6 @@ namespace PoEAssetUpdater
 				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat");
 
 				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
-				var propheciesDatContainer = propheciesDatContainers[Language.English][0];
 				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
 				var uniqueMapsDatContainer = uniqueMapsDatContainers[Language.English][0];
 
@@ -1523,13 +1451,13 @@ namespace PoEAssetUpdater
 				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
-					string inheritsFrom = baseItemType.GetValue<string>("InheritsFrom").Split('/').Last();
+					string inheritsFrom = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
 					if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
 					{
 						continue;
 					}
-					string id = baseItemType.GetValue<string>("Id").Split('/').Last();
-					string name = Escape(baseItemType.GetValue<string>("Name").Trim());
+					string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+					string name = Escape(baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim());
 
 					var category = GetItemCategory(baseItemType, i);
 					if(string.IsNullOrEmpty(category))
@@ -1545,53 +1473,18 @@ namespace PoEAssetUpdater
 						continue;
 					}
 
-					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim()));
 
-					WriteRecord(id, names, GetImageByName(id, names[Language.English]), category, baseItemType.GetValue<int>("Width"), baseItemType.GetValue<int>("Height"));
-				}
-
-				// Write the Prophecies
-				for(int i = 0; i < propheciesDatContainer.Count; i++)
-				{
-					var prophecy = propheciesDatContainer.Records[i];
-					string id = prophecy.GetValue<string>("Id");
-
-					if(IgnoredProphecyIds.Contains(id))
-					{
-						continue;
-					}
-
-					var names = propheciesDatContainers.ToDictionary(kvp => kvp.Key, kvp =>
-					{
-						string name = kvp.Value[0].Records[i].GetValue<string>("Name").Trim();
-
-						if(ProphecyIdToSuffixClientStringIdMapping.TryGetValue(id, out string clientStringId))
-						{
-							var clientStringsDatContainer = clientStringsDatContainers[kvp.Key][0];
-							var clientStringRecordData = clientStringsDatContainer?.Records.First(x => x.GetValue<string>("Id") == clientStringId);
-							if(clientStringRecordData != null)
-							{
-								name += $" ({clientStringRecordData.GetValue<string>("Text")})";
-							}
-							else
-							{
-								PrintError($"Missing {nameof(clientStringId)} for '{clientStringId}'");
-							}
-						}
-
-						return Escape(name);
-					});
-
-					WriteRecord(id, names, GetImageByName(id, names[Language.English]), ItemCategory.Prophecy, 1, 1);
+					WriteRecord(id, names, GetImageByName(id, names[Language.English]), category, baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Width), baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Height));
 				}
 
 				// Write the Monster Varieties
 				for(int i = 0; i < monsterVarietiesDatContainer.Count; i++)
 				{
 					var monsterVariety = monsterVarietiesDatContainer.Records[i];
-					string id = monsterVariety.GetValue<string>("Id").Split('/').Last();
+					string id = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last();
 
-					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.MonsterVarieties.Name).Trim()));
 
 					WriteRecord(id, names, string.Empty, ItemCategory.MonsterBeast, 1, 1);
 				}
@@ -1600,15 +1493,15 @@ namespace PoEAssetUpdater
 				for(int i = 0; i < uniqueMapsDatContainer.Count; i++)
 				{
 					var uniqueMap = uniqueMapsDatContainer.Records[i];
-					var itemVisualIdentityKey = (int)uniqueMap.GetValue<ulong>("ItemVisualIdentityKey");
+					var itemVisualIdentityKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
 					var itemVisualIdentity = itemVisualIdentityDatContainer.Records[itemVisualIdentityKey];
 
-					string id = itemVisualIdentity.GetValue<string>("Id");
-					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>("Name").Trim()));
+					string id = itemVisualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.Id);
+					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.UniqueMaps.Name).Trim()));
 
-					string ddsFileName = itemVisualIdentity.GetValue<string>("DDSFile");
+					string ddsFileName = itemVisualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.DDSFile);
 
-					WriteRecord(id, names, GetImageByName(id, ddsFileName.Substring(0, ddsFileName.Length - 4)), ItemCategory.Map, 1, 1);
+					WriteRecord(id, names, GetImageByName(id, ddsFileName[0..^4]), ItemCategory.Map, 1, 1);
 				}
 
 				// Nested Method(s)
