@@ -2247,11 +2247,6 @@ specification = Specification({
                 key='AchievementItems.dat',
             ),
             Field(
-                name='ItemThemesKey',
-                type='ulong',
-                key='ItemThemes.dat',
-            ),
-            Field(
                 name='IdentifyMagic_AchievementItemsKeys',
                 type='ref|list|ulong',
                 key='AchievementItems.dat',
@@ -2268,12 +2263,6 @@ specification = Specification({
                 name='IsBlessing',
                 type='bool',
             ),
-            # TODO 3.12
-            # mtx related?
-            Field(
-                name='Key0',
-                type='ulong',
-            ),
             # harvest related?
             Field(
                 name='Key1',
@@ -2288,6 +2277,11 @@ specification = Specification({
             Field(
                 name='IsSpecialVendorCurrency',
                 type='bool',
+            ),
+            # 3.17
+            Field(
+                name='Key3',
+                type='ulong',
             ),
         ),
         virtual_fields=(
@@ -11773,8 +11767,8 @@ specification = Specification({
                 key='IncursionRooms.dat',
             ),
             Field(
-                name='ModsKey',
-                type='ulong',
+                name='ModsKeys',
+                type='ref|list|ulong',
                 key='Mods.dat'
             ),
             Field(
@@ -12027,68 +12021,35 @@ specification = Specification({
                 type='ref|string',
             ),
             Field(
-                name='Category',
-                type='ref|string',
-            ),
-            Field(
                 name='Unknown0',
-                type='int',
-            ),
-            Field(
-                name='Elder_TagsKey',
                 type='ulong',
-                key='Tags.dat',
             ),
             Field(
-                name='Shaper_TagsKey',
+                name='ItemClassCategory',
                 type='ulong',
-                key='Tags.dat',
             ),
             Field(
-                name='Flag0',
+                name='RemovedIfLeavesArea',
                 type='bool',
             ),
             Field(
-                name='AchievementItemsKeys',
+                name='Keys0',
                 type='ref|list|ulong',
-                key='AchievementItems.dat',
             ),
             Field(
-                name='Identify_AchievementItemsKeys',
+                name='Keys1',
                 type='ref|list|ulong',
-                key='AchievementItems.dat',
             ),
             Field(
-                name='Crusader_TagsKey',
-                type='ulong',
-                key='Tags.dat',
-            ),
-            Field(
-                name='Eyrie_TagsKey',
-                type='ulong',
-                key='Tags.dat',
-            ),
-            Field(
-                name='Basilisk_TagsKey',
-                type='ulong',
-                key='Tags.dat',
-            ),
-            Field(
-                name='Adjudicator_TagsKey',
-                type='ulong',
-                key='Tags.dat',
-            ),
-            # 3.11
-            Field(
-                name='Flag1',
+                name='AllocateToMapOwner',
                 type='bool',
             ),
             Field(
-                name='Flag2',
+                name='AlwaysAllocate',
                 type='bool',
             ),
             Field(
-                name='Flag3',
+                name='CanHaveVeiledMods',
                 type='bool',
             ),
             Field(
@@ -12099,18 +12060,48 @@ specification = Specification({
                 name='Unknown2',
                 type='int',
             ),
-            #3.12
             Field(
-                name='Flag4',
+                name='AlwaysShow',
                 type='bool',
             ),
-            # TODO 3.13
             Field(
-                name='Unknown3',
-                type='int',
+                name='CanBeCorrupted',
+                type='bool',
             ),
             Field(
-                name='Flag5',
+                name='CanHaveIncubators',
+                type='bool',
+            ),
+            Field(
+                name='CanHaveInfluence',
+                type='bool',
+            ),
+            Field(
+                name='CanBeDoubleCorrupted',
+                type='bool',
+            ),
+            Field(
+                name='CanHaveAspects',
+                type='bool',
+            ),
+            Field(
+                name='CanTransferSkin',
+                type='bool',
+            ),
+            Field(
+                name='ItemStance',
+                type='ulong',
+            ),
+            Field(
+                name='CanScourge',
+                type='bool',
+            ),
+            Field(
+                name='CanScourge2',
+                type='bool',
+            ),
+            Field(
+                name='Unknown3',
                 type='bool',
             ),
         ),
@@ -15290,7 +15281,7 @@ specification = Specification({
                 unique=True,
             ),
             Field(
-                name='Hash',
+                name='Hash16',
                 type='int',
             ),
             Field(
@@ -15590,8 +15581,16 @@ specification = Specification({
                 type='int',
             ),
             Field(
-                name='Key0',
+                name='BuffTemplatesKey',
                 type='ulong',
+            ),
+            Field(
+                name='ArchnemesisMinionMod',
+                type='int',
+            ),
+            Field(
+                name='Hash32',
+                type='int',
             ),
         ),
         virtual_fields=(
@@ -18574,6 +18573,10 @@ specification = Specification({
                 name='MasteryGroupKey',
                 type='ulong',
                 key='PassiveSkillMasteryGroups.dat',
+            ),
+            Field(
+                name='Unknown0',
+                type='ulong',
             ),
         ),
         virtual_fields=(
