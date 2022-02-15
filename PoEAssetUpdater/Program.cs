@@ -194,7 +194,24 @@ namespace PoEAssetUpdater
 		private static readonly Dictionary<string, (string statId, bool clearOptions)> TradeStatIdManualMapping = new Dictionary<string, (string, bool)>()
 		{
 			//Area contains an Expedition Boss (#) -> Area contains [BOSS NAME]
-			["implicit.stat_3159649981"] = ("map_expedition_saga_contains_boss", true)
+			["implicit.stat_3159649981"] = ("map_expedition_saga_contains_boss", true),
+
+			//Allocates # if you have matching modifier on Forbidden Flame -> Allocates [ASCENDANCY NOTABLE] if you have the matching modifier on Forbidden Flame
+			//(Note the removal of `the`)
+			["explicit.stat_2460506030"] = ("unique_jewel_grants_notable_hash_part_1", false),
+
+			//Allocates # if you have matching modifier on Forbidden Flesh -> Allocates [ASCENDANCY NOTABLE] if you have the matching modifier on Forbidden Flesh
+			//(Note the removal of `the`)
+			["explicit.stat_1190333629"] = ("unique_jewel_grants_notable_hash_part_2", false),
+
+			//Grants Summon Harbinger Skill -> Grants Summon [HARBINGER NAME] Skill
+			["explicit.stat_3872739249"] = ("local_display_summon_harbinger_x_on_equip", true),
+		};
+
+		private static readonly Dictionary<ulong, string> PresenceStatIdToClientStringIdMapping = new Dictionary<ulong, string>()
+		{
+			[15607] = "InfluenceStatConditionPresenceUniqueMonster",
+			[15608] = "InfluenceStatConditionPresenceCelestialBoss",
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -754,13 +771,15 @@ namespace PoEAssetUpdater
 
 		private static void ExportStats(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir, string tradeApiCacheDir)
 		{
-			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, false);
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, true);
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
-				var afflictionRewardTypeVisualsDatContainer = GetDatFile(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat");
-				var indexableSupportGemsDatContainer = GetDatFile(dataFiles, datDefinitions, "IndexableSupportGems.dat");
+				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.dat")[Language.English][0];
+				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat")[Language.English][0];
+				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.dat")[Language.English][0];
+				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat")[Language.English][0];
+				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat");
 
 				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
@@ -768,7 +787,9 @@ namespace PoEAssetUpdater
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 
-				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null || heistEquipmentStatDescriptionsText == null)
+				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
+					clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null ||
+					heistEquipmentStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -784,6 +805,54 @@ namespace PoEAssetUpdater
 				Logger.WriteLine($"Parsing {indexableSupportGemsDatContainer.FileDefinition.Name}...");
 
 				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSupportGems.Name)).ToArray();
+
+				Logger.WriteLine($"Parsing {nameof(PresenceStatIdToClientStringIdMapping)}...");
+
+				Dictionary<ulong, Dictionary<Language, string>> presenceMapping = PresenceStatIdToClientStringIdMapping
+					.ToDictionary(
+					kvp => kvp.Key,
+					kvp => clientStringsDatContainers.ToDictionary(
+						kvp2 => kvp2.Key,
+						kvp2 => kvp2.Value[0].Records.Single(x => x.GetValue<string>(DatSchemas.ClientStrings.Id) == kvp.Value).GetValue<string>(DatSchemas.ClientStrings.Text)
+					));
+				(string[] ids, bool isLocalStat, ulong presenceStatKey)[] presenceStats = modsDatContainer.Records
+					// Find all mods that are using any of the presence stats
+					.Where(recordData =>
+					{
+						for(int i = 1; i <= TotalNumberOfStats; i++)
+						{
+							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+
+							if(statsKey != UndefinedValue && presenceMapping.ContainsKey(statsKey))
+							{
+								return true;
+							}
+						}
+						return false;
+					}).Select(recordData =>
+					{
+						List<string> ids = new List<string>();
+						(ulong statKey, string statId) presenceRecord = (0, null);
+						for(int i = 1; i <= TotalNumberOfStats; i++)
+						{
+							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+
+							// Add all valid stats that aren't the 'presence' stat
+							if(statsKey != UndefinedValue)
+							{
+								string statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
+								if(presenceMapping.ContainsKey(statsKey))
+								{
+									presenceRecord = (statsKey, statId);
+								}
+								else
+								{
+									ids.Add(statId);
+								}
+							}
+						}
+						return (ids.ToArray(), ids.Any(x => localStats.Contains(x)), presenceRecord.statKey);
+					}).Distinct().ToArray();
 
 				Logger.WriteLine($"Parsing Stat Description Files...");
 
@@ -854,6 +923,28 @@ namespace PoEAssetUpdater
 								break;
 							}
 						}
+					}
+				}
+
+				// Add all 'presence' stat descriptions
+				for(int i = 0; i < presenceStats.Length; i++)
+				{
+					var presenceStat = presenceStats[i];
+
+					// Find an existing stat in the list
+					StatDescription statDescription = statDescriptions
+						.Where(x => x.HasMatchingIdentifier(presenceStat.ids) && x.LocalStat == presenceStat.isLocalStat)
+						.OrderBy(x => x.GetMatchingIdentifierCount(presenceStat.ids))
+						.FirstOrDefault();
+					if(statDescription != null)
+					{
+						statDescription = new StatDescription(statDescription, presenceStat.ids);
+						statDescription.ApplyPresenceText(presenceMapping[presenceStat.presenceStatKey]);
+						statDescriptions.Add(statDescription);
+					}
+					else
+					{
+						Logger.WriteLine($"Couldn't find existing stat description for presence stat '{string.Join(" ", presenceStat.ids)}'");
 					}
 				}
 
@@ -1062,7 +1153,7 @@ namespace PoEAssetUpdater
 							string[] searchTexts = options.Select(x => GetOptionStatDesc(text, x.Value)).ToArray();
 
 							candidateStatDescs = statDescriptions
-								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.Any(y => x.HasMatchingStatLine(y)))
+								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.All(y => x.HasMatchingStatLine(y)))
 								.OrderBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
 								.ToList();
 						}

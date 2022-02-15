@@ -65,6 +65,19 @@ namespace PoEAssetUpdater
 			FullIdentifier = string.Join(" ", _identifiers);
 		}
 
+		public StatDescription(StatDescription toCopy, string[] ids)
+			: this(ids, toCopy.LocalStat)
+		{
+			foreach(var kvp in toCopy._statLines)
+			{
+				_statLines.Add(kvp.Key, kvp.Value.ToList());
+			}
+			Negated = toCopy.Negated;
+			ContainsAfflictionRewardType = toCopy.ContainsAfflictionRewardType;
+			ContainsConqueredPassivesText = toCopy.ContainsConqueredPassivesText;
+			ContainsIndexableSupportGem = toCopy.ContainsIndexableSupportGem;
+		}
+
 		#endregion
 
 		#region Public Methods
@@ -215,6 +228,26 @@ namespace PoEAssetUpdater
 		}
 
 		public bool HasMatchingIdentifier(string identifier) => _identifiers.Contains(identifier);
+
+		public bool HasMatchingIdentifier(string[] identifiers) => identifiers.Any(HasMatchingIdentifier);
+
+		public int GetMatchingIdentifierCount(string[] identifiers) => identifiers.Count(HasMatchingIdentifier);
+
+		public void ApplyPresenceText(Dictionary<Language, string> presenceTexts)
+		{
+			foreach(var kvp in _statLines)
+			{
+				if(presenceTexts.TryGetValue(kvp.Key, out string presenceText))
+				{
+					List<StatLine> statLines = kvp.Value;
+					for(int i = 0; i < statLines.Count; i++)
+					{
+						StatLine statLine = statLines[i];
+						statLines[i] = new StatLine(statLine.NumberPart, string.Format(presenceText, statLine.StatDescription));
+					}
+				}
+			} 
+		}
 
 		#endregion
 
