@@ -37,29 +37,36 @@ with io.open('validate-' + fileName + '.log', 'w', encoding='utf-8') as f:
                             elif originalLang not in newStats[originalType][originalTradeId][originalKey]:
                                 writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}')
                             else:
-                                for originalTextObj in originalStats[originalType][originalTradeId][originalKey][originalLang]:
+                                for originalTextIdx, originalTextObj in enumerate(originalStats[originalType][originalTradeId][originalKey][originalLang]):
                                     newLang = newStats[originalType][originalTradeId][originalKey][originalLang]
-                                    for originalText in originalTextObj:
-                                        originalTextValue = originalTextObj[originalText]
-                                        exists = False
-                                        existsKeyMatch = False
-                                        existsNewText = None
-                                        for newTextObj in newLang:
-                                            for newText in newTextObj:
-                                                if originalTextValue == newTextObj[newText]:
-                                                    if not existsKeyMatch:
-                                                        existsNewText = newText
-                                                    existsKeyMatch |= (originalText == existsNewText)
-                                                    exists = True
-                                        if not exists:
-                                            writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}[].{originalText} (Value: {originalTextValue})')
-                                        elif originalText != existsNewText:
-                                            writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey}.{originalLang}[].{originalText} (Original: {originalText} | New {existsNewText})')
+                                    if originalTextIdx >= len(newLang):
+                                        writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}[{originalTextIdx}]')
+                                    else:
+                                        newTextObj = newLang[originalTextIdx]
+                                        for originalTextKey in originalTextObj:
+                                            originalTextValue = originalTextObj[originalTextKey]
+                                            if not originalTextKey in newTextObj:
+                                                originalTextFound = False
+                                                originalTextNewKey = None
+                                                for newTextKey in newTextObj:
+                                                    newTextValue = newTextObj[newTextKey]
+                                                    if originalTextValue == newTextValue:
+                                                        originalTextFound = True
+                                                        originalTextNewKey = newTextKey
+                                                        break
+                                                if originalTextFound:
+                                                    writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey}.{originalLang}[{originalTextIdx}].{originalTextKey} Key (Original: {originalTextKey} | New: {originalTextNewKey} | Value: {originalTextValue})')
+                                                else:
+                                                    writeLog(f, f'Missing {originalType}.{originalTradeId}.{originalKey}.{originalLang}[{originalTextIdx}].{originalTextKey} (Value: {originalTextValue})')
+                                            else:
+                                                newTextValue = newTextObj[originalTextKey]
+                                                if originalTextValue != newTextValue:
+                                                    writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey}.{originalLang}[{originalTextIdx}].{originalTextKey} Value (Original: {originalTextValue} | New: {newTextValue})')
                         else:
                             originalValue = str(originalStats[originalType][originalTradeId][originalKey])
                             newValue = str(newStats[originalType][originalTradeId][originalKey])
                             if originalValue != newValue:
-                                writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey} (Original: {originalValue} | New {newValue})')
+                                writeLog(f, f'Changed {originalType}.{originalTradeId}.{originalKey} (Original: {originalValue} | New: {newValue})')
 
     # check if which new data got added
     for newType in newStats:
@@ -68,7 +75,9 @@ with io.open('validate-' + fileName + '.log', 'w', encoding='utf-8') as f:
         else:
             for newTradeId in newStats[newType]:
                 if newTradeId not in originalStats[newType]:
-                    writeLog(f, f'Added {newType}.{newTradeId}')
+                    newEnglishStatNames = newStats[newType][newTradeId]['text']['1'][0]
+                    newEnglish = newEnglishStatNames[list(newEnglishStatNames.keys())[0]]
+                    writeLog(f, f'Added {newType}.{newTradeId} (Value: {newEnglish})')
                 else:
                     for newKey in newStats[newType][newTradeId]:
                         if newKey not in originalStats[newType][newTradeId]:
@@ -78,17 +87,23 @@ with io.open('validate-' + fileName + '.log', 'w', encoding='utf-8') as f:
                                 if newLang not in originalStats[newType][newTradeId][newKey]:
                                     writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}')
                                 else:
-                                    for newTextObj in newStats[newType][newTradeId][newKey][newLang]:
+                                    for newTextIdx, newTextObj in enumerate(newStats[newType][newTradeId][newKey][newLang]):
                                         originalLang = originalStats[newType][newTradeId][newKey][newLang]
-                                        for newText in newTextObj:
-                                            newTextValue = newTextObj[newText]
-                                            exists = False
-                                            for originalTextObj in originalLang:
-                                                for originalText in originalTextObj:
-                                                    if newTextValue == originalTextObj[originalText]:
-                                                        exists = True
-                                                        break
-                                                if exists:
-                                                    break
-                                            if not exists:
-                                                writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}[].{newText} (Value: {newTextValue})')
+                                        if newTextIdx >= len(originalLang):
+                                            writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}[{newTextIdx}]')
+                                            for newTextKey in newTextObj:
+                                                newTextValue = newTextObj[newTextKey]
+                                                writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}[{newTextIdx}].{newTextKey} (Value: {newTextValue})')
+                                        else:
+                                            originalTextObj = originalLang[newTextIdx]
+                                            for newTextKey in newTextObj:
+                                                newTextValue = newTextObj[newTextKey]
+                                                if not newTextKey in originalTextObj:
+                                                    originalTextValueFound = False
+                                                    for originalTextKey in originalTextObj:
+                                                        originalTextValue = originalTextObj[originalTextKey]
+                                                        if newTextValue == originalTextValue:
+                                                            originalTextValueFound = True
+                                                            break
+                                                    if not originalTextValueFound:
+                                                        writeLog(f, f'Added {newType}.{newTradeId}.{newKey}.{newLang}[{newTextIdx}].{newTextKey} (Value: {newTextValue})')
