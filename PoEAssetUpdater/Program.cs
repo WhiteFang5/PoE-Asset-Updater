@@ -196,13 +196,13 @@ namespace PoEAssetUpdater
 			//Area contains an Expedition Boss (#) -> Area contains [BOSS NAME]
 			["implicit.stat_3159649981"] = ("map_expedition_saga_contains_boss", true),
 
-			//Allocates # if you have matching modifier on Forbidden Flame -> Allocates [ASCENDANCY NOTABLE] if you have the matching modifier on Forbidden Flame
-			//(Note the removal of `the`)
-			["explicit.stat_2460506030"] = ("unique_jewel_grants_notable_hash_part_1", false),
-
 			//Allocates # if you have matching modifier on Forbidden Flesh -> Allocates [ASCENDANCY NOTABLE] if you have the matching modifier on Forbidden Flesh
 			//(Note the removal of `the`)
-			["explicit.stat_1190333629"] = ("unique_jewel_grants_notable_hash_part_2", false),
+			["explicit.stat_1190333629"] = ("unique_jewel_grants_notable_hash_part_1", false),
+
+			//Allocates # if you have matching modifier on Forbidden Flame -> Allocates [ASCENDANCY NOTABLE] if you have the matching modifier on Forbidden Flame
+			//(Note the removal of `the`)
+			["explicit.stat_2460506030"] = ("unique_jewel_grants_notable_hash_part_2", false),
 
 			//Grants Summon Harbinger Skill -> Grants Summon [HARBINGER NAME] Skill
 			["explicit.stat_3872739249"] = ("local_display_summon_harbinger_x_on_equip", true),
