@@ -2205,8 +2205,9 @@ specification = Specification({
                 # key='ModDomains.dat',
             ),
             Field(
-                name='Flag0',
-                type='bool',
+                name='SiteVisibility',
+                type='int',
+                enum='BASE_ITEM_TYPE_VISIBILITY',
             ),
             Field(
                 name='ItemVisualIdentityKey',
@@ -4661,6 +4662,18 @@ specification = Specification({
             Field(
                 name='Keys1',
                 type='ref|list|ulong',
+            ),
+            Field(
+                name='PassiveTreeImage',
+                type='ref|string',
+            ),
+            Field(
+                name='Unknown32',
+                type='int',
+            ),
+            Field(
+                name='Unknown33',
+                type='int',
             ),
         ),
     ),
@@ -12104,6 +12117,18 @@ specification = Specification({
                 name='Unknown3',
                 type='bool',
             ),
+            Field(
+                name='Unknown4',
+                type='bool',
+            ),
+            Field(
+                name='Unknown5',
+                type='ref|list|int',
+            ),
+            Field(
+                name='Unknown6',
+                type='ref|list|int',
+            ),
         ),
     ),
     'ItemCostPerLevel.dat': File(
@@ -12612,6 +12637,22 @@ specification = Specification({
             Field(
                 name='Unknown18',
                 type='int',
+            ),
+            Field(
+                name='Unknown19',
+                type='ulong',
+            ),
+            Field(
+                name='Unknown20',
+                type='ulong',
+            ),
+            Field(
+                name='Unknown21',
+                type='ulong',
+            ),
+            Field(
+                name='Unknown22',
+                type='ulong',
             ),
         ),
     ),
@@ -15591,6 +15632,10 @@ specification = Specification({
             Field(
                 name='Hash32',
                 type='int',
+            ),
+            Field(
+                name='Unknown17',
+                type='ref|list|int',
             ),
         ),
         virtual_fields=(
@@ -18576,6 +18621,10 @@ specification = Specification({
             ),
             Field(
                 name='Unknown0',
+                type='ulong',
+            ),
+            Field(
+                name='Unknown1',
                 type='ulong',
             ),
         ),

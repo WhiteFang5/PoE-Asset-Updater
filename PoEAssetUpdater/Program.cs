@@ -23,7 +23,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Scourge";
+		private const string CurrentLeagueName = "Sentinel";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -127,6 +127,8 @@ namespace PoEAssetUpdater
 			["Leaguestone"] = ItemCategory.Leaguestone,
 			// Logbook
 			["ExpeditionSaga"] = ItemCategory.ExpeditionLogbook,
+			// Sentinels
+			["SentinelDroneBase"] = ItemCategory.Sentinel,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
@@ -522,6 +524,7 @@ namespace PoEAssetUpdater
 					["HeistJobs.dat"] = GetHeistJobsKVP,
 					["HeistObjectiveValueDescriptions.dat"] = GetHeistObjectivesKVP,
 					["ExpeditionFactions.dat"] = GetExpeditionFactionsKVP,
+					["Characters.dat"] = GetCharactersKVP,
 				}, false);
 			}
 
@@ -616,13 +619,19 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetExpeditionFactionsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Id).ToString(CultureInfo.InvariantCulture);
+				string id = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Id);
 				string name = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Name).Trim();
 				if(string.IsNullOrEmpty(name))
 				{
 					return (null, null);
 				}
 				return ($"Expedition{id}", name);
+			}
+
+			static (string, string) GetCharactersKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string name = recordData.GetValue<string>(DatSchemas.Characters.Name).Trim();
+				return ($"CharacterName{idx}", name);
 			}
 		}
 
@@ -786,10 +795,11 @@ namespace PoEAssetUpdater
 				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
+				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
 
 				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
 					clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null ||
-					heistEquipmentStatDescriptionsText == null)
+					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -858,7 +868,7 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).ToArray();
+				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).ToArray();
 				for(int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
 				{
 					string line = lines[lineIdx];
@@ -1470,6 +1480,25 @@ namespace PoEAssetUpdater
 					{
 						PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
 						category = ItemCategory.CurrencySeed;
+					}
+					break;
+
+				// Special case for Sentinel Drones
+				case ItemCategory.Sentinel:
+					switch(id.Substring(id.Length - 2, 1))
+					{
+						case "A":
+							category = ItemCategory.SentinelStalker;
+							break;
+						case "B":
+							category = ItemCategory.SentinelPandemonium;
+							break;
+						case "C":
+							category = ItemCategory.SentinelApex;
+							break;
+						default:
+							PrintWarning($"Missing Sentinel type mapping for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}')");
+							break;
 					}
 					break;
 

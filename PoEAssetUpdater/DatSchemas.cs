@@ -36,6 +36,11 @@ namespace PoEAssetUpdater
 			public const string BaseItemTypesKey = "BaseItemTypesKey";
 		}
 
+		public static class Characters
+		{
+			public const string Name = "Name";
+		}
+
 		public static class ClientStrings
 		{
 			public const string Id = "Id";
