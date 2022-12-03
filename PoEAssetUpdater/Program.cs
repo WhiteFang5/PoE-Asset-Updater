@@ -2067,6 +2067,161 @@ namespace PoEAssetUpdater
 			}
 		}
 
+		private static void ExportModIcons(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "mod-icons.json"), WriteRecords, true);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				foreach (var language in AllLanguages)
+				{
+					Dictionary<string, ModIconType> records = new Dictionary<string, ModIconType>();
+
+					// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
+					var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
+					var languageFiles = dataFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
+					if (languageFiles.Count > 0)
+					{
+						// Find the given datFile.
+						var datContainer = GetDatFile(languageFiles, datDefinitions, "Mods.dat");
+						if (datContainer == null)
+						{
+							// An error was already logged.
+							continue;
+						}
+
+						Logger.WriteLine($"\tExporting {langDir}/Mods.dat.");
+
+						foreach (var recordData in datContainer.Records)
+						{
+							string name = recordData.GetValue<string>(DatSchemas.Mods.Name);
+							if (string.IsNullOrEmpty(name.Trim()))
+							{
+								continue;
+							}
+							ModIconType? modIconType = null;
+							// Check for influence mods
+							InfluenceType influenceType = (InfluenceType)recordData.GetValue<int>(DatSchemas.Mods.InfluenceTypes);
+							if (influenceType != InfluenceType.None)
+							{
+								modIconType = InfluenceToModIconMapping[influenceType];
+							}
+							else
+							{
+								// Check for essence mods
+								bool isEssenceOnlyModifier = recordData.GetValue<bool>(DatSchemas.Mods.IsEssenceOnlyModifier);
+								if (isEssenceOnlyModifier)
+								{
+									modIconType = ModIconType.Essence;
+								}
+								else
+								{
+									// Check the mod domain
+									ModDomain modDomain = (ModDomain)recordData.GetValue<int>(DatSchemas.Mods.Domain);
+									if (ModDomainToModIconMapping.TryGetValue(modDomain, out ModIconType modDomainIconType))
+									{
+										modIconType = modDomainIconType;
+									}
+									else
+									{
+										string id = recordData.GetValue<string>(DatSchemas.Mods.Id);
+										// Check incursion mods
+										if (Regex.IsMatch(id, "Enhanced.*Mod"))
+										{
+											modIconType = ModIconType.Incursion;
+										}
+										// Check bestiary mods
+										else if (Regex.IsMatch(id, "Grants.*Aspect"))
+										{
+											modIconType = ModIconType.Bestiary;
+										}
+									}
+								}
+							}
+
+							if (!modIconType.HasValue)
+							{
+								continue;
+							}
+
+							foreach (var splittedName in name.Split('{', '}').Where(x => !x.StartsWith('<')))
+							{
+								if (!string.IsNullOrEmpty(splittedName.Trim()))
+								{
+									records[splittedName] = modIconType.Value;
+								}
+							}
+						}
+					}
+					else
+					{
+						Logger.WriteLine($"\t{language} Language folder not found.");
+					}
+
+					// Create a node and write the data of each record in this node.
+					jsonWriter.WritePropertyName(language.ToString());
+					jsonWriter.WriteStartObject();
+
+					foreach ((var name, var modIconType) in records.OrderBy(x => x.Value).ThenBy(x => x.Key))
+					{
+						jsonWriter.WritePropertyName(name);
+						jsonWriter.WriteValue(modIconType.ToString().ToLowerInvariant());
+					}
+
+					jsonWriter.WriteEndObject();
+				}
+			}
+		}
+
+		private enum InfluenceType
+		{
+			Shaper = 0,
+			Elder = 1,
+			Crusader = 2,
+			Eyrie = 3,//Redeemer
+			Basilisk = 4,//Hunter
+			Adjudicator = 5,//Warlord
+			None = 6,
+		}
+
+		private static readonly Dictionary<InfluenceType, ModIconType> InfluenceToModIconMapping = new Dictionary<InfluenceType, ModIconType>()
+		{
+			[InfluenceType.Shaper] = ModIconType.Shaper,
+			[InfluenceType.Elder] = ModIconType.Elder,
+			[InfluenceType.Crusader] = ModIconType.Crusader,
+			[InfluenceType.Eyrie] = ModIconType.Redeemer,
+			[InfluenceType.Basilisk] = ModIconType.Hunter,
+			[InfluenceType.Adjudicator] = ModIconType.Warlord,
+		};
+
+		private enum ModDomain
+		{
+			DelveFossil = 16,
+			Veiled = 26,
+		}
+
+		private static readonly Dictionary<ModDomain, ModIconType> ModDomainToModIconMapping = new Dictionary<ModDomain, ModIconType>()
+		{
+			[ModDomain.DelveFossil] = ModIconType.Delve,
+			[ModDomain.Veiled] = ModIconType.Veiled,
+		};
+
+		private enum ModIconType
+		{
+			None = 0,
+			Shaper = 1,
+			Elder = 2,
+			Crusader = 3,
+			Redeemer = 4,
+			Hunter = 5,
+			Warlord = 6,
+			Delve = 7,
+			Incursion = 8,
+			Veiled = 9,
+			Essence = 10,
+			Bestiary = 11,
+		}
+
 		#endregion
 	}
 }
