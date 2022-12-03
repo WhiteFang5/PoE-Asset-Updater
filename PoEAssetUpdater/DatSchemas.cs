@@ -33,7 +33,7 @@ namespace PoEAssetUpdater
 
 		public static class BlightCraftingItems
 		{
-			public const string BaseItemTypesKey = "BaseItemTypesKey";
+			public const string Oil = "Oil";
 		}
 
 		public static class Characters
@@ -45,6 +45,31 @@ namespace PoEAssetUpdater
 		{
 			public const string Id = "Id";
 			public const string Text = "Text";
+		}
+
+		public static class Essences
+		{
+			public const string HelmetModsKey = "Helmet_ModsKey";
+			public const string BodyArmourModsKey = "BodyArmour_ModsKey";
+			public const string BootsModsKey = "Boots_ModsKey";
+			public const string GlovesModsKey = "Gloves_ModsKey";
+			public const string BowModsKey = "Bow_ModsKey";
+			public const string WandModsKey = "Wand_ModsKey";
+			public const string StaffModsKey = "Staff_ModsKey";
+			public const string TwoHandSwordModsKey = "TwoHandSword_ModsKey";
+			public const string TwoHandAxeModsKey = "TwoHandAxe_ModsKey";
+			public const string TwoHandMaceModsKey = "TwoHandMace_ModsKey";
+			public const string ClawModsKey = "Claw_ModsKey";
+			public const string DaggerModsKey = "Dagger_ModsKey";
+			public const string OneHandSwordModsKey = "OneHandSword_ModsKey";
+			public const string OneHandThrustingSwordModsKey = "OneHandThrustingSword_ModsKey";
+			public const string OneHandAxeModsKey = "OneHandAxe_ModsKey";
+			public const string OneHandMaceModsKey = "OneHandMace_ModsKey";
+			public const string SceptreModsKey = "Sceptre_ModsKey";
+			public const string BeltModsKey = "Belt_ModsKey";
+			public const string AmuletModsKey = "Amulet_ModsKey";
+			public const string RingModsKey = "Ring_ModsKey";
+			public const string ShieldModsKey = "Shield_ModsKey";
 		}
 
 		public static class ExpeditionFactions
@@ -67,8 +92,8 @@ namespace PoEAssetUpdater
 
 		public static class HeistObjectiveValueDescriptions
 		{
-			public const string Id = "Id";
-			public const string Name = "Name";
+			public const string Tier = "Tier";
+			public const string Description = "Description";
 		}
 
 		public static class IncursionRooms
@@ -90,7 +115,7 @@ namespace PoEAssetUpdater
 
 		public static class MetamorphosisMetaSkillTypes
 		{
-			public const string Unknown8 = "Unknown8";
+			public const string UnknownAfterBodyPartName = "_2";
 			public const string BodypartName = "BodypartName";
 		}
 
@@ -99,10 +124,19 @@ namespace PoEAssetUpdater
 			public const string PassiveSkillGraphId = "PassiveSkillGraphId";
 		}
 
+		public static class ModFamily
+		{
+			public const string Id = "Id";
+		}
+
 		public static class Mods
 		{
 			public const string Id = "Id";
-			public const string CorrectGroup = "CorrectGroup";
+			public const string Families = "Families";
+			public const string Domain = "Domain";
+			public const string Name = "Name";
+			public const string IsEssenceOnlyModifier = "IsEssenceOnlyModifier";
+			public const string InfluenceTypes = "InfluenceTypes";
 
 			public const string StatPrefix = "Stat";
 			public const string StatMinSuffix = "Min";
@@ -126,13 +160,13 @@ namespace PoEAssetUpdater
 		public static class UltimatumEncounters
 		{
 			public const string Id = "Id";
-			public const string Text = "Text";
+			public const string Description = "Description";
 		}
 
 		public static class UltimatumItemisedRewards
 		{
 			public const string Id = "Id";
-			public const string Text = "Text";
+			public const string RewardText = "RewardText";
 		}
 
 		public static class UniqueMaps

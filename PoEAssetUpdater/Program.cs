@@ -575,7 +575,7 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				int index = recordData.GetValue<int>(DatSchemas.MetamorphosisMetaSkillTypes.Unknown8);
+				int index = recordData.GetValue<int>(DatSchemas.MetamorphosisMetaSkillTypes.UnknownAfterBodyPartName);
 				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
 				string name = recordData.GetValue<string>(DatSchemas.MetamorphosisMetaSkillTypes.BodypartName).Trim();
 				return (id, name);
@@ -592,14 +592,14 @@ namespace PoEAssetUpdater
 			static (string, string) GetUltimatumEncountersKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetValue<string>(DatSchemas.UltimatumEncounters.Id);
-				string name = recordData.GetValue<string>(DatSchemas.UltimatumEncounters.Text).Trim();
+				string name = recordData.GetValue<string>(DatSchemas.UltimatumEncounters.Description).Trim();
 				return (id, name);
 			}
 
 			static (string, string) GetUltimatumItemisedRewardsKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
 				string id = recordData.GetValue<string>(DatSchemas.UltimatumItemisedRewards.Id);
-				string name = recordData.GetValue<string>(DatSchemas.UltimatumItemisedRewards.Text).Trim();
+				string name = recordData.GetValue<string>(DatSchemas.UltimatumItemisedRewards.RewardText).Trim();
 				return (id, name);
 			}
 
@@ -627,9 +627,8 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetHeistObjectivesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				string id = recordData.GetValue<int>(DatSchemas.HeistObjectiveValueDescriptions.Id).ToString(CultureInfo.InvariantCulture);
-				string name = recordData.GetValue<string>(DatSchemas.HeistObjectiveValueDescriptions.Name).Trim();
-				if(string.IsNullOrEmpty(name))
+				string id = recordData.GetValue<int>(DatSchemas.HeistObjectiveValueDescriptions.Tier).ToString(CultureInfo.InvariantCulture);
+				string name = recordData.GetValue<string>(DatSchemas.HeistObjectiveValueDescriptions.Description).Trim();
 				if (string.IsNullOrEmpty(name))
 				{
 					return (null, null);
@@ -712,6 +711,7 @@ namespace PoEAssetUpdater
 			{
 				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat");
 				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
+				var modFamilyDatContainer = GetDatFile(dataFiles, datDefinitions, "ModFamily.dat");
 
 				if (modsDatContainer == null || statsDatContainer == null)
 				{
@@ -734,7 +734,11 @@ namespace PoEAssetUpdater
 					foreach (var (recordData, statNames, lastValidStatNum) in recordGroup)
 					{
 						// Write the stat name excluding its group name
-						jsonWriter.WritePropertyName(recordData.GetValue<string>(DatSchemas.Mods.Id).Replace(recordData.GetValue<string>(DatSchemas.Mods.CorrectGroup), ""));
+						var name = recordData.GetValue<string>(DatSchemas.Mods.Id);
+						recordData.GetValue<List<ulong>>(DatSchemas.Mods.Families).ForEach(x => {
+							name = name.Replace(modFamilyDatContainer.Records[(int)x].GetValue<string>(DatSchemas.ModFamily.Id), string.Empty);
+						});
+						jsonWriter.WritePropertyName(name);
 						jsonWriter.WriteStartArray();
 
 						// Write all stats in the array
@@ -1440,7 +1444,7 @@ namespace PoEAssetUpdater
 					foreach (var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
-						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>(DatSchemas.BlightCraftingItems.BaseItemTypesKey);
+						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>(DatSchemas.BlightCraftingItems.Oil);
 						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
 						var id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 
