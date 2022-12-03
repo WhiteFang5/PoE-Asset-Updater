@@ -13,7 +13,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		static TypeDefinition()
 		{
-			for(int i = 1; i <= 100; i++)
+			for (int i = 1; i <= 100; i++)
 			{
 				string name = $"byte[{i.ToString(CultureInfo.InvariantCulture)}]";
 				int bytesToRead = i; // Explicitly capture the variable!
@@ -24,7 +24,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 		private const string RefDataTypeName = "ref|";
 		private const string ListDataTypeName = "list|";
 
-		private static readonly Dictionary<string, TypeDefinition> TypeDefinitionMapping = (new List<TypeDefinition>()
+		private static readonly Dictionary<string, TypeDefinition> TypeDefinitionMapping = new List<TypeDefinition>()
 		{
 			new GenericTypeDefinition("bool", typeof(bool), sizeof(bool), bs => new DatData(bs.ReadBoolean())),
 			new GenericTypeDefinition("byte", typeof(byte), sizeof(byte), bs => new DatData(bs.ReadByte())),
@@ -79,7 +79,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				return new DatData(sb.ToString());
 			}),
 			new GenericTypeDefinition("ref|generic", typeof(int), sizeof(int), bs => new DatData(bs.ReadInt32())),
-		}).ToDictionary(x => x.Name, x => x);
+		}.ToDictionary(x => x.Name, x => x);
 
 		private static readonly Dictionary<string, TypeDefinition> _types = new Dictionary<string, TypeDefinition>();
 
@@ -117,17 +117,17 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		public static TypeDefinition Parse(string dataType, bool x64)
 		{
-			if(_types.TryGetValue(dataType, out TypeDefinition typeDefinition))
+			if (_types.TryGetValue(dataType, out TypeDefinition typeDefinition))
 			{
 				return typeDefinition;
 			}
 
-			if(!TypeDefinitionMapping.TryGetValue(dataType, out typeDefinition))
+			if (!TypeDefinitionMapping.TryGetValue(dataType, out typeDefinition))
 			{
-				if(dataType.StartsWith(RefDataTypeName))
+				if (dataType.StartsWith(RefDataTypeName))
 				{
 					var subDataType = dataType[RefDataTypeName.Length..];
-					if(subDataType.StartsWith(ListDataTypeName))
+					if (subDataType.StartsWith(ListDataTypeName))
 					{
 						typeDefinition = new ListTypeDefinition(dataType, Parse(subDataType[ListDataTypeName.Length..], x64), x64);
 					}
@@ -142,7 +142,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 			}
 
-			if(typeDefinition != null)
+			if (typeDefinition != null)
 			{
 				_types[dataType] = typeDefinition;
 			}

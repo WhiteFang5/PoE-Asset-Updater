@@ -28,7 +28,8 @@ namespace PoEAssetVisualizer
 
 		private const string DatDefinitionFileName = "stable.py";
 
-		private static readonly string[] CommonDatFiles = new string[] {
+		private static readonly string[] CommonDatFiles = new string[]
+		{
 			"BaseItemTypes.dat",
 			"Stats.dat",
 			"Mods.dat",
@@ -42,7 +43,7 @@ namespace PoEAssetVisualizer
 			"Text",
 		};
 
-		private static readonly SolidColorBrush RefColumnColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFDEFADE"));
+		private static readonly SolidColorBrush RefColumnColor = new((Color)ColorConverter.ConvertFromString("#FFDEFADE"));
 
 		#endregion
 
@@ -53,16 +54,16 @@ namespace PoEAssetVisualizer
 
 		private AssetFile _openedAssetFile;
 		private DatDefinitions _datDefinitions;
-		private FileSystemWatcher _datDefinitionsWatcher;
+		private readonly List<FileSystemWatcher> _datDefinitionsWatchers = new();
 
-		private readonly Dictionary<string, HashSet<string>> _fileDirectories = new Dictionary<string, HashSet<string>>()
+		private readonly Dictionary<string, HashSet<string>> _fileDirectories = new()
 		{
 			{ RootNodeName, new HashSet<string>() }
 		};
 
-		private readonly Stack<Cursor> _cursorsStack = new Stack<Cursor>();
+		private readonly Stack<Cursor> _cursorsStack = new();
 
-		private readonly Dictionary<string, DatFile> _datFiles = new Dictionary<string, DatFile>();
+		private readonly Dictionary<string, DatFile> _datFiles = new();
 
 		#endregion
 
@@ -73,7 +74,7 @@ namespace PoEAssetVisualizer
 			InitializeComponent();
 
 			_poeDirectory = FindPoEDirectory();
-			if(string.IsNullOrEmpty(_poeDirectory))
+			if (string.IsNullOrEmpty(_poeDirectory))
 			{
 				Application.Current.Shutdown();
 				return;
@@ -97,18 +98,18 @@ namespace PoEAssetVisualizer
 
 				var assetFiles = _assetIndex.FindFiles(x => true);
 
-				foreach(var assetFile in assetFiles)
+				foreach (var assetFile in assetFiles)
 				{
 					var exploded = assetFile.Name.Split(Path.AltDirectorySeparatorChar);
-					if(exploded.Length > 1)
+					if (exploded.Length > 1)
 					{
 						_fileDirectories[RootNodeName].Add(exploded[0]);
 					}
 
-					for(int i = 0; i < exploded.Length; i++)
+					for (int i = 0; i < exploded.Length; i++)
 					{
 						var dir = string.Join(Path.AltDirectorySeparatorChar, exploded[..i]);
-						if(!_fileDirectories.TryGetValue(dir, out var fileList))
+						if (!_fileDirectories.TryGetValue(dir, out var fileList))
 						{
 							fileList = new HashSet<string>();
 							_fileDirectories[dir] = fileList;
@@ -131,20 +132,26 @@ namespace PoEAssetVisualizer
 			}).Start();
 		}
 
+		private void Window_Unloaded(object sender, RoutedEventArgs e)
+		{
+			_datDefinitionsWatchers.ForEach(x => x.Dispose());
+			_datDefinitionsWatchers.Clear();
+		}
+
 		private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
 		{
-			if(sender is TreeViewItem view && view.Tag is string parent)
+			if (sender is TreeViewItem view && view.Tag is string parent)
 			{
-				if(view.Items.Count == 1 && view.Items[0] is null)
+				if (view.Items.Count == 1 && view.Items[0] is null)
 				{
 					PushCursor(Cursors.Wait);
 					view.Items.Clear();
-					foreach(var child in _fileDirectories[parent].OrderBy(x => _fileDirectories.ContainsKey(x) ? $"!!{x}" : x))
+					foreach (var child in _fileDirectories[parent].OrderBy(x => _fileDirectories.ContainsKey(x) ? $"!!{x}" : x))
 					{
 						var sub = CreateTreeViewItem(child);
 
 						view.Items.Add(sub);
-						if(_fileDirectories.ContainsKey(child))
+						if (_fileDirectories.ContainsKey(child))
 						{
 							sub.Items.Add(null);
 							sub.Expanded += TreeViewItem_Expanded;
@@ -162,22 +169,19 @@ namespace PoEAssetVisualizer
 
 		private void Sub_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 		{
-			if(sender is TreeViewItem item && item.Tag is string file)
+			if (sender is TreeViewItem item && item.Tag is string file)
 			{
 				PushCursor(Cursors.Wait);
 
 				HideAllViewers();
-				if(_datDefinitionsWatcher != null)
-				{
-					_datDefinitionsWatcher.Dispose();
-					_datDefinitionsWatcher = null;
-				}
+				_datDefinitionsWatchers.ForEach(x => x.Dispose());
+				_datDefinitionsWatchers.Clear();
 				ExportButton.IsEnabled = false;
 
 				new Thread(() =>
 				{
 					AssetFile assetFile = _assetIndex.FindFile(x => x.Name == file);
-					if(assetFile != null)
+					if (assetFile != null)
 					{
 						_openedAssetFile = assetFile;
 
@@ -189,17 +193,37 @@ namespace PoEAssetVisualizer
 							BundleLabel.Text = $"Bundle: {assetFile.Bundle.Name}";
 
 							var extension = Path.GetExtension(file);
-							switch(extension)
+							switch (extension)
 							{
 								case ".dat":
 								case ".dat64":
 									FillDatViewer(_openedAssetFile);
-									_datDefinitionsWatcher = new FileSystemWatcher(Directory.GetCurrentDirectory(), DatDefinitionFileName)
+									string datSchemaFolder = Path.Combine(Directory.GetCurrentDirectory(), "dat-schema");
+									if (Directory.Exists(datSchemaFolder))
 									{
-										NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-									};
-									_datDefinitionsWatcher.Changed += OnDatDefinitionsFileChanged;
-									_datDefinitionsWatcher.EnableRaisingEvents = true;
+										Directory.GetFiles(datSchemaFolder).ToList().ForEach(filePath =>
+										{
+											var fileWatcher = new FileSystemWatcher(filePath)
+											{
+												NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+											};
+											fileWatcher.Changed += OnDatDefinitionsFileChanged;
+											fileWatcher.EnableRaisingEvents = true;
+
+											_datDefinitionsWatchers.Add(fileWatcher);
+										});
+									}
+									else
+									{
+										var fileWatcher = new FileSystemWatcher(Directory.GetCurrentDirectory(), DatDefinitionFileName)
+										{
+											NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+										};
+										fileWatcher.Changed += OnDatDefinitionsFileChanged;
+										fileWatcher.EnableRaisingEvents = true;
+
+										_datDefinitionsWatchers.Add(fileWatcher);
+									}
 
 									HexViewer.Stream = new MemoryStream(contents);
 									HexViewerTab.Visibility = Visibility.Visible;
@@ -218,9 +242,9 @@ namespace PoEAssetVisualizer
 
 							ExportButton.IsEnabled = true;
 							Viewers.Visibility = Visibility.Visible;
-							foreach(TabItem tab in Viewers.Items)
+							foreach (TabItem tab in Viewers.Items)
 							{
-								if(tab.Visibility == Visibility.Visible)
+								if (tab.Visibility == Visibility.Visible)
 								{
 									Viewers.SelectedIndex = Viewers.Items.IndexOf(tab);
 									break;
@@ -263,7 +287,7 @@ namespace PoEAssetVisualizer
 
 		private void SearchInFileTextBox_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			if(DatViewer.IsVisible)
+			if (DatViewer.IsVisible)
 			{
 				ApplyDatViewerFilter();
 				DatViewer.Items.Refresh();
@@ -273,19 +297,19 @@ namespace PoEAssetVisualizer
 		private void ApplyDatViewerFilter()
 		{
 			string searchText = SearchInFileText.Text;
-			if(string.IsNullOrEmpty(searchText))
+			if (string.IsNullOrEmpty(searchText))
 			{
 				DatViewer.Items.Filter = null;
 			}
 			else
 			{
-				Regex regex = new Regex(searchText, RegexOptions.IgnoreCase);
+				Regex regex = new(searchText, RegexOptions.IgnoreCase);
 				DatViewer.Items.Filter = o =>
 				{
-					IDictionary<string, object> row = (IDictionary<string, object>)(ExpandoObject)o;
-					foreach((_, object value) in row)
+					IDictionary<string, object> row = (ExpandoObject)o;
+					foreach ((_, object value) in row)
 					{
-						if(regex.IsMatch(value.ToString()))
+						if (regex.IsMatch(value.ToString()))
 						{
 							return true;
 						}
@@ -301,13 +325,13 @@ namespace PoEAssetVisualizer
 			DatViewer.ItemsSource = null;
 			DatViewerError.Text = string.Empty;
 			DatViewerErrorTab.Visibility = Visibility.Collapsed;
-			List<ExpandoObject> items = new List<ExpandoObject>();
+			List<ExpandoObject> items = new();
 
 			try
 			{
-				if(_datDefinitions == null)
+				if (_datDefinitions == null)
 				{
-					_datDefinitions = DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
+					_datDefinitions = DatDefinitions.ParseLocalGQLDirectory("H:\\Repos\\PoE-Tool-Dev-DatSchema\\dat-schema");//DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
 				}
 				DatFile datFile = GetDatFile(assetFile);
 
@@ -320,7 +344,7 @@ namespace PoEAssetVisualizer
 					Binding = new Binding("Index"),
 					Width = 40,
 				});
-				foreach(var field in datFile.FileDefinition.Fields)
+				foreach (var field in datFile.FileDefinition.Fields)
 				{
 					AddColumn(field.ID);
 					TryAddRefColumn(field.ID, field.RefDatFileName);
@@ -332,9 +356,9 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_RemainderUInt");
 				TryAddColumn("_RemainderLong");
 				bool hasRemainderULong = TryAddColumn("_RemainderULong");
-				if(hasRemainderULong)
+				if (hasRemainderULong)
 				{
-					foreach(var commonDatFile in CommonDatFiles)
+					foreach (var commonDatFile in CommonDatFiles)
 					{
 						TryAddRefColumn("_RemainderULong", commonDatFile);
 					}
@@ -343,9 +367,9 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_RemainderString");
 				TryAddColumn("_RemainderRefString");
 				bool hasRemainderListULong = TryAddColumn("_RemainderListULong");
-				if(hasRemainderListULong)
+				if (hasRemainderListULong)
 				{
-					foreach(var commonDatFile in CommonDatFiles)
+					foreach (var commonDatFile in CommonDatFiles)
 					{
 						TryAddRefColumn("_RemainderListULong", commonDatFile);
 					}
@@ -360,11 +384,11 @@ namespace PoEAssetVisualizer
 					IDictionary<string, object> rowDict = (IDictionary<string, object>)row;
 					rowDict["Index"] = i;
 
-					foreach(var key in record.Values.Keys)
+					foreach (var key in record.Values.Keys)
 					{
 						rowDict[key] = record.GetStringValue(key);
 						string remark = record.GetRemark(key);
-						if(!string.IsNullOrEmpty(remark))
+						if (!string.IsNullOrEmpty(remark))
 						{
 							rowDict[$"{key}_Tooltip"] = remark;
 						}
@@ -374,20 +398,20 @@ namespace PoEAssetVisualizer
 				}
 
 				var fieldsWithRefDatFile = datFile.FileDefinition.Fields.Where(x => !string.IsNullOrEmpty(x.RefDatFileName));
-				foreach(var field in fieldsWithRefDatFile)
+				foreach (var field in fieldsWithRefDatFile)
 				{
 					TryAddRefValues(field.ID, field.DataType.Name, field.RefDatFileName, field.RefDatFieldID);
 				}
 
-				if(hasRemainderULong || hasRemainderListULong)
+				if (hasRemainderULong || hasRemainderListULong)
 				{
-					foreach(var commonDatFile in CommonDatFiles)
+					foreach (var commonDatFile in CommonDatFiles)
 					{
-						if(hasRemainderULong)
+						if (hasRemainderULong)
 						{
 							TryAddRefValues("_RemainderULong", "ulong", commonDatFile, null);
 						}
-						if(hasRemainderListULong)
+						if (hasRemainderListULong)
 						{
 							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile, null);
 						}
@@ -412,7 +436,7 @@ namespace PoEAssetVisualizer
 
 					var column = new DataGridTextColumn()
 					{
-						Header= columnName.Replace("_", "__"),
+						Header = columnName.Replace("_", "__"),
 						Binding = new Binding(columnName),
 						//CellStyle = style, // Styling costs A LOT of performance. Disabled for now.
 					};
@@ -453,20 +477,24 @@ namespace PoEAssetVisualizer
 				void TryAddRefValues(string columnName, string columnDataType, string refDatFileName, string refDatFieldID)
 				{
 					DatFile refDatFile = GetDatFile($"Data/{refDatFileName}");
-					if(refDatFile == null)
+					if (refDatFile == null)
 					{
 						return;
 					}
 					var columnBaseName = $"{columnName}_{Path.GetFileNameWithoutExtension(refDatFileName)}";
 					var refDefintion = refDatFile.FileDefinition;
 					var refFields = ReferenceFields.Select(x => refDefintion.Fields.FirstOrDefault(y => y.ID == x)).Where(x => x != null).ToArray();
-					if(string.IsNullOrEmpty(refDatFieldID))
+					if (string.IsNullOrEmpty(refDatFieldID))
 					{
-						switch(columnDataType)
+						switch (columnDataType)
 						{
 							case "int":
 							case "ref|generic":
 								AddSingleRefValueByIdx(columnBaseName, x => x.GetValue<int>(columnName));
+								break;
+
+							case "uint":
+								AddSingleRefValueByIdx(columnBaseName, x => (int)x.GetValue<uint>(columnName));
 								break;
 
 							case "ulong":
@@ -476,6 +504,10 @@ namespace PoEAssetVisualizer
 							case "ref|list|int":
 							case "ref|list|ref|generic":
 								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<int> idxs) ? idxs : null);
+								break;
+
+							case "ref|list|uint":
+								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<uint> idxs) ? idxs.Select(x => (int)x).ToList() : null);
 								break;
 
 							case "ref|list|ulong":
@@ -488,7 +520,7 @@ namespace PoEAssetVisualizer
 					}
 					else
 					{
-						switch(columnDataType)
+						switch (columnDataType)
 						{
 							case "int":
 								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<int>(columnName), (a, b) => a == b);
@@ -521,16 +553,16 @@ namespace PoEAssetVisualizer
 
 					void AddSingleRefValueByIdx(string columnBaseName, Func<DatRecord, int> getIdx)
 					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						for (int i = 0; i < datFile.Records.Count; i++)
 						{
 							var record = datFile.Records[i];
 							var refValue = getIdx(record);
 
-							if(refValue < 0 || refValue >= refDatFile.Records.Count)
+							if (refValue < 0 || refValue >= refDatFile.Records.Count)
 							{
 								continue;
 							}
-							foreach(var refField in refFields)
+							foreach (var refField in refFields)
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
 								rowDict[$"{columnBaseName}_{refField.ID}"] = refDatFile.Records[refValue].GetStringValue(refField.ID);
@@ -540,17 +572,17 @@ namespace PoEAssetVisualizer
 
 					void AddSingleRefValueByFieldID<T>(string columnBaseName, Func<DatRecord, T> getRefValue, Func<T, T, bool> matchesRefValue)
 					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						for (int i = 0; i < datFile.Records.Count; i++)
 						{
 							var record = datFile.Records[i];
 							T refValue = getRefValue(record);
 
 							DatRecord refRecord = refDatFile.Records.FirstOrDefault(x => matchesRefValue(x.GetValue<T>(refDatFieldID), refValue));
-							if(refRecord == null)
+							if (refRecord == null)
 							{
 								continue;
 							}
-							foreach(var refField in refFields)
+							foreach (var refField in refFields)
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
 								rowDict[$"{columnBaseName}_{refField.ID}"] = refRecord.GetStringValue(refField.ID);
@@ -560,15 +592,15 @@ namespace PoEAssetVisualizer
 
 					void AddArrayRefValuesByIdx(string columnBaseName, Func<DatRecord, List<int>> getIdxs)
 					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						for (int i = 0; i < datFile.Records.Count; i++)
 						{
 							var record = datFile.Records[i];
 							var idxs = getIdxs(record);
-							if(idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
+							if (idxs == null || idxs.Any(x => x < 0 || x >= refDatFile.Records.Count))
 							{
 								continue;
 							}
-							foreach(var refField in refFields)
+							foreach (var refField in refFields)
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
 								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", idxs.Select(x => refDatFile.Records[x].GetStringValue(refField.ID))), "]");
@@ -578,18 +610,18 @@ namespace PoEAssetVisualizer
 
 					void AddArrayRefValuesByFieldID<T>(string columnBaseName, Func<DatRecord, List<T>> getRefValues, Func<T, T, bool> matchesRefValue)
 					{
-						for(int i = 0; i < datFile.Records.Count; i++)
+						for (int i = 0; i < datFile.Records.Count; i++)
 						{
 							var record = datFile.Records[i];
 							List<T> refValues = getRefValues(record);
-							if(refValues == null)
+							if (refValues == null)
 							{
 								continue;
 							}
 
 							var refRecords = refValues.Select(x => refDatFile.Records.FirstOrDefault(y => matchesRefValue(y.GetValue<T>(refDatFieldID), x)));
 
-							foreach(var refField in refFields)
+							foreach (var refField in refFields)
 							{
 								var rowDict = (IDictionary<string, object>)items[i];
 								rowDict[$"{columnBaseName}_{refField.ID}"] = string.Concat("[", string.Join(",", refRecords.Select(x => x == null ? string.Empty : x.GetStringValue(refField.ID))), "]");
@@ -598,10 +630,10 @@ namespace PoEAssetVisualizer
 					}
 				}
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				string message = ex.Message;
-				while(ex.InnerException != null)
+				while (ex.InnerException != null)
 				{
 					message = $"{message} >> {ex.InnerException.Message}";
 					ex = ex.InnerException;
@@ -614,7 +646,7 @@ namespace PoEAssetVisualizer
 
 		private DatFile GetDatFile(string fileName)
 		{
-			if(!_datFiles.TryGetValue(fileName, out DatFile datFile))
+			if (!_datFiles.TryGetValue(fileName, out DatFile datFile))
 			{
 				return GetDatFile(_assetIndex.FindFile(x => x.Name == fileName));
 			}
@@ -623,11 +655,11 @@ namespace PoEAssetVisualizer
 
 		private DatFile GetDatFile(AssetFile assetFile)
 		{
-			if(assetFile == null)
+			if (assetFile == null)
 			{
 				return null;
 			}
-			if(!_datFiles.TryGetValue(assetFile.Name, out DatFile datFile))
+			if (!_datFiles.TryGetValue(assetFile.Name, out DatFile datFile))
 			{
 				_datFiles[assetFile.Name] = datFile = new DatFile(assetFile, _datDefinitions);
 			}
@@ -643,18 +675,18 @@ namespace PoEAssetVisualizer
 			TextViewerTab.Visibility = Visibility.Collapsed;
 		}
 
-		private string FindPoEDirectory()
+		private static string FindPoEDirectory()
 		{
-			VistaFolderBrowserDialog folderBrowserDialog = new VistaFolderBrowserDialog();
+			VistaFolderBrowserDialog folderBrowserDialog = new();
 			var result = folderBrowserDialog.ShowDialog();
-			if(result.HasValue && result.Value)
+			if (result.HasValue && result.Value)
 			{
 				return folderBrowserDialog.SelectedPath;
 			}
 			return string.Empty;
 		}
 
-		private TreeViewItem CreateTreeViewItem(string name)
+		private static TreeViewItem CreateTreeViewItem(string name)
 		{
 			var item = new TreeViewItem()
 			{
@@ -671,11 +703,11 @@ namespace PoEAssetVisualizer
 
 		private void UpdateTreeViewItemVisibility(ItemsControl item, Regex regex)
 		{
-			foreach(TreeViewItem child in item.Items)
+			foreach (TreeViewItem child in item.Items)
 			{
-				if(child != null)
+				if (child != null)
 				{
-					if(child.Items.Count > 0)
+					if (child.Items.Count > 0)
 					{
 						UpdateTreeViewItemVisibility(child, regex);
 					}
@@ -695,7 +727,7 @@ namespace PoEAssetVisualizer
 
 		private void PopCursor()
 		{
-			if(_cursorsStack.Count > 0)
+			if (_cursorsStack.Count > 0)
 			{
 				Cursor = _cursorsStack.Pop();
 			}
@@ -705,34 +737,34 @@ namespace PoEAssetVisualizer
 
 		private void ExportButton_Click(object sender, RoutedEventArgs e)
 		{
-			if(_openedAssetFile != null)
+			if (_openedAssetFile != null)
 			{
-				SaveFileDialog saveFileDialog = new SaveFileDialog
+				SaveFileDialog saveFileDialog = new()
 				{
 					Title = $"Export {_openedAssetFile.Name}",
 					FileName = Path.GetFileNameWithoutExtension(_openedAssetFile.Name)
 				};
 				var extension = Path.GetExtension(_openedAssetFile.Name);
 				saveFileDialog.Filter = $"Raw file (*{extension})|*{extension}";
-				switch(extension)
+				switch (extension)
 				{
 					case ".dat":
 					case ".dat64":
 						saveFileDialog.Filter += "|CSV file (*.csv)|*.csv";
 						break;
 				}
-				if(saveFileDialog.ShowDialog() == true && !string.IsNullOrEmpty(saveFileDialog.FileName))
+				if (saveFileDialog.ShowDialog() == true && !string.IsNullOrEmpty(saveFileDialog.FileName))
 				{
-					switch(Path.GetExtension(saveFileDialog.FileName))
+					switch (Path.GetExtension(saveFileDialog.FileName))
 					{
 						case ".csv":
-							StringBuilder sb = new StringBuilder();
-							DatFile datFile = new DatFile(_openedAssetFile, _datDefinitions);
+							StringBuilder sb = new();
+							DatFile datFile = new(_openedAssetFile, _datDefinitions);
 
-							sb.Append("#");
-							foreach(var field in datFile.FileDefinition.Fields)
+							sb.Append('#');
+							foreach (var field in datFile.FileDefinition.Fields)
 							{
-								sb.Append("\t");
+								sb.Append('\t');
 								sb.Append(field.ID);
 							}
 
@@ -752,7 +784,7 @@ namespace PoEAssetVisualizer
 							{
 								if (datFile.Records.Count > 0 && datFile.Records[0].HasValue(columnName))
 								{
-									sb.Append("\t");
+									sb.Append('\t');
 									sb.Append(columnName);
 								}
 							}
@@ -764,9 +796,9 @@ namespace PoEAssetVisualizer
 								var record = datFile.Records[i];
 
 								sb.Append(i);
-								foreach(var key in record.Values.Keys)
+								foreach (var key in record.Values.Keys)
 								{
-									sb.Append("\t");
+									sb.Append('\t');
 									sb.Append(record.GetStringValue(key));
 								}
 								sb.AppendLine();

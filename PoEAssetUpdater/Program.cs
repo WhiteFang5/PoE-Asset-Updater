@@ -228,7 +228,7 @@ namespace PoEAssetUpdater
 		public static void Main(string[] args)
 		{
 			// Validate args array size
-			if(args.Length < 2)
+			if (args.Length < 2)
 			{
 				Logger.WriteLine($"Invalid number of arguments. Found {args.Length}, expected atleast 2.");
 				PrintUsage();
@@ -237,21 +237,21 @@ namespace PoEAssetUpdater
 
 			// Validate arguments
 			string poeDirectory = args[0];
-			if(!Directory.Exists(poeDirectory))
+			if (!Directory.Exists(poeDirectory))
 			{
 				Logger.WriteLine($"Directory '{poeDirectory}' does not exist.");
 				PrintUsage();
 				return;
 			}
 			string assetOutputDir = args[1];
-			if(!Directory.Exists(assetOutputDir))
+			if (!Directory.Exists(assetOutputDir))
 			{
 				Logger.WriteLine($"Directory '{assetOutputDir}' does not exist.");
 				PrintUsage();
 				return;
 			}
 			string tradeApiCacheDir = args.Length > 2 ? args[2] : null;
-			if(!string.IsNullOrEmpty(tradeApiCacheDir) && !Directory.Exists(tradeApiCacheDir))
+			if (!string.IsNullOrEmpty(tradeApiCacheDir) && !Directory.Exists(tradeApiCacheDir))
 			{
 				Directory.CreateDirectory(tradeApiCacheDir);
 			}
@@ -347,8 +347,8 @@ namespace PoEAssetUpdater
 		private static void WriteJsonFile(string exportFilePath, Action<JsonWriter> writeData)
 		{
 			// Create a JSON writer with human-readable output.
-			using(StreamWriter streamWriter = new StreamWriter(exportFilePath))
-			using(JsonTextWriter jsonWriter = new JsonTextWriter(streamWriter)
+			using (StreamWriter streamWriter = new StreamWriter(exportFilePath))
+			using (JsonTextWriter jsonWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.Indented,
 				Indentation = 1,
@@ -364,16 +364,16 @@ namespace PoEAssetUpdater
 
 			// Create a minified json.
 			string minifiedDir = Path.Combine(Path.GetDirectoryName(exportFilePath), "minified");
-			if(!Directory.Exists(minifiedDir))
+			if (!Directory.Exists(minifiedDir))
 			{
 				Directory.CreateDirectory(minifiedDir);
 			}
 			string minifiedFilePath = Path.Combine(minifiedDir, Path.GetFileName(exportFilePath));
 
-			using(StreamReader streamReader = new StreamReader(exportFilePath))
-			using(StreamWriter streamWriter = new StreamWriter(minifiedFilePath))
-			using(JsonReader jsonReader = new JsonTextReader(streamReader))
-			using(JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
+			using (StreamReader streamReader = new StreamReader(exportFilePath))
+			using (StreamWriter streamWriter = new StreamWriter(minifiedFilePath))
+			using (JsonReader jsonReader = new JsonTextReader(streamReader))
+			using (JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.None,
 			})
@@ -396,19 +396,19 @@ namespace PoEAssetUpdater
 		private static Dictionary<Language, List<DatFile>> GetLanguageDataFiles(List<AssetFile> assetFiles, DatDefinitions datDefinitions, params string[] datFileNames)
 		{
 			Dictionary<Language, List<DatFile>> datFiles = new Dictionary<Language, List<DatFile>>();
-			foreach(var language in AllLanguages)
+			foreach (var language in AllLanguages)
 			{
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
 				var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
 				var languageFiles = assetFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
-				if(languageFiles.Count > 0)
+				if (languageFiles.Count > 0)
 				{
 					datFiles.Add(language, new List<DatFile>());
 
-					foreach(var datFileName in datFileNames)
+					foreach (var datFileName in datFileNames)
 					{
 						var datContainer = GetDatFile(languageFiles, datDefinitions, datFileName);
-						if(datContainer == null)
+						if (datContainer == null)
 						{
 							// An error was already logged.
 							continue;
@@ -426,21 +426,21 @@ namespace PoEAssetUpdater
 
 		private static void ExportLanguageDataFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, JsonWriter jsonWriter, Dictionary<string, GetKeyValuePairDelegate> datFiles, bool mirroredRecords)
 		{
-			foreach(var language in AllLanguages)
+			foreach (var language in AllLanguages)
 			{
 				Dictionary<string, string> records = new Dictionary<string, string>();
 
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
 				var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
 				var languageFiles = assetFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
-				if(languageFiles.Count > 0)
+				if (languageFiles.Count > 0)
 				{
 					// Retrieve all records
-					foreach((var datFileName, var getKeyValuePair) in datFiles)
+					foreach ((var datFileName, var getKeyValuePair) in datFiles)
 					{
 						// Find the given datFile.
 						var datContainer = GetDatFile(languageFiles, datDefinitions, datFileName);
-						if(datContainer == null)
+						if (datContainer == null)
 						{
 							// An error was already logged.
 							continue;
@@ -448,16 +448,16 @@ namespace PoEAssetUpdater
 
 						Logger.WriteLine($"\tExporting {langDir}/{datFileName}.");
 
-						for(int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
+						for (int j = 0, recordsLength = datContainer.Records.Count; j < recordsLength; j++)
 						{
 							(string key, string value) = getKeyValuePair(j, datContainer.Records[j], languageFiles);
-							if(key == null || value == null || records.ContainsKey(key) || (mirroredRecords && records.ContainsKey(value)))
+							if (key == null || value == null || records.ContainsKey(key) || (mirroredRecords && records.ContainsKey(value)))
 							{
 								continue;
 							}
 
 							records[key] = value;
-							if(mirroredRecords)
+							if (mirroredRecords)
 							{
 								records[value] = key;
 							}
@@ -473,7 +473,7 @@ namespace PoEAssetUpdater
 				jsonWriter.WritePropertyName(language.ToString());
 				jsonWriter.WriteStartObject();
 
-				foreach((var key, var value) in records)
+				foreach ((var key, var value) in records)
 				{
 					jsonWriter.WritePropertyName(key);
 					jsonWriter.WriteValue(value);
@@ -501,7 +501,7 @@ namespace PoEAssetUpdater
 				string id = recordData.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 				string name = Escape(recordData.GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim());
 				string inheritsFrom = recordData.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
-				if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
+				if (inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
 				{
 					return (null, null);
 				}
@@ -552,7 +552,7 @@ namespace PoEAssetUpdater
 				string id = recordData.GetValue<string>(DatSchemas.ClientStrings.Id);
 				string name = recordData.GetValue<string>(DatSchemas.ClientStrings.Text).Trim();
 
-				switch(id)
+				switch (id)
 				{
 					case "ItemDisplayStoredExperience" when name.EndsWith(": %0"):
 						name = name[0..^4];
@@ -607,7 +607,7 @@ namespace PoEAssetUpdater
 			{
 				string id = recordData.GetValue<string>(DatSchemas.IncursionRooms.Id);
 				string name = recordData.GetValue<string>(DatSchemas.IncursionRooms.Name).Trim();
-				if(string.IsNullOrEmpty(name))
+				if (string.IsNullOrEmpty(name))
 				{
 					return (null, null);
 				}
@@ -618,7 +618,7 @@ namespace PoEAssetUpdater
 			{
 				string id = recordData.GetValue<string>(DatSchemas.HeistJobs.Id);
 				string name = recordData.GetValue<string>(DatSchemas.HeistJobs.Name).Trim();
-				if(string.IsNullOrEmpty(name))
+				if (string.IsNullOrEmpty(name))
 				{
 					return (null, null);
 				}
@@ -630,6 +630,7 @@ namespace PoEAssetUpdater
 				string id = recordData.GetValue<int>(DatSchemas.HeistObjectiveValueDescriptions.Id).ToString(CultureInfo.InvariantCulture);
 				string name = recordData.GetValue<string>(DatSchemas.HeistObjectiveValueDescriptions.Name).Trim();
 				if(string.IsNullOrEmpty(name))
+				if (string.IsNullOrEmpty(name))
 				{
 					return (null, null);
 				}
@@ -640,7 +641,7 @@ namespace PoEAssetUpdater
 			{
 				string id = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Id);
 				string name = recordData.GetValue<string>(DatSchemas.ExpeditionFactions.Name).Trim();
-				if(string.IsNullOrEmpty(name))
+				if (string.IsNullOrEmpty(name))
 				{
 					return (null, null);
 				}
@@ -677,24 +678,24 @@ namespace PoEAssetUpdater
 		private static DatFile GetDatFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, string datFileName)
 		{
 			var assetFile = assetFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == datFileName);
-			if(assetFile == null)
+			if (assetFile == null)
 			{
 				Logger.WriteLine($"\t{datFileName} not found.");
 				return null;
 			}
 
 			var datFile = new DatFile(assetFile, datDefinitions);
-			if(datFile.Records.Count > 0)
+			if (datFile.Records.Count > 0)
 			{
-				if(datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
+				if (datFile.Records[0].TryGetValue("_Remainder", out byte[] remainder))
 				{
 					PrintError($"Found {remainder.Length} Remainder Bytes in {datFileName}");
 				}
-				for(int i = 0; i < datFile.Records.Count; i++)
+				for (int i = 0; i < datFile.Records.Count; i++)
 				{
 					var record = datFile.Records[i];
 					var remarks = string.Join("; ", record.Values.Where(x => !string.IsNullOrEmpty(x.Value.Remark)).Select(x => $"{x.Key}: {x.Value.Remark}"));
-					if(!string.IsNullOrEmpty(remarks))
+					if (!string.IsNullOrEmpty(remarks))
 					{
 						PrintError($"{datFileName}[{i}] Remarks: {remarks}");
 					}
@@ -712,7 +713,7 @@ namespace PoEAssetUpdater
 				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat");
 				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
 
-				if(modsDatContainer == null || statsDatContainer == null)
+				if (modsDatContainer == null || statsDatContainer == null)
 				{
 					return;
 				}
@@ -724,20 +725,20 @@ namespace PoEAssetUpdater
 				// Group mods
 				var groupedRecords = modsDatContainer.Records.Select(RecordSelector).GroupBy(x => x.statNames);
 
-				foreach(var recordGroup in groupedRecords)
+				foreach (var recordGroup in groupedRecords)
 				{
 					// Write the stat names
 					jsonWriter.WritePropertyName(recordGroup.Key);
 					jsonWriter.WriteStartObject();
 					int recordIdx = 0;
-					foreach(var (recordData, statNames, lastValidStatNum) in recordGroup)
+					foreach (var (recordData, statNames, lastValidStatNum) in recordGroup)
 					{
 						// Write the stat name excluding its group name
 						jsonWriter.WritePropertyName(recordData.GetValue<string>(DatSchemas.Mods.Id).Replace(recordData.GetValue<string>(DatSchemas.Mods.CorrectGroup), ""));
 						jsonWriter.WriteStartArray();
 
 						// Write all stats in the array
-						for(int i = 1; i <= lastValidStatNum; i++)
+						for (int i = 1; i <= lastValidStatNum; i++)
 						{
 							WriteMinMaxValues(recordData, jsonWriter, i);
 						}
@@ -753,11 +754,11 @@ namespace PoEAssetUpdater
 				{
 					List<string> statNames = new List<string>();
 					int lastValidStatsKey = 0;
-					for(int i = 1; i <= TotalNumberOfStats; i++)
+					for (int i = 1; i <= TotalNumberOfStats; i++)
 					{
 						ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-						if(statsKey != UndefinedValue)
+						if (statsKey != UndefinedValue)
 						{
 							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id));
 							lastValidStatsKey = i;
@@ -788,7 +789,7 @@ namespace PoEAssetUpdater
 			request.Timeout = 10 * 1000;
 			request.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
 			using var response = (HttpWebResponse)request.GetResponse();
-			if(response.StatusCode == HttpStatusCode.OK)
+			if (response.StatusCode == HttpStatusCode.OK)
 			{
 				using Stream dataStream = response.GetResponseStream();
 				using StreamReader reader = new StreamReader(dataStream);
@@ -816,7 +817,7 @@ namespace PoEAssetUpdater
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
 
-				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
+				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
 					clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null ||
 					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null)
 				{
@@ -848,11 +849,11 @@ namespace PoEAssetUpdater
 					// Find all mods that are using any of the presence stats
 					.Where(recordData =>
 					{
-						for(int i = 1; i <= TotalNumberOfStats; i++)
+						for (int i = 1; i <= TotalNumberOfStats; i++)
 						{
 							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-							if(statsKey != UndefinedValue && presenceMapping.ContainsKey(statsKey))
+							if (statsKey != UndefinedValue && presenceMapping.ContainsKey(statsKey))
 							{
 								return true;
 							}
@@ -862,15 +863,15 @@ namespace PoEAssetUpdater
 					{
 						List<string> ids = new List<string>();
 						(ulong statKey, string statId) presenceRecord = (0, null);
-						for(int i = 1; i <= TotalNumberOfStats; i++)
+						for (int i = 1; i <= TotalNumberOfStats; i++)
 						{
 							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
 							// Add all valid stats that aren't the 'presence' stat
-							if(statsKey != UndefinedValue)
+							if (statsKey != UndefinedValue)
 							{
 								string statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
-								if(presenceMapping.ContainsKey(statsKey))
+								if (presenceMapping.ContainsKey(statsKey))
 								{
 									presenceRecord = (statsKey, statId);
 								}
@@ -888,17 +889,17 @@ namespace PoEAssetUpdater
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
 				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).ToArray();
-				for(int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
+				for (int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
 				{
 					string line = lines[lineIdx];
 					// Description found => read id(s)
-					if(line.StartsWith("description"))
+					if (line.StartsWith("description"))
 					{
 						line = lines[++lineIdx];
 						string[] ids = line.Split(WhiteSpaceSplitter, StringSplitOptions.RemoveEmptyEntries);
 						int statCount = int.Parse(ids[0]);
 
-						if(Array.Exists(ids, x => x.Contains("old_do_not_use")))
+						if (Array.Exists(ids, x => x.Contains("old_do_not_use")))
 						{
 							// Ignore all "old do not use" stats.
 							continue;
@@ -911,7 +912,7 @@ namespace PoEAssetUpdater
 
 						// Find an existing stat in the list
 						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID && x.LocalStat == isLocalStat);
-						if(statDescription == null)
+						if (statDescription == null)
 						{
 							statDescription = new StatDescription(ids, isLocalStat);
 							statDescriptions.Add(statDescription);
@@ -923,21 +924,21 @@ namespace PoEAssetUpdater
 
 						// Initial (first) language is always english
 						Language language = Language.English;
-						while(true)
+						while (true)
 						{
 							// Read the next line as it contains how many mods are added.
 							line = lines[++lineIdx];
 							int textCount = int.Parse(line);
-							for(int i = 0; i < textCount; i++)
+							for (int i = 0; i < textCount; i++)
 							{
 								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems);
 							}
-							if(lineIdx < lastLineIdx)
+							if (lineIdx < lastLineIdx)
 							{
 								// Take a peek at the next line to check if it's a new language, or something else
 								line = lines[lineIdx + 1];
 								Match match = StatDescriptionLangRegex.Match(line);
-								if(match.Success)
+								if (match.Success)
 								{
 									lineIdx++;
 									language = Enum.Parse<Language>(match.Groups[1].Value.Replace(" ", ""), true);
@@ -956,24 +957,24 @@ namespace PoEAssetUpdater
 				}
 
 				// Add all 'presence' stat descriptions
-				for(int i = 0; i < presenceStats.Length; i++)
+				for (int i = 0; i < presenceStats.Length; i++)
 				{
-					var presenceStat = presenceStats[i];
+					var (ids, isLocalStat, presenceStatKey) = presenceStats[i];
 
 					// Find an existing stat in the list
 					StatDescription statDescription = statDescriptions
-						.Where(x => x.HasMatchingIdentifier(presenceStat.ids) && x.LocalStat == presenceStat.isLocalStat)
-						.OrderBy(x => x.GetMatchingIdentifierCount(presenceStat.ids))
+						.Where(x => x.HasMatchingIdentifier(ids) && x.LocalStat == isLocalStat)
+						.OrderBy(x => x.GetMatchingIdentifierCount(ids))
 						.FirstOrDefault();
-					if(statDescription != null)
+					if (statDescription != null)
 					{
-						statDescription = new StatDescription(statDescription, presenceStat.ids);
-						statDescription.ApplyPresenceText(presenceMapping[presenceStat.presenceStatKey]);
+						statDescription = new StatDescription(statDescription, ids);
+						statDescription.ApplyPresenceText(presenceMapping[presenceStatKey]);
 						statDescriptions.Add(statDescription);
 					}
 					else
 					{
-						Logger.WriteLine($"Couldn't find existing stat description for presence stat '{string.Join(" ", presenceStat.ids)}'");
+						Logger.WriteLine($"Couldn't find existing stat description for presence stat '{string.Join(" ", ids)}'");
 					}
 				}
 
@@ -991,15 +992,15 @@ namespace PoEAssetUpdater
 						poeTradeSiteContent[language] = content;
 						poeTradeStats[language] = JObject.Parse(content);
 					}
-					catch(Exception ex)
+					catch (Exception ex)
 					{
 						retrievedAllContent = false;
 						PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
 						// Check if we have a cached file
-						if(!string.IsNullOrEmpty(tradeApiCacheDir))
+						if (!string.IsNullOrEmpty(tradeApiCacheDir))
 						{
 							string cachedFileName = Path.Combine(tradeApiCacheDir, LanguageToPoETradeAPICachedFileNameMapping[language]);
-							if(File.Exists(cachedFileName))
+							if (File.Exists(cachedFileName))
 							{
 								PrintWarning($"Using cached trade-api data for {language}");
 								poeTradeStats[language] = JObject.Parse(File.ReadAllText(cachedFileName));
@@ -1012,23 +1013,23 @@ namespace PoEAssetUpdater
 
 				Logger.WriteLine("Parsing PoE Trade API Stats...");
 
-				if(!poeTradeStats.ContainsKey(Language.English))
+				if (!poeTradeStats.ContainsKey(Language.English))
 				{
 					PrintError($"Failed to parse PoE Trade API Stats.");
 					return;
 				}
 
 				// Update the trade api cached files
-				if(retrievedAllContent && !string.IsNullOrEmpty(tradeApiCacheDir))
+				if (retrievedAllContent && !string.IsNullOrEmpty(tradeApiCacheDir))
 				{
-					foreach((var language, string content) in poeTradeSiteContent)
+					foreach ((var language, string content) in poeTradeSiteContent)
 					{
-						if(LanguageToPoETradeAPICachedFileNameMapping.TryGetValue(language, out string fileName))
+						if (LanguageToPoETradeAPICachedFileNameMapping.TryGetValue(language, out string fileName))
 						{
 							string cachedFileName = Path.Combine(tradeApiCacheDir, fileName);
 							File.WriteAllText(cachedFileName, content);
 						}
-					} 
+					}
 				}
 				poeTradeSiteContent.Clear();
 
@@ -1043,7 +1044,7 @@ namespace PoEAssetUpdater
 
 					jsonWriter.WritePropertyName(label);
 					jsonWriter.WriteStartObject();
-					foreach(var entry in result["entries"])
+					foreach (var entry in result["entries"])
 					{
 						string tradeId = GetTradeID(entry, label);
 						string text = (string)entry["text"];
@@ -1055,7 +1056,7 @@ namespace PoEAssetUpdater
 
 						// Check for options
 						var options = entry["option"]?["options"];
-						if(options != null)
+						if (options != null)
 						{
 							optionValues = options.ToDictionary(option => option["id"].ToString(), option => option["text"].ToString());
 						}
@@ -1084,10 +1085,10 @@ namespace PoEAssetUpdater
 #if DEBUG
 								Logger.WriteLine($"[{label}] Indistinguishable Desc '{statDesc}' for Trade Stat IDs: {string.Join(", ", tradeIds.Select(x => $"'{x}'"))}");
 #endif
-								for(int i = 0; i < tradeIds.Count; i++)
+								for (int i = 0; i < tradeIds.Count; i++)
 								{
 									string tradeId = tradeIds[i];
-									if(usedTradeIds.Contains(tradeId))
+									if (usedTradeIds.Contains(tradeId))
 									{
 										continue;
 									}
@@ -1095,7 +1096,7 @@ namespace PoEAssetUpdater
 									jsonWriter.WriteStartArray();
 									for (int j = 0; j < tradeIds.Count; j++)
 									{
-										if(i == j)
+										if (i == j)
 										{
 											continue;
 										}
@@ -1134,7 +1135,7 @@ namespace PoEAssetUpdater
 				{
 					var statDescriptionsFile = statDescriptionFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == fileName);
 
-					if(statDescriptionsFile == null)
+					if (statDescriptionsFile == null)
 					{
 						Logger.WriteLine($"\t{fileName} not found.");
 						return null;
@@ -1157,10 +1158,10 @@ namespace PoEAssetUpdater
 					if (TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
 					{
 						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
-						if(statDescription != null)
+						if (statDescription != null)
 						{
 							addTradeStatData = true;
-							if(mapping.clearOptions)
+							if (mapping.clearOptions)
 							{
 								options = null;
 							}
@@ -1175,7 +1176,7 @@ namespace PoEAssetUpdater
 							.ToList();
 
 						// When no regular stat descs were found, and options are present, try to split them out and find matching stat descs.
-						if(candidateStatDescs.Count == 0 && options != null)
+						if (candidateStatDescs.Count == 0 && options != null)
 						{
 							expandOptions = true;
 
@@ -1187,7 +1188,7 @@ namespace PoEAssetUpdater
 								.ToList();
 						}
 
-						if(candidateStatDescs.Count == 0)
+						if (candidateStatDescs.Count == 0)
 						{
 							PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
 						}
@@ -1200,23 +1201,23 @@ namespace PoEAssetUpdater
 							mod ??= statDescription.LocalStat ? "local" : null;
 						}
 					}
-					
+
 					jsonWriter.WritePropertyName(tradeId);
 					jsonWriter.WriteStartObject();
 					{
-						if(statDescription != null)
+						if (statDescription != null)
 						{
 							jsonWriter.WritePropertyName("id");
 							jsonWriter.WriteValue(statDescription.FullIdentifier);
 							jsonWriter.WritePropertyName("negated");
 							jsonWriter.WriteValue(statDescription.Negated);
 						}
-						if(mod != null)
+						if (mod != null)
 						{
 							jsonWriter.WritePropertyName("mod");
 							jsonWriter.WriteValue(mod);
 						}
-						if(options != null)
+						if (options != null)
 						{
 							jsonWriter.WritePropertyName("option");
 							jsonWriter.WriteValue(true);
@@ -1224,7 +1225,7 @@ namespace PoEAssetUpdater
 						jsonWriter.WritePropertyName("text");
 						jsonWriter.WriteStartObject();
 						{
-							for(int i = 0; i < AllLanguages.Length; i++)
+							for (int i = 0; i < AllLanguages.Length; i++)
 							{
 								Language language = AllLanguages[i];
 
@@ -1232,9 +1233,9 @@ namespace PoEAssetUpdater
 								jsonWriter.WriteStartArray();
 								if (statDescription != null)
 								{
-									if(expandOptions)
+									if (expandOptions)
 									{
-										foreach((_, var optionValue) in options)
+										foreach ((_, var optionValue) in options)
 										{
 											foreach (var statLine in statDescription.GetStatLines(language, GetOptionStatDesc(text, optionValue), true))
 											{
@@ -1287,22 +1288,22 @@ namespace PoEAssetUpdater
 			{
 				string desc = statLine.StatDescription;
 				string descSuffix = null;
-				if(LabelsWithSuffix.Contains(label))
+				if (LabelsWithSuffix.Contains(label))
 				{
 					descSuffix = $" \\({label}\\)";
 				}
 
-				if(options == null)
+				if (options == null)
 				{
 					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(desc, descSuffix)));
-					if(language == Language.English)
+					if (language == Language.English)
 					{
 						AddTradeStatData(tradeStatsData, desc, tradeId);
 					}
 				}
 				else
 				{
-					foreach((var id, var optionValue) in options)
+					foreach ((var id, var optionValue) in options)
 					{
 						string optionDesc = GetOptionStatDesc(desc, optionValue);
 						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(optionDesc, descSuffix)));
@@ -1315,7 +1316,7 @@ namespace PoEAssetUpdater
 
 				static string AppendSuffix(string text, string suffix)
 				{
-					if(string.IsNullOrEmpty(suffix))
+					if (string.IsNullOrEmpty(suffix))
 					{
 						return text;
 					}
@@ -1339,7 +1340,7 @@ namespace PoEAssetUpdater
 
 			static void AddTradeStatData(Dictionary<string, List<string>> tradeStatsData, string desc, string tradeId)
 			{
-				if(tradeStatsData == null)
+				if (tradeStatsData == null)
 				{
 					return;
 				}
@@ -1347,7 +1348,7 @@ namespace PoEAssetUpdater
 				{
 					tradeStatsData[desc] = tradeData = new List<string>();
 				}
-				if(!tradeData.Contains(tradeId))
+				if (!tradeData.Contains(tradeId))
 				{
 					tradeData.Add(tradeId);
 				}
@@ -1363,7 +1364,7 @@ namespace PoEAssetUpdater
 				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
 				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat");
 
-				if(baseItemTypesDatContainer == null)
+				if (baseItemTypesDatContainer == null)
 				{
 					return;
 				}
@@ -1373,14 +1374,14 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteStartObject();
 
 				// Write the Base Item Types
-				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
+				for (int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
 					string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 					var category = GetItemCategory(baseItemType, i);
-					
+
 					// Only write to the json if an appropriate category was found.
-					if(category != null)
+					if (category != null)
 					{
 						jsonWriter.WritePropertyName(id);
 						jsonWriter.WriteValue(category);
@@ -1388,7 +1389,7 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the Monster Varieties
-				foreach(var monsterVariety in monsterVarietiesDatContainer.Records)
+				foreach (var monsterVariety in monsterVarietiesDatContainer.Records)
 				{
 					jsonWriter.WritePropertyName(monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last());
 					jsonWriter.WriteValue(ItemCategory.MonsterBeast);
@@ -1414,12 +1415,12 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteStartObject();
 
 				// Write the Base Item Types
-				for(int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
+				for (int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
 				{
 					var craftingRecipe = craftingRecipesDatContainer.Records[i];
 					var craftingType = craftingRecipe.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey);
 
-					if(craftingType != 0)
+					if (craftingType != 0)
 					{
 						continue;
 					}
@@ -1436,7 +1437,7 @@ namespace PoEAssetUpdater
 
 					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
 					jsonWriter.WriteStartArray();
-					foreach(var craftingItemKey in craftingItemKeys)
+					foreach (var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
 						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>(DatSchemas.BlightCraftingItems.BaseItemTypesKey);
@@ -1457,20 +1458,20 @@ namespace PoEAssetUpdater
 			string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 			string inheritsFrom = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
 
-			if(IgnoredItemIds.Contains(id))
+			if (IgnoredItemIds.Contains(id))
 			{
 				return null;
 			}
 
 			// Check the inheritance mapping for a matching category.
-			if(!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
+			if (!BaseItemTypeInheritsFromToCategoryMapping.TryGetValue(inheritsFrom, out string category))
 			{
 				PrintError($"Missing BaseItemTypes Category for '{id}' (InheritsFrom '{inheritsFrom}') at row {rowIndex}");
 				return null;
 			}
 
 			// Special cases
-			switch(category)
+			switch (category)
 			{
 				// Special case for Fossils
 				case ItemCategory.Currency when id.StartsWith("CurrencyDelveCrafting"):
@@ -1495,7 +1496,7 @@ namespace PoEAssetUpdater
 				// Special case for Harvest Seeds
 				case ItemCategory.CurrencySeed:
 					string seedName = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name).Split(' ').First();
-					if(!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
+					if (!HarvestSeedPrefixToItemCategoryMapping.TryGetValue(seedName, out category))
 					{
 						PrintWarning($"Missing Seed Name in {nameof(HarvestSeedPrefixToItemCategoryMapping)} for '{seedName}'");
 						category = ItemCategory.CurrencySeed;
@@ -1504,7 +1505,7 @@ namespace PoEAssetUpdater
 
 				// Special case for Sentinel Drones
 				case ItemCategory.Sentinel:
-					switch(id.Substring(id.Length - 2, 1))
+					switch (id.Substring(id.Length - 2, 1))
 					{
 						case "A":
 							category = ItemCategory.SentinelStalker;
@@ -1529,16 +1530,16 @@ namespace PoEAssetUpdater
 				// Special case of Heist Equipment & Map Fragments
 				case ItemCategory.HeistEquipment:
 				case ItemCategory.MapFragment:
-					foreach(ulong tag in baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))
+					foreach (ulong tag in baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))
 					{
-						if(TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
+						if (TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
 						{
 							category = newCategory;
 						}
 					}
-					if(category == ItemCategory.HeistEquipment)
+					if (category == ItemCategory.HeistEquipment)
 					{
-						PrintWarning($"Missing Heist Equipment Tag in {TagsToItemCategoryMapping} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
+						PrintWarning($"Missing Heist Equipment Tag in {nameof(TagsToItemCategoryMapping)} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
 					}
 					break;
 			}
@@ -1556,7 +1557,7 @@ namespace PoEAssetUpdater
 			{
 				staticTradeData = JObject.Parse(GetWebContent(staticTradeDataUrl));
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				PrintError($"Failed to connect to '{staticTradeDataUrl}': {ex.Message}");
 				staticTradeData = null;
@@ -1565,7 +1566,7 @@ namespace PoEAssetUpdater
 			{
 				poeNinjaMapData = JObject.Parse(GetWebContent(poeNinjaMapDataUrl));
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				PrintError($"Failed to connect to '{poeNinjaMapDataUrl}': {ex.Message}");
 				poeNinjaMapData = null;
@@ -1587,11 +1588,11 @@ namespace PoEAssetUpdater
 				var uniqueMapsDatContainer = uniqueMapsDatContainers[Language.English][0];
 
 				// Write the Base Item Types
-				for(int i = 0; i < baseItemTypesDatContainer.Count; i++)
+				for (int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
 					string inheritsFrom = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.InheritsFrom).Split('/').Last();
-					if(inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
+					if (inheritsFrom == "AbstractMicrotransaction" || inheritsFrom == "AbstractHideoutDoodad")
 					{
 						continue;
 					}
@@ -1599,14 +1600,14 @@ namespace PoEAssetUpdater
 					string name = Escape(baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim());
 
 					var category = GetItemCategory(baseItemType, i);
-					if(string.IsNullOrEmpty(category))
+					if (string.IsNullOrEmpty(category))
 					{
 						// Ignore items without an appropriate category.
 						continue;
-					} 
+					}
 
 					// Explicitly exclude old maps from previous expansions.
-					if(ShouldExclude(id, category))
+					if (ShouldExclude(id, category))
 					{
 						Logger.WriteLine($"[BITsV2] Excluded: '{id}' ('{name}')");
 						continue;
@@ -1618,7 +1619,7 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the Monster Varieties
-				for(int i = 0; i < monsterVarietiesDatContainer.Count; i++)
+				for (int i = 0; i < monsterVarietiesDatContainer.Count; i++)
 				{
 					var monsterVariety = monsterVarietiesDatContainer.Records[i];
 					string id = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last();
@@ -1629,7 +1630,7 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the Unique Map Names
-				for(int i = 0; i < uniqueMapsDatContainer.Count; i++)
+				for (int i = 0; i < uniqueMapsDatContainer.Count; i++)
 				{
 					var uniqueMap = uniqueMapsDatContainer.Records[i];
 					var itemVisualIdentityKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
@@ -1646,35 +1647,35 @@ namespace PoEAssetUpdater
 				// Nested Method(s)
 				string GetImageByName(string id, string name)
 				{
-					if(staticTradeData != null)
+					if (staticTradeData != null)
 					{
-						foreach(var group in staticTradeData["result"])
+						foreach (var group in staticTradeData["result"])
 						{
 							string groupLabel = (string)group["label"];
-							foreach(var entry in group["entries"])
+							foreach (var entry in group["entries"])
 							{
 								string entryText = (string)entry["text"];
-								if(entryText == name)
+								if (entryText == name)
 								{
-									if(PoEStaticDataLabelToImagesMapping.TryGetValue(groupLabel, out string groupImage))
+									if (PoEStaticDataLabelToImagesMapping.TryGetValue(groupLabel, out string groupImage))
 									{
 										return groupImage;
 									}
 									else
 									{
 										var imageObj = entry["image"];
-										if(imageObj == null)
+										if (imageObj == null)
 										{
 											// Check if poe-ninja contains the data
-											if(poeNinjaMapData != null)
+											if (poeNinjaMapData != null)
 											{
-												foreach(var line in poeNinjaMapData["lines"])
+												foreach (var line in poeNinjaMapData["lines"])
 												{
 													string lineName = (string)line["name"];
-													if(lineName == name)
+													if (lineName == name)
 													{
 														imageObj = line["icon"];
-														if(imageObj == null)
+														if (imageObj == null)
 														{
 															PrintWarning($"Missing Image for '{id}' ({name})");
 															return string.Empty;
@@ -1705,11 +1706,11 @@ namespace PoEAssetUpdater
 
 				bool ShouldExclude(string id, string category)
 				{
-					if(category != ItemCategory.Map)
+					if (category != ItemCategory.Map)
 					{
 						return false;
 					}
-					if(id.StartsWith("MapWorlds") || id.StartsWith("Itemised"))
+					if (id.StartsWith("MapWorlds") || id.StartsWith("Itemised"))
 					{
 						return false;
 					}
@@ -1725,7 +1726,7 @@ namespace PoEAssetUpdater
 					// Write Names
 					jsonWriter.WritePropertyName("names");
 					jsonWriter.WriteStartObject();
-					foreach((var language, var name) in names)
+					foreach ((var language, var name) in names)
 					{
 						jsonWriter.WritePropertyName(((int)language).ToString(CultureInfo.InvariantCulture));
 						jsonWriter.WriteValue(name);
@@ -1733,14 +1734,14 @@ namespace PoEAssetUpdater
 					jsonWriter.WriteEndObject();
 
 					// Write Art Name
-					if(!string.IsNullOrEmpty(image))
+					if (!string.IsNullOrEmpty(image))
 					{
 						jsonWriter.WritePropertyName("image");
 						jsonWriter.WriteValue(image);
 					}
 
 					// Write Category
-					if(!string.IsNullOrEmpty(category))
+					if (!string.IsNullOrEmpty(category))
 					{
 						jsonWriter.WritePropertyName("category");
 						jsonWriter.WriteValue(category);
@@ -1778,14 +1779,14 @@ namespace PoEAssetUpdater
 					request.Timeout = 10 * 1000;
 					request.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetUpdater/" + ApplicationVersion;
 					using var response = (HttpWebResponse)request.GetResponse();
-					if(response.StatusCode == HttpStatusCode.OK)
+					if (response.StatusCode == HttpStatusCode.OK)
 					{
 						using Stream dataStream = response.GetResponseStream();
 						using StreamReader reader = new StreamReader(dataStream);
 						return reader.ReadToEnd();
 					}
 				}
-				catch(Exception ex)
+				catch (Exception ex)
 				{
 					PrintError($"Failed to connect to '{url}': {ex.Message}");
 				}
@@ -1794,7 +1795,7 @@ namespace PoEAssetUpdater
 
 			static string StripWikiMarkdown(string input)
 			{
-				if(!string.IsNullOrEmpty(input))
+				if (!string.IsNullOrEmpty(input))
 				{
 					input = Regex.Replace(input, "<.*?>", string.Empty);
 					input = Regex.Replace(input, "{{c\\|mod\\|(.*?)}}", "$1");
@@ -1817,27 +1818,37 @@ namespace PoEAssetUpdater
 				IEnumerable<JToken> items = null;
 
 				string mapsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND areas.main_page<>'' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,areas.main_page=page");
-				if(string.IsNullOrEmpty(mapsJson))
+				if (string.IsNullOrEmpty(mapsJson))
+				{
 					return;
+				}
 
 				string uniqueMapsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas&join_on=maps.unique_area_id=areas.id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,areas.main_page=page");
-				if(string.IsNullOrEmpty(uniqueMapsJson))
+				if (string.IsNullOrEmpty(uniqueMapsJson))
+				{
 					return;
+				}
 
 				string bossesJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,monsters.name=monster_name");
-				if(string.IsNullOrEmpty(mapsJson))
+				if (string.IsNullOrEmpty(mapsJson))
+				{
 					return;
+				}
 
 				string uniqueMapBossesJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=maps,areas,monsters&join_on=maps.unique_area_id=areas.id,areas.boss_monster_ids HOLDS monsters.metadata_id&where=maps.series='{CurrentMapSeries}' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,monsters.name=monster_name");
-				if(string.IsNullOrEmpty(uniqueMapBossesJson))
+				if (string.IsNullOrEmpty(uniqueMapBossesJson))
+				{
 					return;
+				}
 
-				for(int i = 0; i < 3; i++)
+				for (int i = 0; i < 3; i++)
 				{
 					int offset = i * maxLimit;
 					string itemsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&offset={offset}&limit={maxLimit}&tables=items,maps,areas&join_on=maps.area_id=areas.id,items.drop_areas HOLDS maps.area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND (maps.unique_area_id IS NULL OR maps.area_id<>maps.unique_area_id)&fields=maps.area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
-					if(string.IsNullOrEmpty(itemsJson))
+					if (string.IsNullOrEmpty(itemsJson))
+					{
 						return;
+					}
 
 					var parsed = JObject.Parse(itemsJson)["cargoquery"].Select(x => x["title"]);
 
@@ -1845,8 +1856,10 @@ namespace PoEAssetUpdater
 				}
 
 				string uniqueMapItemsJson = GetContent($"{PoEWikiApiUrl}/api.php?format=json&action=cargoquery&limit=500&tables=items,maps,areas&join_on=maps.unique_area_id=areas.id,items.drop_areas HOLDS maps.unique_area_id&where=maps.series='{CurrentMapSeries}' AND items.drop_enabled='1' AND maps.unique_area_id IS NOT NULL AND areas.main_page<>''&fields=maps.unique_area_id=area_id,items.name=item_name,items.drop_level=item_drop_level");
-				if(string.IsNullOrEmpty(uniqueMapItemsJson))
+				if (string.IsNullOrEmpty(uniqueMapItemsJson))
+				{
 					return;
+				}
 
 				var maps = JObject.Parse(mapsJson)["cargoquery"].Select(x => x["title"]);
 				var uniqueMaps = JObject.Parse(uniqueMapsJson)["cargoquery"].Select(x => x["title"]);
@@ -1863,26 +1876,30 @@ namespace PoEAssetUpdater
 
 				var mapTitles = maps.Select(x => (string)x["page"]);
 
-				for(int i = 0, c = (int)Math.Ceiling((decimal)mapCount / titleLimit); i < c; i++)
+				for (int i = 0, c = (int)Math.Ceiling((decimal)mapCount / titleLimit); i < c; i++)
 				{
 					int skip = i * titleLimit;
 					int remaining = mapCount - skip;
 					string mapsContentsJson = GetContent($"{PoEWikiApiUrl}/api.php?action=query&format=json&prop=revisions&titles={string.Join("|", mapTitles.Skip(skip).Take(Math.Min(titleLimit, remaining)))}&redirects=1&rvprop=content&rvslots=main");
-					if(string.IsNullOrEmpty(mapsContentsJson))
+					if (string.IsNullOrEmpty(mapsContentsJson))
+					{
 						return;
+					}
 
 					var parsed = JObject.Parse(mapsContentsJson)["query"]["pages"].Select(x => ((string)x.First["title"], (string)x.First["revisions"][0]["slots"]["main"]["*"]));
 					mapContents = mapContents?.Concat(parsed) ?? parsed;
 				}
 
 				string mapContentsJson = GetContent($"{PoEWikiApiUrl}/api.php?action=query&format=json&prop=revisions&titles=Map&redirects=1&rvprop=content&rvslots=main&rvsection=9");
-				if(string.IsNullOrEmpty(mapContentsJson))
+				if (string.IsNullOrEmpty(mapContentsJson))
+				{
 					return;
+				}
 
 				string mapcontents = (string)JObject.Parse(mapContentsJson)["query"]["pages"][PoEWikiMapsPageId]["revisions"][0]["slots"]["main"]["*"];
 				int mapTableStartIndex = mapcontents.IndexOf("{|");
-				mapcontents = mapcontents.Substring(mapTableStartIndex, mapcontents.IndexOf("|}") - mapTableStartIndex);
-				if(string.IsNullOrEmpty(mapcontents))
+				mapcontents = mapcontents[mapTableStartIndex..mapcontents.IndexOf("|}")];
+				if (string.IsNullOrEmpty(mapcontents))
 				{
 					PrintError("[Maps] Can't find map table in the Maps wiki page.");
 					return;
@@ -1896,22 +1913,22 @@ namespace PoEAssetUpdater
 				int layoutRatingIdx = mapRecords[0].FindIndex(x => x == "LayoutRating");
 				int bossRatingIdx = mapRecords[0].FindIndex(x => x == "BossRating");
 				int numberOfBossesIdx = mapRecords[0].FindIndex(x => x == "Numberof Bosses");
-				if(mapNameIdx == -1)
+				if (mapNameIdx == -1)
 				{
 					PrintError("[Maps] Missing 'Map' (name) in Maps wiki table.");
 					return;
 				}
-				if(layoutRatingIdx == -1)
+				if (layoutRatingIdx == -1)
 				{
 					PrintError("[Maps] Missing 'Layout Rating' in Maps wiki table.");
 					return;
 				}
-				if(bossRatingIdx == -1)
+				if (bossRatingIdx == -1)
 				{
 					PrintError("[Maps] Missing 'Boss Rating' in Maps wiki table.");
 					return;
 				}
-				if(numberOfBossesIdx == -1)
+				if (numberOfBossesIdx == -1)
 				{
 					PrintError("[Maps] Missing 'Number of Bosses' in Maps wiki table.");
 					return;
@@ -1920,7 +1937,7 @@ namespace PoEAssetUpdater
 				jsonWriter.WritePropertyName("Default");
 				jsonWriter.WriteStartObject();
 
-				foreach(var map in maps)
+				foreach (var map in maps)
 				{
 					string pageTitle = (string)map["page"];
 					string areaId = (string)map["area_id"];
@@ -1945,13 +1962,13 @@ namespace PoEAssetUpdater
 					jsonWriter.WritePropertyName("items");
 					jsonWriter.WriteStartArray();
 
-					foreach(var itemName in itemNames)
+					foreach (var itemName in itemNames)
 					{
 						jsonWriter.WriteStartObject();
 						jsonWriter.WritePropertyName("item");
 						jsonWriter.WriteValue(itemName.Item1);
 						jsonWriter.WritePropertyName("dropLevel");
-						if(string.IsNullOrEmpty(itemName.Item2))
+						if (string.IsNullOrEmpty(itemName.Item2))
 						{
 							jsonWriter.WriteValue(1);
 						}
@@ -1964,7 +1981,7 @@ namespace PoEAssetUpdater
 
 					jsonWriter.WriteEndArray();
 
-					if(mapRecord == null)
+					if (mapRecord == null)
 					{
 						PrintWarning($"[Maps] Missing Map Record for '{pageTitle}'.");
 					}
@@ -1974,19 +1991,19 @@ namespace PoEAssetUpdater
 						string bossCount = mapRecord[numberOfBossesIdx];
 						string bossRating = mapRecord[bossRatingIdx];
 
-						if(!string.IsNullOrEmpty(layoutRating))
+						if (!string.IsNullOrEmpty(layoutRating))
 						{
 							jsonWriter.WritePropertyName("layoutRating");
 							jsonWriter.WriteValue(layoutRating);
 						}
 
-						if(!string.IsNullOrEmpty(bossRating))
+						if (!string.IsNullOrEmpty(bossRating))
 						{
 							jsonWriter.WritePropertyName("bossRating");
 							jsonWriter.WriteValue(bossRating);
 						}
 
-						if(!string.IsNullOrEmpty(bossCount))
+						if (!string.IsNullOrEmpty(bossCount))
 						{
 							jsonWriter.WritePropertyName("bossCount");
 							jsonWriter.WriteValue(int.Parse(bossCount));
@@ -1997,7 +2014,7 @@ namespace PoEAssetUpdater
 					jsonWriter.WritePropertyName("bosses");
 					jsonWriter.WriteStartArray();
 
-					foreach(var bossName in bossNames)
+					foreach (var bossName in bossNames)
 					{
 						jsonWriter.WriteValue(bossName);
 					}
@@ -2007,13 +2024,13 @@ namespace PoEAssetUpdater
 					jsonWriter.WritePropertyName("url");
 					jsonWriter.WriteValue($"{PoEWikiUrl}/wiki/{pageTitle.Replace(" ", "_")}");
 
-					if(!string.IsNullOrEmpty(encounter))
+					if (!string.IsNullOrEmpty(encounter))
 					{
 						jsonWriter.WritePropertyName("encounter");
 						jsonWriter.WriteValue(encounter);
 					}
 
-					if(!string.IsNullOrEmpty(layout))
+					if (!string.IsNullOrEmpty(layout))
 					{
 						jsonWriter.WritePropertyName("layout");
 						jsonWriter.WriteValue(layout);
