@@ -255,10 +255,10 @@ namespace PoEAssetUpdater
 			{
 				Directory.CreateDirectory(tradeApiCacheDir);
 			}
-			string pyPoeFileName = args.Length > 3 ? args[3] : null;
-			if(!string.IsNullOrEmpty(pyPoeFileName) && !File.Exists(pyPoeFileName))
+			string datSchemaPath = args.Length > 3 ? args[3] : null;
+			if (!string.IsNullOrEmpty(datSchemaPath) && !Directory.Exists(datSchemaPath) && !File.Exists(datSchemaPath))
 			{
-				Logger.WriteLine($"File '{pyPoeFileName}' does not exist.");
+				Logger.WriteLine($"Dat Schema Path '{datSchemaPath}' does not exist.");
 				PrintUsage();
 				return;
 			}
@@ -267,7 +267,25 @@ namespace PoEAssetUpdater
 			{
 				// Read the index
 				AssetIndex assetIndex = new AssetIndex(poeDirectory);
-				DatDefinitions datDefinitions = DatDefinitions.ParseLocalPyPoE(pyPoeFileName);
+				DatDefinitions datDefinitions;
+				if (datSchemaPath.EndsWith(".py"))
+				{
+					datDefinitions = DatDefinitions.ParseLocalPyPoE(datSchemaPath);
+				}
+				else if (datSchemaPath.EndsWith(".json"))
+				{
+					datDefinitions = DatDefinitions.ParseJson(datSchemaPath);
+				}
+				else if (File.GetAttributes(datSchemaPath).HasFlag(FileAttributes.Directory))
+				{
+					datDefinitions = DatDefinitions.ParseLocalGQLDirectory(datSchemaPath);
+				}
+				else
+				{
+					Logger.WriteLine($"Dat Schema Path '{datSchemaPath}' doesn't contain not a valid DatDefinition.");
+					PrintUsage();
+					return;
+				}
 
 				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
 
@@ -277,12 +295,13 @@ namespace PoEAssetUpdater
 				//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
+				ExportWords(assetIndex, datDefinitions, assetOutputDir);
+				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
+				ExportModIcons(assetIndex, datDefinitions, assetOutputDir);
 				//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
 				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
 				//stats-local.json -> Likely/maintained created manually.
-				ExportWords(assetIndex, datDefinitions, assetOutputDir);
-				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
 			}
 #if !DEBUG
 			catch(Exception ex)

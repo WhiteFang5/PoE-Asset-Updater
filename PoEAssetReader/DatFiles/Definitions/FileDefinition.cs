@@ -18,7 +18,9 @@ namespace PoEAssetReader.DatFiles.Definitions
 		public FieldDefinition[] Fields
 		{
 			get;
-		} 
+		}
+
+		public bool X64 => Name.EndsWith(".dat64");
 
 		#endregion
 	}

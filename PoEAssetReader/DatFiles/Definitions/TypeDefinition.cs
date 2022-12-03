@@ -104,7 +104,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 			get;
 		}
 
-		public int DataSize
+		public long DataSize
 		{
 			get;
 		}
@@ -115,7 +115,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		public abstract DatData ReadData(BinaryReader binaryReader, long dataSectionOffset);
 
-		public static TypeDefinition Parse(string dataType)
+		public static TypeDefinition Parse(string dataType, bool x64)
 		{
 			if(_types.TryGetValue(dataType, out TypeDefinition typeDefinition))
 			{
@@ -129,11 +129,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 					var subDataType = dataType[RefDataTypeName.Length..];
 					if(subDataType.StartsWith(ListDataTypeName))
 					{
-						typeDefinition = new ListTypeDefinition(dataType, Parse(subDataType[ListDataTypeName.Length..]));
+						typeDefinition = new ListTypeDefinition(dataType, Parse(subDataType[ListDataTypeName.Length..], x64), x64);
 					}
 					else
 					{
-						typeDefinition = new RefTypeDefinition(dataType, Parse(subDataType));
+						typeDefinition = new RefTypeDefinition(dataType, Parse(subDataType, x64), x64);
 					}
 				}
 				else

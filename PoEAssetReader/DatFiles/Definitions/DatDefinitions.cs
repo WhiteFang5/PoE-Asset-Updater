@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 
@@ -46,7 +47,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				{
 					string id = jsonFieldDefinition.Value<string>("id");
 					string dataType = jsonFieldDefinition.Value<string>("type");
-					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), null, null));
+					fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType, false), null, null));
 				}
 				fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
 			}
@@ -109,7 +110,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 								}
 							}
 
-							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType), refDatFileName, refDatFieldID));
+							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType, false), refDatFileName, refDatFieldID));
 
 							if(findEnd)
 							{
@@ -153,6 +154,145 @@ namespace PoEAssetReader.DatFiles.Definitions
 			static bool IsRefDataFieldID(string input)
 			{
 				return input.Trim().StartsWith("key_id='");
+			}
+		}
+
+		public static DatDefinitions ParseLocalGQLDirectory(string directory)
+		{
+			bool x64 = false;
+			List<FileDefinition> fileDefinitions = new List<FileDefinition>();
+			List<string> enums = new List<string>();
+			foreach(string filePath in Directory.GetFiles(directory).OrderBy(x => x))
+			{
+				string[] lines = File.ReadAllLines(filePath);
+				for(int i = 0; i < lines.Length; i++)
+				{
+					string line = lines[i];
+					if(line.StartsWith("type "))
+					{
+						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
+						List<FieldDefinition> fields = new List<FieldDefinition>();
+						for(i++; i < lines.Length; i++)
+						{
+							line = lines[i].Trim();
+							if(line.StartsWith("}"))
+							{
+								break;
+							}
+							else if(line.Contains(":"))
+							{
+								string[] split = line.Split(": @".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+								string id = split[0];
+								string refDatFieldID = null;
+								string dataType = ConvertToPyPoeDataType(split[1], filePath, fileDefinitions, x64, out string refDatFileName);
+								if(!string.IsNullOrEmpty(refDatFileName) && split.Length >= 4 && split[2].StartsWith("ref(column"))
+								{
+									refDatFieldID = split[3].Split("\"", StringSplitOptions.RemoveEmptyEntries)[0];
+								}
+
+								int j = 1;
+								string originalId = id;
+								while(fields.Exists(x => x.ID == id))
+								{
+									id = $"{originalId}{j}";
+									j++;
+								}
+
+								fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType, x64), refDatFileName, refDatFieldID));
+							}
+						}
+						fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
+					}
+					else if(line.StartsWith("enum "))
+					{
+						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
+						enums.Add(name);
+					}
+				}
+			}
+
+			// Update the type of referenced fields
+			for(int i = fileDefinitions.Count - 1; i >= 0; i--)
+			{
+				FileDefinition fileDefinition = fileDefinitions[i];
+				if(!fileDefinition.Fields.Any(x => !string.IsNullOrEmpty(x.RefDatFileName)))
+				{
+					continue;
+				}
+				List<FieldDefinition> fields = new List<FieldDefinition>();
+				foreach(var field in fileDefinition.Fields)
+				{
+					if(string.IsNullOrEmpty(field.RefDatFileName))
+					{
+						fields.Add(field);
+						continue;
+					}
+
+					TypeDefinition dataType;
+					if(enums.Contains(field.RefDatFileName))
+					{
+						dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", "int"), x64);
+					}
+					else
+					{
+						FileDefinition refDatFile = fileDefinitions.FirstOrDefault(x => x.Name == field.RefDatFileName);
+						FieldDefinition refDatField = refDatFile?.Fields.FirstOrDefault(x => x.ID == field.RefDatFieldID);
+						dataType = refDatField != null ? TypeDefinition.Parse(field.DataType.Name.Replace("ulong", refDatField.DataType.Name), x64) : field.DataType;
+					}
+
+					fields.Add(new FieldDefinition(field.ID, dataType, field.RefDatFileName, field.RefDatFieldID));
+				}
+				fileDefinitions[i] = new FileDefinition(fileDefinition.Name, fields.ToArray());
+			}
+
+			return new DatDefinitions(fileDefinitions.ToArray());
+
+			// Nested Method(s)
+			static string ConvertToPyPoeDataType(string input, string filePath, List<FileDefinition> fileDefinitions, bool x64, out string refDatFileName)
+			{
+				refDatFileName = null;
+
+				string result = string.Empty;
+				bool isList = input.StartsWith("[");
+				if(isList)
+				{
+					result = "ref|list|";
+					input = input.Replace("[", "").Replace("]", "");
+				}
+
+				string dataType;
+				switch(input)
+				{
+					case "string":
+						dataType = "ref|string";
+						break;
+					case "bool":
+						dataType = "bool";
+						break;
+					case "i32":
+						dataType = isList ? "uint" : "int";
+						break;
+					case "f32":
+						dataType = "float";
+						break;
+					case "rid":
+					case "_":
+						dataType = "ulong";
+						break;
+
+					default:
+						if(!char.IsUpper(input[0]))
+						{
+							throw new InvalidDataException($"Invalid data type '{input}' found in '{filePath}'");
+						}
+						refDatFileName = $"{input}.dat{(x64 ? "64" : string.Empty)}";
+						dataType = "ulong";
+						break;
+				}
+
+				result += dataType;
+
+				return result;
 			}
 		}
 

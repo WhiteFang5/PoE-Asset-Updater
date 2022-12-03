@@ -13,10 +13,17 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		#endregion
 
-		public ListTypeDefinition(string name, TypeDefinition listType)
-			: base(name, typeof(List<>).MakeGenericType(listType.DataType), sizeof(uint) * 2)
+		#region Variables
+
+		private readonly bool _x64;
+
+		#endregion
+
+		public ListTypeDefinition(string name, TypeDefinition listType, bool x64 = false)
+			: base(name, typeof(List<>).MakeGenericType(listType.DataType), (x64 ? sizeof(ulong) : sizeof(uint)) * 2)
 		{
 			ListType = listType;
+			_x64 = x64;
 		}
 
 		#region Properties
@@ -33,8 +40,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 		public override DatData ReadData(BinaryReader binaryReader, long dataSectionOffset)
 		{
 			string remark = null;
-			var count = binaryReader.ReadUInt32();
-			var pointer = binaryReader.ReadUInt32();
+			var count = _x64 ? binaryReader.ReadInt64() : binaryReader.ReadUInt32();
+			var pointer = _x64 ? binaryReader.ReadInt64() : binaryReader.ReadUInt32();
 			IList list = (IList)Activator.CreateInstance(DataType);
 			if(count > 0)
 			{
@@ -45,12 +52,12 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				var dataPos = dataSectionOffset + pointer;
 				var streamLength = binaryReader.BaseStream.Length;
-				var dataSize = Math.Max(0, ListType.DataSize);
+				var dataSize = Math.Max(0L, ListType.DataSize);
 				if ((dataPos + (dataSize * count)) <= streamLength)
 				{
 					var oldPos = binaryReader.BaseStream.Position;
 					binaryReader.BaseStream.Seek(dataPos, SeekOrigin.Begin);
-					for(int i = 0; i < count; i++)
+					for(var i = 0L; i < count; i++)
 					{
 						DatData data = ListType.ReadData(binaryReader, dataSectionOffset);
 						list.Add(data.Value);
