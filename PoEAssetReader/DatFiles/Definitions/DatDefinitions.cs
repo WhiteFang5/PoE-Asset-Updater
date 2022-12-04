@@ -39,11 +39,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 			using JsonReader reader = new JsonTextReader(streamReader);
 			List<FileDefinition> fileDefinitions = new List<FileDefinition>();
 			var jsonFileDefinitions = JArray.Load(reader);
-			foreach(JObject jsonFileDefinition in jsonFileDefinitions.Children())
+			foreach (JObject jsonFileDefinition in jsonFileDefinitions.Children())
 			{
 				string name = jsonFileDefinition.Value<string>("name");
 				List<FieldDefinition> fields = new List<FieldDefinition>();
-				foreach(JObject jsonFieldDefinition in jsonFileDefinition.Values("fields"))
+				foreach (JObject jsonFieldDefinition in jsonFileDefinition.Values("fields"))
 				{
 					string id = jsonFieldDefinition.Value<string>("id");
 					string dataType = jsonFieldDefinition.Value<string>("type");
@@ -65,7 +65,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 			{
 				return ParsePyPoE(wc.DownloadString("https://raw.githubusercontent.com/brather1ng/PyPoE/dev/PyPoE/poe/file/specification/data/stable.py"));
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				throw new Exception($"Failed to download definitions from PyPoE's GitHub.", ex);
 			}
@@ -75,17 +75,17 @@ namespace PoEAssetReader.DatFiles.Definitions
 		{
 			string[] lines = definitionsFileContent.Split("\r\n".ToCharArray());
 			List<FileDefinition> fileDefinitions = new List<FileDefinition>();
-			for(int i = 0; i < lines.Length; i++)
+			for (int i = 0; i < lines.Length; i++)
 			{
 				string line = lines[i];
-				if(line.EndsWith("': File("))
+				if (line.EndsWith("': File("))
 				{
 					string name = line.Split("'")[1];
 					List<FieldDefinition> fields = new List<FieldDefinition>();
-					for(i++; i < lines.Length; i++)
+					for (i++; i < lines.Length; i++)
 					{
 						line = lines[i];
-						if(line.EndsWith("Field("))
+						if (line.EndsWith("Field("))
 						{
 							bool findEnd = false;
 							line = FindLine(ref lines, ref i, s => s.Trim().StartsWith("name='"));
@@ -98,12 +98,12 @@ namespace PoEAssetReader.DatFiles.Definitions
 							line = FindLine(ref lines, ref i, s => IsRefDatFileName(s) || IsEndOfSection(s));
 							string refDatFileName = null;
 							string refDatFieldID = null;
-							if(IsRefDatFileName(line))
+							if (IsRefDatFileName(line))
 							{
 								refDatFileName = line.Split("'")[1];
 
 								line = FindLine(ref lines, ref i, s => IsRefDataFieldID(s) || IsEndOfSection(s));
-								if(IsRefDataFieldID(line))
+								if (IsRefDataFieldID(line))
 								{
 									refDatFieldID = line.Split("'")[1];
 									findEnd = true;
@@ -112,12 +112,12 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 							fields.Add(new FieldDefinition(id, TypeDefinition.Parse(dataType, false), refDatFileName, refDatFieldID));
 
-							if(findEnd)
+							if (findEnd)
 							{
 								FindLine(ref lines, ref i, IsEndOfSection);
 							}
 						}
-						else if(IsEndOfSection(line))
+						else if (IsEndOfSection(line))
 						{
 							break;
 						}
@@ -130,10 +130,10 @@ namespace PoEAssetReader.DatFiles.Definitions
 			// Nested Method(s)
 			static string FindLine(ref string[] lines, ref int idx, Predicate<string> predicate)
 			{
-				for(; idx < lines.Length; idx++)
+				for (; idx < lines.Length; idx++)
 				{
 					string line = lines[idx];
-					if(predicate(line))
+					if (predicate(line))
 					{
 						return line;
 					}
@@ -162,37 +162,37 @@ namespace PoEAssetReader.DatFiles.Definitions
 			bool x64 = false;
 			List<FileDefinition> fileDefinitions = new List<FileDefinition>();
 			List<string> enums = new List<string>();
-			foreach(string filePath in Directory.GetFiles(directory).OrderBy(x => x))
+			foreach (string filePath in Directory.GetFiles(directory).OrderBy(x => x))
 			{
 				string[] lines = File.ReadAllLines(filePath);
-				for(int i = 0; i < lines.Length; i++)
+				for (int i = 0; i < lines.Length; i++)
 				{
 					string line = lines[i];
-					if(line.StartsWith("type "))
+					if (line.StartsWith("type "))
 					{
 						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
 						List<FieldDefinition> fields = new List<FieldDefinition>();
-						for(i++; i < lines.Length; i++)
+						for (i++; i < lines.Length; i++)
 						{
 							line = lines[i].Trim();
-							if(line.StartsWith("}"))
+							if (line.StartsWith("}"))
 							{
 								break;
 							}
-							else if(line.Contains(":"))
+							else if (line.Contains(":"))
 							{
 								string[] split = line.Split(": @".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 								string id = split[0];
 								string refDatFieldID = null;
 								string dataType = ConvertToPyPoeDataType(split[1], filePath, fileDefinitions, x64, out string refDatFileName);
-								if(!string.IsNullOrEmpty(refDatFileName) && split.Length >= 4 && split[2].StartsWith("ref(column"))
+								if (!string.IsNullOrEmpty(refDatFileName) && split.Length >= 4 && split[2].StartsWith("ref(column"))
 								{
 									refDatFieldID = split[3].Split("\"", StringSplitOptions.RemoveEmptyEntries)[0];
 								}
 
 								int j = 1;
 								string originalId = id;
-								while(fields.Exists(x => x.ID == id))
+								while (fields.Exists(x => x.ID == id))
 								{
 									id = $"{originalId}{j}";
 									j++;
@@ -203,7 +203,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 						}
 						fileDefinitions.Add(new FileDefinition(name, fields.ToArray()));
 					}
-					else if(line.StartsWith("enum "))
+					else if (line.StartsWith("enum "))
 					{
 						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
 						enums.Add(name);
@@ -212,24 +212,24 @@ namespace PoEAssetReader.DatFiles.Definitions
 			}
 
 			// Update the type of referenced fields
-			for(int i = fileDefinitions.Count - 1; i >= 0; i--)
+			for (int i = fileDefinitions.Count - 1; i >= 0; i--)
 			{
 				FileDefinition fileDefinition = fileDefinitions[i];
-				if(!fileDefinition.Fields.Any(x => !string.IsNullOrEmpty(x.RefDatFileName)))
+				if (!fileDefinition.Fields.Any(x => !string.IsNullOrEmpty(x.RefDatFileName)))
 				{
 					continue;
 				}
 				List<FieldDefinition> fields = new List<FieldDefinition>();
-				foreach(var field in fileDefinition.Fields)
+				foreach (var field in fileDefinition.Fields)
 				{
-					if(string.IsNullOrEmpty(field.RefDatFileName))
+					if (string.IsNullOrEmpty(field.RefDatFileName))
 					{
 						fields.Add(field);
 						continue;
 					}
 
 					TypeDefinition dataType;
-					if(enums.Contains(field.RefDatFileName))
+					if (enums.Contains(field.RefDatFileName))
 					{
 						dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", "int"), x64);
 					}
@@ -237,7 +237,18 @@ namespace PoEAssetReader.DatFiles.Definitions
 					{
 						FileDefinition refDatFile = fileDefinitions.FirstOrDefault(x => x.Name == field.RefDatFileName);
 						FieldDefinition refDatField = refDatFile?.Fields.FirstOrDefault(x => x.ID == field.RefDatFieldID);
-						dataType = refDatField != null ? TypeDefinition.Parse(field.DataType.Name.Replace("ulong", refDatField.DataType.Name), x64) : field.DataType;
+						if (refDatField != null)
+						{
+							dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", refDatField.DataType.Name), x64);
+						}
+						else if(refDatFile?.Name == fileDefinition.Name)
+						{
+							dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", "uint"), x64);
+						}
+						else
+						{
+							dataType = field.DataType;
+						}
 					}
 
 					fields.Add(new FieldDefinition(field.ID, dataType, field.RefDatFileName, field.RefDatFieldID));
@@ -254,14 +265,14 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 				string result = string.Empty;
 				bool isList = input.StartsWith("[");
-				if(isList)
+				if (isList)
 				{
 					result = "ref|list|";
 					input = input.Replace("[", "").Replace("]", "");
 				}
 
 				string dataType;
-				switch(input)
+				switch (input)
 				{
 					case "string":
 						dataType = "ref|string";
@@ -281,7 +292,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 						break;
 
 					default:
-						if(!char.IsUpper(input[0]))
+						if (!char.IsUpper(input[0]))
 						{
 							throw new InvalidDataException($"Invalid data type '{input}' found in '{filePath}'");
 						}
