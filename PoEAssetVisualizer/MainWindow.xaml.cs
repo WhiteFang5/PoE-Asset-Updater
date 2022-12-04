@@ -26,6 +26,8 @@ namespace PoEAssetVisualizer
 
 		private const string RootNodeName = "ROOT";
 
+		private const string DatDefinitionFolder = "dat-schema";
+		private const string DatDefinitionFolderFilter = "*.gql";
 		private const string DatDefinitionFileName = "stable.py";
 
 		private static readonly string[] CommonDatFiles = new string[]
@@ -54,7 +56,7 @@ namespace PoEAssetVisualizer
 
 		private AssetFile _openedAssetFile;
 		private DatDefinitions _datDefinitions;
-		private readonly List<FileSystemWatcher> _datDefinitionsWatchers = new();
+		private FileSystemWatcher _datDefinitionsWatcher;
 
 		private readonly Dictionary<string, HashSet<string>> _fileDirectories = new()
 		{
@@ -134,8 +136,8 @@ namespace PoEAssetVisualizer
 
 		private void Window_Unloaded(object sender, RoutedEventArgs e)
 		{
-			_datDefinitionsWatchers.ForEach(x => x.Dispose());
-			_datDefinitionsWatchers.Clear();
+			_datDefinitionsWatcher?.Dispose();
+			_datDefinitionsWatcher = null;
 		}
 
 		private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
@@ -174,8 +176,8 @@ namespace PoEAssetVisualizer
 				PushCursor(Cursors.Wait);
 
 				HideAllViewers();
-				_datDefinitionsWatchers.ForEach(x => x.Dispose());
-				_datDefinitionsWatchers.Clear();
+				_datDefinitionsWatcher?.Dispose();
+				_datDefinitionsWatcher = null;
 				ExportButton.IsEnabled = false;
 
 				new Thread(() =>
@@ -198,32 +200,19 @@ namespace PoEAssetVisualizer
 								case ".dat":
 								case ".dat64":
 									FillDatViewer(_openedAssetFile);
-									string datSchemaFolder = Path.Combine(Directory.GetCurrentDirectory(), "dat-schema");
+									string datSchemaFolder = Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFolder);
 									if (Directory.Exists(datSchemaFolder))
 									{
-										Directory.GetFiles(datSchemaFolder).ToList().ForEach(filePath =>
-										{
-											var fileWatcher = new FileSystemWatcher(filePath)
-											{
-												NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-											};
-											fileWatcher.Changed += OnDatDefinitionsFileChanged;
-											fileWatcher.EnableRaisingEvents = true;
-
-											_datDefinitionsWatchers.Add(fileWatcher);
-										});
+										var directoryInfo = Directory.ResolveLinkTarget(datSchemaFolder, true) as DirectoryInfo ?? new DirectoryInfo(datSchemaFolder);
+										_datDefinitionsWatcher = new(directoryInfo.FullName, DatDefinitionFolderFilter);
 									}
 									else
 									{
-										var fileWatcher = new FileSystemWatcher(Directory.GetCurrentDirectory(), DatDefinitionFileName)
-										{
-											NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-										};
-										fileWatcher.Changed += OnDatDefinitionsFileChanged;
-										fileWatcher.EnableRaisingEvents = true;
-
-										_datDefinitionsWatchers.Add(fileWatcher);
+										_datDefinitionsWatcher = new(Directory.GetCurrentDirectory(), DatDefinitionFileName);
 									}
+									_datDefinitionsWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
+									_datDefinitionsWatcher.Changed += OnDatDefinitionsFileChanged;
+									_datDefinitionsWatcher.EnableRaisingEvents = true;
 
 									HexViewer.Stream = new MemoryStream(contents);
 									HexViewerTab.Visibility = Visibility.Visible;
@@ -329,9 +318,14 @@ namespace PoEAssetVisualizer
 
 			try
 			{
-				if (_datDefinitions == null)
+				string datSchemaFolder = Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFolder);
+				if (Directory.Exists(datSchemaFolder))
 				{
-					_datDefinitions = DatDefinitions.ParseLocalGQLDirectory("H:\\Repos\\PoE-Tool-Dev-DatSchema\\dat-schema");//DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
+					_datDefinitions ??= DatDefinitions.ParseLocalGQLDirectory(datSchemaFolder);
+				}
+				else
+				{
+					_datDefinitions ??= DatDefinitions.ParseLocalPyPoE(Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFileName));
 				}
 				DatFile datFile = GetDatFile(assetFile);
 
