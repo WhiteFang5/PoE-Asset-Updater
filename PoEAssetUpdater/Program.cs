@@ -23,7 +23,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Sentinel";
+		private const string CurrentLeagueName = "Kalandra";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -54,7 +54,9 @@ namespace PoEAssetUpdater
 
 		private static readonly string PoEStaticTradeDataUrl = string.Format(CountryStaticURLFormat, "www");
 
-		private static readonly string PoENinjaMapAPIUrl = string.Format("https://poe.ninja/api/data/itemoverview?league={0}&type=Map&language=en", CurrentLeagueName);
+		private const string PoENinjaAPIUrlFormat = "https://poe.ninja/api/data/{0}?league={2}&type={1}&language=en";
+		private static readonly string PoENinjaMapAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", CurrentLeagueName);
+		private static readonly string PoENinjaCurrencyAPIUrl = string.Format(PoENinjaAPIUrlFormat, "currencyoverview", "Currency", CurrentLeagueName);
 
 		private const string PoEWikiUrl = "https://www.poewiki.net";//https://pathofexile.fandom.com
 		private static readonly string PoEWikiApiUrl = $"{PoEWikiUrl}/w";//https://pathofexile.fandom.com
@@ -125,6 +127,8 @@ namespace PoEAssetUpdater
 			["AbstractAbyssJewel"] = ItemCategory.JewelAbyss,
 			// Leaguestones
 			["Leaguestone"] = ItemCategory.Leaguestone,
+			// Memory Lines
+			["MemoryLineBase"] = ItemCategory.MemoryLine,
 			// Logbook
 			["ExpeditionSaga"] = ItemCategory.ExpeditionLogbook,
 			// Sentinels
@@ -177,11 +181,11 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<ulong, string> TagsToItemCategoryMapping = new Dictionary<ulong, string>()
 		{
-			[649] = ItemCategory.HeistCloak,
-			[650] = ItemCategory.HeistBrooch,
-			[651] = ItemCategory.HeistGear,
-			[662] = ItemCategory.HeistTool,
-			[694] = ItemCategory.MapInvitation,
+			[644] = ItemCategory.HeistCloak,//heist_equipment_utility
+			[645] = ItemCategory.HeistBrooch,//heist_equipment_reward
+			[646] = ItemCategory.HeistGear,//heist_equipment_weapon
+			[657] = ItemCategory.HeistTool,//heist_equipment_tool
+			[691] = ItemCategory.MapInvitation,//maven_map
 		};
 
 		private static readonly string[] IgnoredItemIds = new string[]
@@ -212,8 +216,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<ulong, string> PresenceStatIdToClientStringIdMapping = new Dictionary<ulong, string>()
 		{
-			[15607] = "InfluenceStatConditionPresenceUniqueMonster",
-			[15608] = "InfluenceStatConditionPresenceCelestialBoss",
+			[15598] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15599] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -1555,8 +1559,10 @@ namespace PoEAssetUpdater
 		{
 			string staticTradeDataUrl = PoEStaticTradeDataUrl;
 			string poeNinjaMapDataUrl = PoENinjaMapAPIUrl;
+			string poeNinjaCurrencyDataUrl = PoENinjaCurrencyAPIUrl;
 			JObject staticTradeData;
 			JObject poeNinjaMapData;
+			JObject poeNinjaCurrencyData;
 			try
 			{
 				staticTradeData = JObject.Parse(GetWebContent(staticTradeDataUrl));
@@ -1574,6 +1580,15 @@ namespace PoEAssetUpdater
 			{
 				PrintError($"Failed to connect to '{poeNinjaMapDataUrl}': {ex.Message}");
 				poeNinjaMapData = null;
+			}
+			try
+			{
+				poeNinjaCurrencyData = JObject.Parse(GetWebContent(poeNinjaCurrencyDataUrl));
+			}
+			catch (Exception ex)
+			{
+				PrintError($"Failed to connect to '{poeNinjaCurrencyDataUrl}': {ex.Message}");
+				poeNinjaCurrencyData = null;
 			}
 
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types-v2.json"), WriteRecords, true);
@@ -1681,7 +1696,28 @@ namespace PoEAssetUpdater
 														imageObj = line["icon"];
 														if (imageObj == null)
 														{
-															PrintWarning($"Missing Image for '{id}' ({name})");
+															PrintWarning($"Missing Map Image for '{id}' ({name})");
+															return string.Empty;
+														}
+														else
+														{
+															// Strip the CDN url since that'll be added by poe overlay itself.
+															return ((string)imageObj).Replace("https://web.poecdn.com", string.Empty);
+														}
+													}
+												}
+											}
+											if(poeNinjaCurrencyData != null)
+											{
+												foreach (var line in poeNinjaCurrencyData["currencyDetails"])
+												{
+													string lineName = (string)line["name"];
+													if (lineName == name)
+													{
+														imageObj = line["icon"];
+														if (imageObj == null)
+														{
+															PrintWarning($"Missing Currency Image for '{id}' ({name})");
 															return string.Empty;
 														}
 														else

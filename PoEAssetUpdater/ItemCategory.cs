@@ -48,6 +48,7 @@ namespace PoEAssetUpdater
 		public const string MapScarab = "map.scarab";
 		public const string Watchstone = "watchstone";
 		public const string Leaguestone = "leaguestone";
+		public const string MemoryLine = "memoryline";
 		public const string Prophecy = "prophecy";
 		public const string Card = "card";
 		public const string MonsterBeast = "monster.beast";
