@@ -55,8 +55,11 @@ namespace PoEAssetUpdater
 		private static readonly string PoEStaticTradeDataUrl = string.Format(CountryStaticURLFormat, "www");
 
 		private const string PoENinjaAPIUrlFormat = "https://poe.ninja/api/data/{0}?league={2}&type={1}&language=en";
-		private static readonly string PoENinjaMapAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", CurrentLeagueName);
-		private static readonly string PoENinjaCurrencyAPIUrl = string.Format(PoENinjaAPIUrlFormat, "currencyoverview", "Currency", CurrentLeagueName);
+		private static readonly string PoENinjaMapCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", CurrentLeagueName);
+		private static readonly string PoENinjaMapStandardAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", "Standard");
+		private static readonly string PoENinjaUniqueMapCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "UniqueMap", CurrentLeagueName);
+		private static readonly string PoENinjaUniqueMapStandardAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "UniqueMap", "Standard");
+		private static readonly string PoENinjaCurrencyCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "currencyoverview", "Currency", CurrentLeagueName);
 
 		private const string PoEWikiUrl = "https://www.poewiki.net";//https://pathofexile.fandom.com
 		private static readonly string PoEWikiApiUrl = $"{PoEWikiUrl}/w";//https://pathofexile.fandom.com
@@ -739,7 +742,8 @@ namespace PoEAssetUpdater
 					{
 						// Write the stat name excluding its group name
 						var name = recordData.GetValue<string>(DatSchemas.Mods.Id);
-						recordData.GetValue<List<ulong>>(DatSchemas.Mods.Families).ForEach(x => {
+						recordData.GetValue<List<ulong>>(DatSchemas.Mods.Families).ForEach(x =>
+						{
 							name = name.Replace(modFamilyDatContainer.Records[(int)x].GetValue<string>(DatSchemas.ModFamily.Id), string.Empty);
 						});
 						jsonWriter.WritePropertyName(name);
@@ -1557,41 +1561,27 @@ namespace PoEAssetUpdater
 
 		private static void ExportBaseItemTypesV2(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
-			string staticTradeDataUrl = PoEStaticTradeDataUrl;
-			string poeNinjaMapDataUrl = PoENinjaMapAPIUrl;
-			string poeNinjaCurrencyDataUrl = PoENinjaCurrencyAPIUrl;
-			JObject staticTradeData;
-			JObject poeNinjaMapData;
-			JObject poeNinjaCurrencyData;
-			try
-			{
-				staticTradeData = JObject.Parse(GetWebContent(staticTradeDataUrl));
-			}
-			catch (Exception ex)
-			{
-				PrintError($"Failed to connect to '{staticTradeDataUrl}': {ex.Message}");
-				staticTradeData = null;
-			}
-			try
-			{
-				poeNinjaMapData = JObject.Parse(GetWebContent(poeNinjaMapDataUrl));
-			}
-			catch (Exception ex)
-			{
-				PrintError($"Failed to connect to '{poeNinjaMapDataUrl}': {ex.Message}");
-				poeNinjaMapData = null;
-			}
-			try
-			{
-				poeNinjaCurrencyData = JObject.Parse(GetWebContent(poeNinjaCurrencyDataUrl));
-			}
-			catch (Exception ex)
-			{
-				PrintError($"Failed to connect to '{poeNinjaCurrencyDataUrl}': {ex.Message}");
-				poeNinjaCurrencyData = null;
-			}
+			JObject staticTradeData = TryParseData(PoEStaticTradeDataUrl);
+			JObject poeNinjaMapDataCurrentLeague = TryParseData(PoENinjaMapCurrentLeagueAPIUrl);
+			JObject poeNinjaMapDataStandard = TryParseData(PoENinjaMapStandardAPIUrl);
+			JObject poeNinjaUniqueMapDataCurrentLeague = TryParseData(PoENinjaUniqueMapCurrentLeagueAPIUrl);
+			JObject poeNinjaUniqueMapDataStandard = TryParseData(PoENinjaUniqueMapStandardAPIUrl);
+			JObject poeNinjaCurrencyDataCurrentLeague = TryParseData(PoENinjaCurrencyCurrentLeagueAPIUrl);
 
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types-v2.json"), WriteRecords, true);
+
+			JObject TryParseData(string url)
+			{
+				try
+				{
+					return JObject.Parse(GetWebContent(url));
+				}
+				catch (Exception ex)
+				{
+					PrintError($"Failed to connect to '{url}': {ex.Message}");
+				}
+				return null;
+			}
 
 			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
@@ -1599,6 +1589,7 @@ namespace PoEAssetUpdater
 				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat");
 				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat");
 				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat");
+				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.dat");
 
 				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat");
 
@@ -1634,7 +1625,7 @@ namespace PoEAssetUpdater
 
 					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim()));
 
-					WriteRecord(id, names, GetImageByName(id, names[Language.English]), category, baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Width), baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Height));
+					WriteRecord(id, names, GetImageByName(id, names[Language.English], category), category, baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Width), baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Height));
 				}
 
 				// Write the Monster Varieties
@@ -1652,19 +1643,20 @@ namespace PoEAssetUpdater
 				for (int i = 0; i < uniqueMapsDatContainer.Count; i++)
 				{
 					var uniqueMap = uniqueMapsDatContainer.Records[i];
-					var itemVisualIdentityKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
-					var itemVisualIdentity = itemVisualIdentityDatContainer.Records[itemVisualIdentityKey];
+					var visualIdentityKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
+					var visualIdentity = itemVisualIdentityDatContainer.Records[visualIdentityKey];
+					var wordsKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.WordsKey);
 
-					string id = itemVisualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.Id);
-					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.UniqueMaps.Name).Trim()));
+					string id = visualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.Id);
+					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(wordsDatContainers[kvp.Key][0].Records[wordsKey].GetValue<string>(DatSchemas.Words.Text2).Trim()));
 
-					string ddsFileName = itemVisualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.DDSFile);
+					var category = ItemCategory.Map;
 
-					WriteRecord(id, names, GetImageByName(id, ddsFileName[0..^4]), ItemCategory.Map, 1, 1);
+					WriteRecord(id, names, GetImageByName(id, names[Language.English], category), category, 1, 1);
 				}
 
 				// Nested Method(s)
-				string GetImageByName(string id, string name)
+				string GetImageByName(string id, string name, string category)
 				{
 					if (staticTradeData != null)
 					{
@@ -1683,56 +1675,7 @@ namespace PoEAssetUpdater
 									else
 									{
 										var imageObj = entry["image"];
-										if (imageObj == null)
-										{
-											// Check if poe-ninja contains the data
-											if (poeNinjaMapData != null)
-											{
-												foreach (var line in poeNinjaMapData["lines"])
-												{
-													string lineName = (string)line["name"];
-													if (lineName == name)
-													{
-														imageObj = line["icon"];
-														if (imageObj == null)
-														{
-															PrintWarning($"Missing Map Image for '{id}' ({name})");
-															return string.Empty;
-														}
-														else
-														{
-															// Strip the CDN url since that'll be added by poe overlay itself.
-															return ((string)imageObj).Replace("https://web.poecdn.com", string.Empty);
-														}
-													}
-												}
-											}
-											if(poeNinjaCurrencyData != null)
-											{
-												foreach (var line in poeNinjaCurrencyData["currencyDetails"])
-												{
-													string lineName = (string)line["name"];
-													if (lineName == name)
-													{
-														imageObj = line["icon"];
-														if (imageObj == null)
-														{
-															PrintWarning($"Missing Currency Image for '{id}' ({name})");
-															return string.Empty;
-														}
-														else
-														{
-															// Strip the CDN url since that'll be added by poe overlay itself.
-															return ((string)imageObj).Replace("https://web.poecdn.com", string.Empty);
-														}
-													}
-												}
-											}
-
-											PrintWarning($"Missing Image for '{id}' ({name})");
-											return string.Empty;
-										}
-										else
+										if (imageObj != null)
 										{
 											return (string)imageObj;
 										}
@@ -1741,7 +1684,101 @@ namespace PoEAssetUpdater
 							}
 						}
 					}
+
+					// Check if poe-ninja contains the data
+					if (TryGetPoENinjaMapImage(poeNinjaMapDataCurrentLeague, name, true, out string image))
+					{
+						return image;
+					}
+					if (TryGetPoENinjaMapImage(poeNinjaMapDataStandard, name, true, out image))
+					{
+						return image;
+					}
+					if (TryGetPoENinjaMapImage(poeNinjaUniqueMapDataCurrentLeague, name, false, out image))
+					{
+						return image;
+					}
+					if (TryGetPoENinjaMapImage(poeNinjaUniqueMapDataStandard, name, false, out image))
+					{
+						return image;
+					}
+					if (poeNinjaCurrencyDataCurrentLeague != null)
+					{
+						foreach (var line in poeNinjaCurrencyDataCurrentLeague["currencyDetails"])
+						{
+							string lineName = (string)line["name"];
+							if (lineName == name)
+							{
+								var imageObj = line["icon"];
+								if (imageObj != null)
+								{
+									return GetStrippedImageURL(imageObj);
+								}
+							}
+						}
+					}
+
+					if (category.StartsWith(ItemCategory.Currency) || category.StartsWith(ItemCategory.Map))
+					{
+						PrintWarning($"Missing Image for '{id}' ({name} ; Category: {category})");
+					}
+
 					return string.Empty;
+				}
+
+				string GetStrippedImageURL(JToken obj)
+				{
+					// Strip the CDN url since that'll be added by poe overlay itself.
+					return ((string)obj).Replace("https://web.poecdn.com", string.Empty);
+				}
+
+				bool TryGetPoENinjaMapImage(JObject poeNinjaMapData, string name, bool hasVariant, out string image)
+				{
+					image = null;
+					if (poeNinjaMapData != null)
+					{
+						int highestGen = -1;
+						foreach (var line in poeNinjaMapData["lines"])
+						{
+							string lineName = (string)line["name"];
+							if (lineName == name)
+							{
+								var imageObj = line["icon"];
+								var genObj = line["variant"];
+								if (imageObj == null || (hasVariant && genObj == null))
+								{
+									continue;
+								}
+
+								if (!hasVariant)
+								{
+									image = GetStrippedImageURL(imageObj);
+									return true;
+								}
+
+								string genStr = ((string)genObj).Replace(", Gen-", string.Empty);
+								if (!int.TryParse(genStr, out int gen))
+								{
+									if(genStr == "Ritual")
+									{
+										gen = 10;
+									}
+									else
+									{
+										// Ignore any gens before Ritual (all maps should've been on the atlas in Ritual)
+										gen = -1;
+									} 
+								}
+								if (gen > highestGen)
+								{
+									image = GetStrippedImageURL(imageObj);
+									highestGen = gen;
+								}
+							}
+						}
+						return highestGen != -1;
+					}
+					return false;
 				}
 
 				bool ShouldExclude(string id, string category)

@@ -172,6 +172,7 @@ namespace PoEAssetUpdater
 		public static class UniqueMaps
 		{
 			public const string Name = "Name";
+			public const string WordsKey = "WordsKey";
 			public const string ItemVisualIdentityKey = "ItemVisualIdentityKey";
 		}
 
