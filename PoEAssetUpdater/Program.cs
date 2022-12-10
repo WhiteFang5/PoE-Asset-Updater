@@ -28,7 +28,8 @@ namespace PoEAssetUpdater
 
 		private const int TotalNumberOfStats = 6;
 
-		private const ulong UndefinedValue = 18374403900871474942L;
+		private const ulong UndefinedValueDat = 18374403900871474942L;
+		private static readonly UInt128 UndefinedValueDat64 = new UInt128(UndefinedValueDat, UndefinedValueDat);
 
 		private static readonly char[] NewLineSplitter = "\r\n".ToCharArray();
 		private static readonly char[] WhiteSpaceSplitter = "\t ".ToCharArray();
@@ -173,6 +174,8 @@ namespace PoEAssetUpdater
 			["HarvestInfrastructure"] = null,
 			["Item"] = null,
 			["ArchnemesisMod"] = null,
+			["AbstractRelic"] = null,
+			["AbstractSpecialRelic"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -182,7 +185,7 @@ namespace PoEAssetUpdater
 			["Primal"] = ItemCategory.CurrencyPrimalSeed,
 		};
 
-		private static readonly Dictionary<ulong, string> TagsToItemCategoryMapping = new Dictionary<ulong, string>()
+		private static readonly Dictionary<UInt128, string> TagsToItemCategoryMapping = new Dictionary<UInt128, string>()
 		{
 			[644] = ItemCategory.HeistCloak,//heist_equipment_utility
 			[645] = ItemCategory.HeistBrooch,//heist_equipment_reward
@@ -217,10 +220,10 @@ namespace PoEAssetUpdater
 			["explicit.stat_3872739249"] = ("local_display_summon_harbinger_x_on_equip", true),
 		};
 
-		private static readonly Dictionary<ulong, string> PresenceStatIdToClientStringIdMapping = new Dictionary<ulong, string>()
+		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15598] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15599] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15593] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15594] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -498,8 +501,8 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(assetFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["BaseItemTypes.dat"] = GetBaseItemTypeKVP,
-					["MonsterVarieties.dat"] = GetMonsterVaritiesKVP,
+					["BaseItemTypes.dat64"] = GetBaseItemTypeKVP,
+					["MonsterVarieties.dat64"] = GetMonsterVaritiesKVP,
 				}, true);
 			}
 
@@ -540,17 +543,17 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["ClientStrings.dat"] = GetClientStringKVP,
-					["AlternateQualityTypes.dat"] = GetAlternateQualityTypesKVP,
-					["MetamorphosisMetaSkillTypes.dat"] = GetMetamorphosisMetaSkillTypesKVP,
-					["GrantedEffectQualityTypes.dat"] = GetAlternateGemQualityTypesKVP,
-					["UltimatumEncounters.dat"] = GetUltimatumEncountersKVP,
-					["UltimatumItemisedRewards.dat"] = GetUltimatumItemisedRewardsKVP,
-					["IncursionRooms.dat"] = GetIncursionRoomsKVP,
-					["HeistJobs.dat"] = GetHeistJobsKVP,
-					["HeistObjectiveValueDescriptions.dat"] = GetHeistObjectivesKVP,
-					["ExpeditionFactions.dat"] = GetExpeditionFactionsKVP,
-					["Characters.dat"] = GetCharactersKVP,
+					["ClientStrings.dat64"] = GetClientStringKVP,
+					["AlternateQualityTypes.dat64"] = GetAlternateQualityTypesKVP,
+					["MetamorphosisMetaSkillTypes.dat64"] = GetMetamorphosisMetaSkillTypesKVP,
+					["GrantedEffectQualityTypes.dat64"] = GetAlternateGemQualityTypesKVP,
+					["UltimatumEncounters.dat64"] = GetUltimatumEncountersKVP,
+					["UltimatumItemisedRewards.dat64"] = GetUltimatumItemisedRewardsKVP,
+					["IncursionRooms.dat64"] = GetIncursionRoomsKVP,
+					["HeistJobs.dat64"] = GetHeistJobsKVP,
+					["HeistObjectiveValueDescriptions.dat64"] = GetHeistObjectivesKVP,
+					["ExpeditionFactions.dat64"] = GetExpeditionFactionsKVP,
+					["Characters.dat64"] = GetCharactersKVP,
 				}, false);
 			}
 
@@ -574,7 +577,7 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetAlternateQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				var modsKey = recordData.GetValue<ulong>(DatSchemas.AlternateQualityTypes.ModsKey);
+				var modsKey = recordData.GetValue<UInt128>(DatSchemas.AlternateQualityTypes.ModsKey);
 				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
 				string name = recordData.GetValue<string>(DatSchemas.AlternateQualityTypes.Description);
 				return (id, name);
@@ -669,7 +672,7 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["Words.dat"] = GetWordsKVP,
+					["Words.dat64"] = GetWordsKVP,
 				}, true);
 			}
 
@@ -716,9 +719,9 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat");
-				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat");
-				var modFamilyDatContainer = GetDatFile(dataFiles, datDefinitions, "ModFamily.dat");
+				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat64");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat64");
+				var modFamilyDatContainer = GetDatFile(dataFiles, datDefinitions, "ModFamily.dat64");
 
 				if (modsDatContainer == null || statsDatContainer == null)
 				{
@@ -742,7 +745,7 @@ namespace PoEAssetUpdater
 					{
 						// Write the stat name excluding its group name
 						var name = recordData.GetValue<string>(DatSchemas.Mods.Id);
-						recordData.GetValue<List<ulong>>(DatSchemas.Mods.Families).ForEach(x =>
+						recordData.GetValue<List<UInt128>>(DatSchemas.Mods.Families).ForEach(x =>
 						{
 							name = name.Replace(modFamilyDatContainer.Records[(int)x].GetValue<string>(DatSchemas.ModFamily.Id), string.Empty);
 						});
@@ -768,9 +771,9 @@ namespace PoEAssetUpdater
 					int lastValidStatsKey = 0;
 					for (int i = 1; i <= TotalNumberOfStats; i++)
 					{
-						ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+						var statsKey = recordData.GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-						if (statsKey != UndefinedValue)
+						if (statsKey != UndefinedValueDat64)
 						{
 							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id));
 							lastValidStatsKey = i;
@@ -816,11 +819,11 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.dat")[Language.English][0];
-				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat")[Language.English][0];
-				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.dat")[Language.English][0];
-				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat")[Language.English][0];
-				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat");
+				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.dat64")[Language.English][0];
+				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat64")[Language.English][0];
+				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.dat64")[Language.English][0];
+				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat64")[Language.English][0];
+				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat64");
 
 				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
@@ -850,22 +853,22 @@ namespace PoEAssetUpdater
 
 				Logger.WriteLine($"Parsing {nameof(PresenceStatIdToClientStringIdMapping)}...");
 
-				Dictionary<ulong, Dictionary<Language, string>> presenceMapping = PresenceStatIdToClientStringIdMapping
+				Dictionary<UInt128, Dictionary<Language, string>> presenceMapping = PresenceStatIdToClientStringIdMapping
 					.ToDictionary(
 					kvp => kvp.Key,
 					kvp => clientStringsDatContainers.ToDictionary(
 						kvp2 => kvp2.Key,
 						kvp2 => kvp2.Value[0].Records.Single(x => x.GetValue<string>(DatSchemas.ClientStrings.Id) == kvp.Value).GetValue<string>(DatSchemas.ClientStrings.Text)
 					));
-				(string[] ids, bool isLocalStat, ulong presenceStatKey)[] presenceStats = modsDatContainer.Records
+				(string[] ids, bool isLocalStat, UInt128 presenceStatKey)[] presenceStats = modsDatContainer.Records
 					// Find all mods that are using any of the presence stats
 					.Where(recordData =>
 					{
 						for (int i = 1; i <= TotalNumberOfStats; i++)
 						{
-							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+							var statsKey = recordData.GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-							if (statsKey != UndefinedValue && presenceMapping.ContainsKey(statsKey))
+							if (statsKey != UndefinedValueDat64 && presenceMapping.ContainsKey(statsKey))
 							{
 								return true;
 							}
@@ -874,13 +877,13 @@ namespace PoEAssetUpdater
 					}).Select(recordData =>
 					{
 						List<string> ids = new List<string>();
-						(ulong statKey, string statId) presenceRecord = (0, null);
+						(UInt128 statKey, string statId) presenceRecord = (0, null);
 						for (int i = 1; i <= TotalNumberOfStats; i++)
 						{
-							ulong statsKey = recordData.GetValue<ulong>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+							var statsKey = recordData.GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
 							// Add all valid stats that aren't the 'presence' stat
-							if (statsKey != UndefinedValue)
+							if (statsKey != UndefinedValueDat64)
 							{
 								string statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
 								if (presenceMapping.ContainsKey(statsKey))
@@ -1373,8 +1376,8 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
-				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
+				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat64");
 
 				if (baseItemTypesDatContainer == null)
 				{
@@ -1417,11 +1420,11 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat");
-				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat");
-				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat");
-				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat");
-				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
+				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat64");
+				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat64");
+				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat64");
+				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat64");
 
 				jsonWriter.WritePropertyName("annointments");
 				jsonWriter.WriteStartObject();
@@ -1430,19 +1433,19 @@ namespace PoEAssetUpdater
 				for (int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
 				{
 					var craftingRecipe = craftingRecipesDatContainer.Records[i];
-					var craftingType = craftingRecipe.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey);
+					var craftingType = craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey);
 
 					if (craftingType != 0)
 					{
 						continue;
 					}
 
-					var craftingItemKeys = craftingRecipe.GetValue<List<ulong>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
+					var craftingItemKeys = craftingRecipe.GetValue<List<UInt128>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
 
-					var craftingResultsKey = (int)craftingRecipe.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
+					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var passiveSkillsKey = (int)craftingResult.GetValue<ulong>(DatSchemas.BlightCraftingRecipes.PassiveSkillsKey);
+					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.PassiveSkillsKey);
 					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
 
 					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
@@ -1452,7 +1455,7 @@ namespace PoEAssetUpdater
 					foreach (var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
-						var baseItemTypeKey = (int)craftingItem.GetValue<ulong>(DatSchemas.BlightCraftingItems.Oil);
+						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
 						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
 						var id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
 
@@ -1542,7 +1545,7 @@ namespace PoEAssetUpdater
 				// Special case of Heist Equipment & Map Fragments
 				case ItemCategory.HeistEquipment:
 				case ItemCategory.MapFragment:
-					foreach (ulong tag in baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))
+					foreach (UInt128 tag in baseItemType.GetValue<List<UInt128>>(DatSchemas.BaseItemTypes.TagsKeys))
 					{
 						if (TagsToItemCategoryMapping.TryGetValue(tag, out string newCategory))
 						{
@@ -1551,7 +1554,7 @@ namespace PoEAssetUpdater
 					}
 					if (category == ItemCategory.HeistEquipment)
 					{
-						PrintWarning($"Missing Heist Equipment Tag in {nameof(TagsToItemCategoryMapping)} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<ulong>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
+						PrintWarning($"Missing Heist Equipment Tag in {nameof(TagsToItemCategoryMapping)} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<UInt128>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
 					}
 					break;
 			}
@@ -1585,13 +1588,13 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.dat");
-				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat");
-				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat");
-				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat");
-				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.dat");
+				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.dat64");
+				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat64");
+				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat64");
+				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat64");
+				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.dat64");
 
-				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat");
+				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat64");
 
 				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
 				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
@@ -1643,9 +1646,9 @@ namespace PoEAssetUpdater
 				for (int i = 0; i < uniqueMapsDatContainer.Count; i++)
 				{
 					var uniqueMap = uniqueMapsDatContainer.Records[i];
-					var visualIdentityKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
+					var visualIdentityKey = (int)uniqueMap.GetValue<UInt128>(DatSchemas.UniqueMaps.ItemVisualIdentityKey);
 					var visualIdentity = itemVisualIdentityDatContainer.Records[visualIdentityKey];
-					var wordsKey = (int)uniqueMap.GetValue<ulong>(DatSchemas.UniqueMaps.WordsKey);
+					var wordsKey = (int)uniqueMap.GetValue<UInt128>(DatSchemas.UniqueMaps.WordsKey);
 
 					string id = visualIdentity.GetValue<string>(DatSchemas.ItemVisualIdentity.Id);
 					var names = uniqueMapsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(wordsDatContainers[kvp.Key][0].Records[wordsKey].GetValue<string>(DatSchemas.Words.Text2).Trim()));
@@ -1720,7 +1723,7 @@ namespace PoEAssetUpdater
 
 					if (category.StartsWith(ItemCategory.Currency) || category.StartsWith(ItemCategory.Map))
 					{
-						PrintWarning($"Missing Image for '{id}' ({name} ; Category: {category})");
+						PrintWarning($"Missing Image for '{id}' ('{name}' ; Category: '{category}')");
 					}
 
 					return string.Empty;
@@ -2156,7 +2159,7 @@ namespace PoEAssetUpdater
 					if (languageFiles.Count > 0)
 					{
 						// Find the given datFile.
-						var datContainer = GetDatFile(languageFiles, datDefinitions, "Mods.dat");
+						var datContainer = GetDatFile(languageFiles, datDefinitions, "Mods.dat64");
 						if (datContainer == null)
 						{
 							// An error was already logged.
