@@ -13,7 +13,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		static TypeDefinition()
 		{
-			for (int i = 1; i <= 100; i++)
+			for(int i = 1; i <= 100; i++)
 			{
 				string name = $"byte[{i.ToString(CultureInfo.InvariantCulture)}]";
 				int bytesToRead = i; // Explicitly capture the variable!
@@ -35,7 +35,22 @@ namespace PoEAssetReader.DatFiles.Definitions
 			new GenericTypeDefinition("float", typeof(float), sizeof(float), bs => new DatData(bs.ReadSingle())),
 			new GenericTypeDefinition("long", typeof(long), sizeof(long), bs => new DatData(bs.ReadInt64())),
 			new GenericTypeDefinition("ulong", typeof(ulong), sizeof(ulong), bs => new DatData(bs.ReadUInt64())),
-			new GenericTypeDefinition("string", typeof(string), -1, bs => {
+			new GenericTypeDefinition("int128", typeof(Int128), sizeof(ulong) * 2, bs =>
+			{
+				// Stored as little endian
+				ulong first = bs.ReadUInt64();
+				ulong second = bs.ReadUInt64();
+				return new DatData(new Int128(second, first));
+			}),
+			new GenericTypeDefinition("uint128", typeof(UInt128), sizeof(ulong) * 2, bs =>
+			{
+				// Stored as little endian
+				ulong first = bs.ReadUInt64();
+				ulong second = bs.ReadUInt64();
+				return new DatData(new UInt128(second, first));
+			}),
+			new GenericTypeDefinition("string", typeof(string), -1, bs =>
+			{
 				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
 				int ch;
@@ -51,7 +66,8 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 				return new DatData(sb.ToString());
 			}),
-			new GenericTypeDefinition("string_utf8", typeof(string), -1, bs => {
+			new GenericTypeDefinition("string_utf8", typeof(string), -1, bs =>
+			{
 				var oldPos = bs.BaseStream.Position;
 				var sb = new StringBuilder();
 				bool eos = false;
@@ -117,17 +133,17 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		public static TypeDefinition Parse(string dataType, bool x64)
 		{
-			if (_types.TryGetValue(dataType, out TypeDefinition typeDefinition))
+			if(_types.TryGetValue(dataType, out TypeDefinition typeDefinition))
 			{
 				return typeDefinition;
 			}
 
-			if (!TypeDefinitionMapping.TryGetValue(dataType, out typeDefinition))
+			if(!TypeDefinitionMapping.TryGetValue(dataType, out typeDefinition))
 			{
-				if (dataType.StartsWith(RefDataTypeName))
+				if(dataType.StartsWith(RefDataTypeName))
 				{
 					var subDataType = dataType[RefDataTypeName.Length..];
-					if (subDataType.StartsWith(ListDataTypeName))
+					if(subDataType.StartsWith(ListDataTypeName))
 					{
 						typeDefinition = new ListTypeDefinition(dataType, Parse(subDataType[ListDataTypeName.Length..], x64), x64);
 					}
@@ -142,7 +158,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				}
 			}
 
-			if (typeDefinition != null)
+			if(typeDefinition != null)
 			{
 				_types[dataType] = typeDefinition;
 			}

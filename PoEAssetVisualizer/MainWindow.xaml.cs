@@ -357,6 +357,14 @@ namespace PoEAssetVisualizer
 						TryAddRefColumn("_RemainderULong", commonDatFile);
 					}
 				}
+				bool hasRemainderUInt128 = TryAddColumn("_RemainderUInt128");
+				if (hasRemainderUInt128)
+				{
+					foreach (var commonDatFile in CommonDatFiles)
+					{
+						TryAddRefColumn("_RemainderUInt128", commonDatFile);
+					}
+				}
 				TryAddColumn("_RemainderFloat");
 				TryAddColumn("_RemainderString");
 				TryAddColumn("_RemainderRefString");
@@ -366,6 +374,14 @@ namespace PoEAssetVisualizer
 					foreach (var commonDatFile in CommonDatFiles)
 					{
 						TryAddRefColumn("_RemainderListULong", commonDatFile);
+					}
+				}
+				bool hasRemainderListUInt128 = TryAddColumn("_RemainderListUInt128");
+				if(hasRemainderListUInt128)
+				{
+					foreach(var commonDatFile in CommonDatFiles)
+					{
+						TryAddRefColumn("_RemainderListUInt128", commonDatFile);
 					}
 				}
 				TryAddColumn("_RemainderListInt");
@@ -408,6 +424,21 @@ namespace PoEAssetVisualizer
 						if (hasRemainderListULong)
 						{
 							TryAddRefValues("_RemainderListULong", "ref|list|ulong", commonDatFile, null);
+						}
+					}
+				}
+
+				if (hasRemainderUInt128 || hasRemainderListUInt128)
+				{
+					foreach (var commonDatFile in CommonDatFiles)
+					{
+						if (hasRemainderUInt128)
+						{
+							TryAddRefValues("_RemainderUInt128", "uint128", commonDatFile, null);
+						}
+						if (hasRemainderListUInt128)
+						{
+							TryAddRefValues("_RemainderListUInt128", "ref|list|uint128", commonDatFile, null);
 						}
 					}
 				}
@@ -495,6 +526,10 @@ namespace PoEAssetVisualizer
 								AddSingleRefValueByIdx(columnBaseName, x => (int)x.GetValue<ulong>(columnName));
 								break;
 
+							case "uint128":
+								AddSingleRefValueByIdx(columnBaseName, x => (int)x.GetValue<UInt128>(columnName));
+								break;
+
 							case "ref|list|int":
 							case "ref|list|ref|generic":
 								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<int> idxs) ? idxs : null);
@@ -506,6 +541,10 @@ namespace PoEAssetVisualizer
 
 							case "ref|list|ulong":
 								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<ulong> idxs) ? idxs.Select(x => (int)x).ToList() : null);
+								break;
+
+							case "ref|list|uint128":
+								AddArrayRefValuesByIdx(columnBaseName, x => x.TryGetValue(columnName, out List<UInt128> idxs) ? idxs.Select(x => (int)x).ToList() : null);
 								break;
 
 							default:
@@ -524,6 +563,10 @@ namespace PoEAssetVisualizer
 								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<ulong>(columnName), (a, b) => a == b);
 								break;
 
+							case "uint128":
+								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<UInt128>(columnName), (a, b) => a == b);
+								break;
+
 							case "ref|string":
 								AddSingleRefValueByFieldID(columnBaseName, x => x.GetValue<string>(columnName), (a, b) => a == b);
 								break;
@@ -534,6 +577,10 @@ namespace PoEAssetVisualizer
 
 							case "ref|list|ulong":
 								AddArrayRefValuesByFieldID(columnBaseName, x => x.TryGetValue(columnName, out List<ulong> values) ? values : null, (a, b) => a == b);
+								break;
+
+							case "ref|list|uint128":
+								AddArrayRefValuesByFieldID(columnBaseName, x => x.TryGetValue(columnName, out List<UInt128> values) ? values : null, (a, b) => a == b);
 								break;
 
 							case "ref|list|ref|string":
@@ -769,9 +816,11 @@ namespace PoEAssetVisualizer
 							TryAddColumn("_RemainderUInt");
 							TryAddColumn("_RemainderLong");
 							TryAddColumn("_RemainderULong");
+							TryAddColumn("_RemainderUInt128");
 							TryAddColumn("_RemainderString");
 							TryAddColumn("_RemainderRefString");
 							TryAddColumn("_RemainderListULong");
+							TryAddColumn("_RemainderListUInt128");
 							TryAddColumn("_RemainderListInt");
 
 							void TryAddColumn(string columnName)

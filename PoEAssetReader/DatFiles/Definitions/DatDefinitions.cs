@@ -5,7 +5,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace PoEAssetReader.DatFiles.Definitions
 {
@@ -58,12 +61,18 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		public static DatDefinitions ParsePyPoE()
 		{
-			using WebClient wc = new WebClient();
+			using HttpClient client = new();
+			client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PoEOverlayAssetReader/" + ApplicationVersion));
 
-			wc.Headers[HttpRequestHeader.UserAgent] = "PoEOverlayAssetReader/" + ApplicationVersion;
 			try
 			{
-				return ParsePyPoE(wc.DownloadString("https://raw.githubusercontent.com/brather1ng/PyPoE/dev/PyPoE/poe/file/specification/data/stable.py"));
+				var request = client.GetAsync("https://raw.githubusercontent.com/brather1ng/PyPoE/dev/PyPoE/poe/file/specification/data/stable.py");
+				request.RunSynchronously();
+				using var response = request.Result;
+				using var content = response.Content;
+				var task = content.ReadAsStringAsync();
+				task.RunSynchronously();
+				return ParsePyPoE(task.Result);
 			}
 			catch (Exception ex)
 			{
@@ -159,7 +168,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 
 		public static DatDefinitions ParseLocalGQLDirectory(string directory)
 		{
-			bool x64 = false;
+			bool x64 = true;
 			List<FileDefinition> fileDefinitions = new List<FileDefinition>();
 			List<string> enums = new List<string>();
 			foreach (string filePath in Directory.GetFiles(directory).OrderBy(x => x))
@@ -231,7 +240,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 					TypeDefinition dataType;
 					if (enums.Contains(field.RefDatFileName))
 					{
-						dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", "int"), x64);
+						dataType = TypeDefinition.Parse(x64 ? field.DataType.Name.Replace("uint128", "int") : field.DataType.Name.Replace("ulong", "int"), x64);
 					}
 					else
 					{
@@ -239,11 +248,11 @@ namespace PoEAssetReader.DatFiles.Definitions
 						FieldDefinition refDatField = refDatFile?.Fields.FirstOrDefault(x => x.ID == field.RefDatFieldID);
 						if (refDatField != null)
 						{
-							dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", refDatField.DataType.Name), x64);
+							dataType = TypeDefinition.Parse(x64 ? field.DataType.Name.Replace("uint128", refDatField.DataType.Name) : field.DataType.Name.Replace("ulong", refDatField.DataType.Name), x64);
 						}
 						else if(refDatFile?.Name == fileDefinition.Name)
 						{
-							dataType = TypeDefinition.Parse(field.DataType.Name.Replace("ulong", "uint"), x64);
+							dataType = TypeDefinition.Parse(x64 ? field.DataType.Name.Replace("uint128", "ulong") : field.DataType.Name.Replace("ulong", "uint"), x64);
 						}
 						else
 						{
@@ -288,7 +297,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 						break;
 					case "rid":
 					case "_":
-						dataType = "ulong";
+						dataType = x64 ? "uint128" : "ulong";
 						break;
 
 					default:
@@ -297,7 +306,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 							throw new InvalidDataException($"Invalid data type '{input}' found in '{filePath}'");
 						}
 						refDatFileName = $"{input}.dat{(x64 ? "64" : string.Empty)}";
-						dataType = "ulong";
+						dataType = x64 ? "uint128" : "ulong";
 						break;
 				}
 

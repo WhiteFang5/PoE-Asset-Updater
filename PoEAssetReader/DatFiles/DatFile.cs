@@ -70,10 +70,12 @@ namespace PoEAssetReader.DatFiles
 							TryRead("uint", "_RemainderUInt");
 							TryRead("long", "_RemainderLong");
 							TryRead("ulong", "_RemainderULong");
+							TryRead("uint128", "_RemainderUInt128");
 							TryRead("float", "_RemainderFloat");
 							TryRead("string_utf8", "_RemainderString");
 							TryRead("ref|string_utf8", "_RemainderRefString");
 							TryRead("ref|list|ulong", "_RemainderListULong");
+							TryRead("ref|list|uint128", "_RemainderListUInt128");
 							TryRead("ref|list|int", "_RemainderListInt");
 
 							void TryRead(string dataType, string valuesKey)
