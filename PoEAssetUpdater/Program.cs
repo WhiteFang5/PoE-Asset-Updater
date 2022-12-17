@@ -48,6 +48,7 @@ namespace PoEAssetUpdater
 			[Language.German] = string.Format(CountryStatsURLFormat, "de"),
 			[Language.French] = string.Format(CountryStatsURLFormat, "fr"),
 			[Language.Spanish] = string.Format(CountryStatsURLFormat, "es"),
+			[Language.Japanese] = string.Format(CountryStatsURLFormat, "jp"),
 			[Language.Korean] = "https://poe.game.daum.net/api/trade/data/stats",
 			//[Language.SimplifiedChinese] = "https://poe.game.qq.com/api/trade/data/stats",
 			[Language.TraditionalChinese] = "https://web.poe.garena.tw/api/trade/data/stats",
@@ -80,6 +81,7 @@ namespace PoEAssetUpdater
 			[Language.Korean] = string.Format(CountryCachedFileNameFormat, "kr"),
 			[Language.SimplifiedChinese] = string.Format(CountryCachedFileNameFormat, "ch"),
 			[Language.TraditionalChinese] = string.Format(CountryCachedFileNameFormat, "tw"),
+			[Language.Japanese] = string.Format(CountryCachedFileNameFormat, "jp"),
 		};
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
