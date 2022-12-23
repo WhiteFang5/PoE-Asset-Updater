@@ -54,6 +54,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool ContainsAdvancedStatDescriptions
+		{
+			get; private set;
+		}
+
 		#endregion
 
 		#region Lifecycle
@@ -76,13 +81,14 @@ namespace PoEAssetUpdater
 			ContainsAfflictionRewardType = toCopy.ContainsAfflictionRewardType;
 			ContainsConqueredPassivesText = toCopy.ContainsConqueredPassivesText;
 			ContainsIndexableSupportGem = toCopy.ContainsIndexableSupportGem;
+			ContainsAdvancedStatDescriptions = toCopy.ContainsAdvancedStatDescriptions;
 		}
 
 		#endregion
 
 		#region Public Methods
 
-		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems)
+		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems, bool isAdvancedStat)
 		{
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
@@ -92,6 +98,8 @@ namespace PoEAssetUpdater
 				// Invalid stat line detected -> do nothing & return.
 				return;
 			}
+
+			ContainsAdvancedStatDescriptions |= isAdvancedStat;
 
 			string numberPart = line[..openQuoteIdx].Trim();
 			string statDescription = line[(openQuoteIdx + 1)..closeQuoteIdx];
@@ -203,7 +211,12 @@ namespace PoEAssetUpdater
 				{
 					return new StatLine[0];
 				}
-				return new StatLine[] { statLines[englishStatLines.FindIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription))] };
+				var statLine = statLines[englishStatLines.FindIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription))];
+				if(ContainsAdvancedStatDescriptions)
+				{
+					return statLines.FindAll(x => x.NumberPart == statLine.NumberPart).DistinctBy(x => x.StatDescription).ToArray();
+				}
+				return new StatLine[] { statLine };
 			}
 
 			return statLines.ToArray();

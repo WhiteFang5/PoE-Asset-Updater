@@ -833,10 +833,11 @@ namespace PoEAssetUpdater
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
+				string[] advancedModsStatDescriptionsText = GetStatDescriptions("advanced_mod_stat_descriptions.txt");
 
 				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
 					clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null ||
-					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null)
+					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || advancedModsStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -905,7 +906,9 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				string[] lines = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).ToArray();
+				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText);
+				int advancedModDesStartIdx = textDescriptions.Count();
+				string[] lines = textDescriptions.Concat(advancedModsStatDescriptionsText).ToArray();
 				for (int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
 				{
 					string line = lines[lineIdx];
@@ -926,6 +929,7 @@ namespace PoEAssetUpdater
 						ids = ids.Skip(1).ToArray();
 						string fullID = string.Join(" ", ids);
 						bool isLocalStat = ids.Any(x => localStats.Contains(x));
+						bool isAdvancedStat = lineIdx >= advancedModDesStartIdx;
 
 						// Find an existing stat in the list
 						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID && x.LocalStat == isLocalStat);
@@ -948,7 +952,7 @@ namespace PoEAssetUpdater
 							int textCount = int.Parse(line);
 							for (int i = 0; i < textCount; i++)
 							{
-								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems);
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems, isAdvancedStat);
 							}
 							if (lineIdx < lastLineIdx)
 							{
