@@ -23,7 +23,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Kalandra";
+		private const string CurrentLeagueName = "Crucible";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -86,7 +86,7 @@ namespace PoEAssetUpdater
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
-		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant" };
+		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant", "crucible" };
 
 		private static readonly Dictionary<string, string> BaseItemTypeInheritsFromToCategoryMapping = new Dictionary<string, string>()
 		{
@@ -141,6 +141,7 @@ namespace PoEAssetUpdater
 			["SentinelDroneBase"] = ItemCategory.Sentinel,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
+			["AbstractVaultKey"] = ItemCategory.Map,
 			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
 			["OfferingToTheGoddess"] = ItemCategory.MapFragment,
@@ -178,6 +179,7 @@ namespace PoEAssetUpdater
 			["ArchnemesisMod"] = null,
 			["AbstractRelic"] = null,
 			["AbstractSpecialRelic"] = null,
+			["AbstractGiftBox"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -224,8 +226,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15593] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15594] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15584] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15585] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -1293,7 +1295,7 @@ namespace PoEAssetUpdater
 										PrintWarning($"Missing {language} trade ID '{tradeIdSearch}'");
 									}
 
-									var statLine = new StatDescription.StatLine("#", otherLangText.Replace("\n", "\\n"));
+									var statLine = new StatDescription.StatLine("#", otherLangText);
 									WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
 								}
 								jsonWriter.WriteEndArray();
@@ -1626,7 +1628,7 @@ namespace PoEAssetUpdater
 					}
 
 					// Explicitly exclude old maps from previous expansions.
-					if (ShouldExclude(id, category))
+					if (ShouldExclude(id, category, inheritsFrom))
 					{
 						Logger.WriteLine($"[BITsV2] Excluded: '{id}' ('{name}')");
 						continue;
@@ -1790,7 +1792,7 @@ namespace PoEAssetUpdater
 					return false;
 				}
 
-				bool ShouldExclude(string id, string category)
+				static bool ShouldExclude(string id, string category, string inheritsFrom)
 				{
 					if (category != ItemCategory.Map)
 					{
@@ -1800,7 +1802,11 @@ namespace PoEAssetUpdater
 					{
 						return false;
 					}
-					return true;
+					return inheritsFrom switch
+					{
+						"AbstractVaultKey" => false,
+						_ => true,
+					};
 				}
 
 				void WriteRecord(string id, Dictionary<Language, string> names, string image, string category, int width, int height)
