@@ -196,6 +196,7 @@ namespace PoEAssetUpdater
 			[646] = ItemCategory.HeistGear,//heist_equipment_weapon
 			[657] = ItemCategory.HeistTool,//heist_equipment_tool
 			[691] = ItemCategory.MapInvitation,//maven_map
+			[1057] = ItemCategory.Map,//crucible_map
 		};
 
 		private static readonly string[] IgnoredItemIds = new string[]
@@ -1798,7 +1799,7 @@ namespace PoEAssetUpdater
 					{
 						return false;
 					}
-					if (id.StartsWith("MapWorlds") || id.StartsWith("Itemised"))
+					if (id.StartsWith("MapWorlds") || id.StartsWith("Itemised") || id.StartsWith("Crucible"))
 					{
 						return false;
 					}
