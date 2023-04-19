@@ -79,7 +79,7 @@ namespace PoEAssetUpdater
 			[Language.French] = string.Format(CountryCachedFileNameFormat, "fr"),
 			[Language.Spanish] = string.Format(CountryCachedFileNameFormat, "es"),
 			[Language.Korean] = string.Format(CountryCachedFileNameFormat, "kr"),
-			[Language.SimplifiedChinese] = string.Format(CountryCachedFileNameFormat, "ch"),
+			//[Language.SimplifiedChinese] = string.Format(CountryCachedFileNameFormat, "ch"),
 			[Language.TraditionalChinese] = string.Format(CountryCachedFileNameFormat, "tw"),
 			[Language.Japanese] = string.Format(CountryCachedFileNameFormat, "jp"),
 		};
@@ -223,6 +223,13 @@ namespace PoEAssetUpdater
 
 			//Grants Summon Harbinger Skill -> Grants Summon [HARBINGER NAME] Skill
 			["explicit.stat_3872739249"] = ("local_display_summon_harbinger_x_on_equip", true),
+
+			//Allocates # -> Allocates [PASSIVE TREE NOTABLE]
+			//(Identical stat description exists for the crucible weapon passive tree, so we force it to the non-crucible one)
+			["enchant.stat_2954116742"] = ("mod_granted_passive_hash", false),
+			["enchant.stat_3459808765"] = ("mod_granted_passive_hash", false),
+			["enchant.stat_1898784841"] = ("mod_granted_passive_hash", false),
+			["enchant.stat_1422267548"] = ("mod_granted_passive_hash", false),
 		};
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
@@ -1218,7 +1225,7 @@ namespace PoEAssetUpdater
 						}
 						else
 						{
-							// Only add trade data for candidates that have equal "local stat" values because instinguishable stats always occur between different "local stat" values, but are properly dstinguished by the app.
+							// Only add trade data for candidates that have equal "local stat" values because instinguishable stats always occur between different "local stat" values, but are properly distinguished by the app.
 							addTradeStatData = candidateStatDescs.All(x => x.LocalStat == candidateStatDescs[0].LocalStat);
 
 							statDescription = candidateStatDescs.First();
@@ -1368,14 +1375,18 @@ namespace PoEAssetUpdater
 				{
 					return;
 				}
-				if (!tradeStatsData.TryGetValue(desc, out var tradeData))
+				foreach((var existingDesc, var tradeData) in tradeStatsData)
 				{
-					tradeStatsData[desc] = tradeData = new List<string>();
+					if(existingDesc == desc || Regex.IsMatch(desc, StatDescription.StatLine.GetStatDescriptionRegex(existingDesc)))
+					{
+						if(!tradeData.Contains(tradeId))
+						{
+							tradeData.Add(tradeId);
+						}
+						return;
+					}
 				}
-				if (!tradeData.Contains(tradeId))
-				{
-					tradeData.Add(tradeId);
-				}
+				tradeStatsData[desc] = new List<string>() { tradeId };
 			}
 		}
 
