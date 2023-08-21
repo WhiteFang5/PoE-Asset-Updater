@@ -408,7 +408,7 @@ namespace PoEAssetUpdater
 		{
 			Logger.WriteLine($"Exporting {Path.GetFileName(exportFilePath)}...");
 
-			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("Data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "Data");
+			List<AssetFile> dataFiles = includeLanguageFolders ? assetIndex.FindFiles(x => x.Name.StartsWith("data/")) : assetIndex.FindFiles(x => Path.GetDirectoryName(x.Name) == "data");
 
 			WriteJsonFile(exportFilePath, jsonWriter => writeData(dataFiles, jsonWriter));
 
@@ -421,7 +421,7 @@ namespace PoEAssetUpdater
 			foreach (var language in AllLanguages)
 			{
 				// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
-				var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
+				var langDir = (language == Language.English ? "data" : $"data\\{language}").ToLowerInvariant();
 				var languageFiles = assetFiles.FindAll(x => Path.GetDirectoryName(x.Name).ToLowerInvariant() == langDir);
 				if (languageFiles.Count > 0)
 				{
@@ -698,7 +698,7 @@ namespace PoEAssetUpdater
 
 		private static DatFile GetDatFile(List<AssetFile> assetFiles, DatDefinitions datDefinitions, string datFileName)
 		{
-			var assetFile = assetFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == datFileName);
+			var assetFile = assetFiles.FirstOrDefault(x => Path.GetFileName(x.Name).ToLowerInvariant() == datFileName.ToLowerInvariant());
 			if (assetFile == null)
 			{
 				Logger.WriteLine($"\t{datFileName} not found.");
@@ -837,7 +837,7 @@ namespace PoEAssetUpdater
 				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat64")[Language.English][0];
 				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat64");
 
-				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions"));
+				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions".ToLowerInvariant()));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
 				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
@@ -1164,7 +1164,7 @@ namespace PoEAssetUpdater
 
 				string[] GetStatDescriptions(string fileName)
 				{
-					var statDescriptionsFile = statDescriptionFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == fileName);
+					var statDescriptionsFile = statDescriptionFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == fileName.ToLowerInvariant());
 
 					if (statDescriptionsFile == null)
 					{

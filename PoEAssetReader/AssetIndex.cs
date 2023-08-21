@@ -149,10 +149,10 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 
 			// Read the file info
 			int fileCount = reader.ReadInt32();
-			List<(int bundleIndex, int offset, int size, long fileNameHash)> files = new List<(int bundleIndex, int offset, int size, long fileNameHash)>(fileCount);
+			List<(int bundleIndex, int offset, int size, ulong fileNameHash)> files = new List<(int bundleIndex, int offset, int size, ulong fileNameHash)>(fileCount);
 			for(int i = 0; i < fileCount; i++)
 			{
-				long fileNameHash = reader.ReadInt64();
+				ulong fileNameHash = reader.ReadUInt64();
 				int bundleIndex = reader.ReadInt32();
 				int offset = reader.ReadInt32();
 				int size = reader.ReadInt32();
@@ -162,33 +162,55 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 			}
 
 			int pathCount = reader.ReadInt32();
-			List<(int offset, int size, int unk0, int unk1, int unk2)> pathSections = new List<(int offset, int size, int unk0, int unk1, int unk2)>(pathCount);
+			List<(int offset, int size, ulong pathHash, int recursiveSize)> pathSections = new List<(int offset, int size, ulong pathHash, int recursiveSize)>(pathCount);
 			for(int i = 0; i < pathCount; i++)
 			{
-				// Read unknown values.
-				int unk0 = reader.ReadInt32();
-				int unk1 = reader.ReadInt32();
-
 				// Read known values.
+				ulong pathHash = reader.ReadUInt64();
 				int payload_offset = reader.ReadInt32();
 				int payload_size = reader.ReadInt32();
+				int recursiveSize = reader.ReadInt32();
 
-				// Read unknown values.
-				int unk2 = reader.ReadInt32();
-
-				pathSections.Add((payload_offset, payload_size, unk0, unk1, unk2));
+				pathSections.Add((payload_offset, payload_size, pathHash, recursiveSize));
 			}
 
 			byte[] pathBundle = AssetBundle.GetBundleContent(reader.ReadBytes((int)(content.Length - reader.BaseStream.Position)));
 
-			FNV1aHash64 fnv1a = new FNV1aHash64();
-			Dictionary<long, string> paths = new Dictionary<long, string>(pathCount);
+			Dictionary<ulong, string> paths = new Dictionary<ulong, string>(pathCount);
 
-			for(int i = 0; i < pathCount; i++)
+			var rootHash = pathSections[0].pathHash;
+			switch(rootHash)
 			{
-				var pathSection = pathSections[i];
-				var generatedPaths = GeneratePaths(pathBundle.Skip(pathSection.offset).Take(pathSection.size).ToArray());
-				generatedPaths.ForEach(x => paths.Add(BitConverter.ToInt64(fnv1a.ComputeHash(Encoding.UTF8.GetBytes($"{x.ToLowerInvariant()}++"))), x));
+				case 0x07e47507b4a92e53:
+					FNV1aHash64 fnv1a = new FNV1aHash64();
+					for(int i = 0; i < pathCount; i++)
+					{
+						var pathSection = pathSections[i];
+						var generatedPaths = GeneratePaths(pathBundle.Skip(pathSection.offset).Take(pathSection.size).ToArray());
+						generatedPaths.ForEach(x => paths.Add(BitConverter.ToUInt64(fnv1a.ComputeHash(Encoding.UTF8.GetBytes($"{x.ToLowerInvariant()}++"))), x));
+					}
+					break;
+
+				case 0xf42a94e69cff42fe:
+					MurmurHash murmurHash = new MurmurHash(0x1337b33f);
+					for(int i = 0; i < pathCount; i++)
+					{
+						var pathSection = pathSections[i];
+						var generatedPaths = GeneratePaths(pathBundle.Skip(pathSection.offset).Take(pathSection.size).ToArray());
+						foreach(var generatedPath in generatedPaths)
+						{
+							var trimmedPath = generatedPath.ToLowerInvariant();
+							while(trimmedPath.EndsWith('/'))
+							{
+								trimmedPath = trimmedPath[..^1];
+							}
+							paths.Add(murmurHash.ComputeHash(Encoding.UTF8.GetBytes(trimmedPath)), generatedPath);
+						}
+					}
+					break;
+
+				default:
+					throw new NotSupportedException($"{nameof(rootHash)} {rootHash} is not supported.");
 			}
 
 			AssetBundle currentBundle = null;

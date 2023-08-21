@@ -16,7 +16,7 @@ namespace PoEAssetReader.DatFiles
 		#endregion
 
 		public DatFile(AssetFile assetFile, DatDefinitions datDefinitions)
-			: this(assetFile.GetFileContents(), datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name == Path.GetFileName(assetFile.Name)) ?? new FileDefinition($"[DUMMY] {assetFile.Name}"))
+			: this(assetFile.GetFileContents(), datDefinitions.FileDefinitions.FirstOrDefault(x => x.Name.ToLowerInvariant() == Path.GetFileName(assetFile.Name).ToLowerInvariant()) ?? new FileDefinition($"[DUMMY] {assetFile.Name}"))
 		{
 		}
 

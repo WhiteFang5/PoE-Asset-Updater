@@ -5,7 +5,7 @@ namespace PoEAssetReader
 		public AssetFile(AssetBundle bundle, string name, int offset, int size)
 		{
 			Bundle = bundle;
-			Name = name;
+			Name = name.ToLowerInvariant();
 			Offset = offset;
 			Size = size;
 		}
