@@ -141,14 +141,16 @@ namespace PoEAssetUpdater
 				statDescription = statDescription
 					.Replace($"{{{num}}}", Placeholder)
 					.Replace($"{{{num}:d}}", Placeholder)
-					.Replace($"{{{num}:+d}}", Placeholder);
+					.Replace($"{{{num}:+d}}%", Placeholder)
+					.Replace($"{{{num}:+d}}", $"+{Placeholder}");
 			}
 			numberPart = string.Join(' ', numberParts).Trim();
 
 			statDescription = statDescription
 				.Replace("{}", Placeholder)
 				.Replace("{:d}", Placeholder)
-				.Replace("{:+d}", Placeholder)
+				.Replace("{:+d}%", Placeholder)
+				.Replace("{:+d}", $"+{Placeholder}")
 				.Replace("%%", "%")
 				.Replace("\\n", "\n");
 

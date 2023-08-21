@@ -46,7 +46,6 @@ namespace PoEAssetUpdater
 		public const string MapFragment = "map.fragment";
 		public const string MapInvitation = "map.invitation";
 		public const string MapScarab = "map.scarab";
-		public const string Watchstone = "watchstone";
 		public const string Leaguestone = "leaguestone";
 		public const string MemoryLine = "memoryline";
 		public const string Prophecy = "prophecy";
@@ -62,16 +61,23 @@ namespace PoEAssetUpdater
 		public const string HeistContract = "heistmission.contract";
 		public const string HeistBlueprint = "heistmission.blueprint";
 		public const string ExpeditionLogbook = "logbook";
-		public const string Sentinel = "sentinel";
-		public const string SentinelStalker = "sentinel.stalker";
-		public const string SentinelPandemonium = "sentinel.pandemonium";
-		public const string SentinelApex = "sentinel.apex";
+		public const string SanctumResearch = "sanctum.research";
+		public const string SanctumRelic = "sanctum.relic";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";
 		public const string CurrencyFossil = "currency.fossil";
 		public const string CurrencyIncubator = "currency.incubator";
 		public const string CurrencyHeistTarget = "currency.heistobjective";
+		public const string CurrencyOmen = "currency.omen";
+		public const string CurrencyTattoo = "currency.tattoo";
+
+		// Deprecated (due to previous league mechanics not going core or being removed)
+		public const string Watchstone = "watchstone";
+		public const string Sentinel = "sentinel";
+		public const string SentinelStalker = "sentinel.stalker";
+		public const string SentinelPandemonium = "sentinel.pandemonium";
+		public const string SentinelApex = "sentinel.apex";
 		public const string CurrencySeed = "currency.seed";
 		public const string CurrencyWildSeed = "currency.wildseed";
 		public const string CurrencyVividSeed = "currency.vividseed";

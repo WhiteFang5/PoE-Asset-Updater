@@ -23,7 +23,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Crucible";
+		private const string CurrentLeagueName = "Ancestor";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -137,6 +137,10 @@ namespace PoEAssetUpdater
 			["MemoryLineBase"] = ItemCategory.MemoryLine,
 			// Logbook
 			["ExpeditionSaga"] = ItemCategory.ExpeditionLogbook,
+			// Sanctum
+			["AbstractRelic"] = ItemCategory.SanctumRelic,
+			["AbstractSpecialRelic"] = ItemCategory.SanctumRelic,
+			["SanctumFloorBase"] = ItemCategory.SanctumResearch,
 			// Sentinels
 			["SentinelDroneBase"] = ItemCategory.Sentinel,
 			// Maps
@@ -177,8 +181,6 @@ namespace PoEAssetUpdater
 			["HarvestInfrastructure"] = null,
 			["Item"] = null,
 			["ArchnemesisMod"] = null,
-			["AbstractRelic"] = null,
-			["AbstractSpecialRelic"] = null,
 			["AbstractGiftBox"] = null,
 		};
 
@@ -234,8 +236,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15584] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15585] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15582] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15583] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -1576,6 +1578,14 @@ namespace PoEAssetUpdater
 					{
 						PrintWarning($"Missing Heist Equipment Tag in {nameof(TagsToItemCategoryMapping)} for '{id}' ('{baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Name)}') [Tags: {string.Join(',', baseItemType.GetValue<List<UInt128>>(DatSchemas.BaseItemTypes.TagsKeys))}]");
 					}
+					break;
+
+				// Special case for Ancestral items
+				case ItemCategory.Currency when id.StartsWith("AncestralOmen"):
+					category = ItemCategory.CurrencyOmen;
+					break;
+				case ItemCategory.Currency when id.StartsWith("AncestralTattoo"):
+					category = ItemCategory.CurrencyTattoo;
 					break;
 			}
 
