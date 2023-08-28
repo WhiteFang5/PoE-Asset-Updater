@@ -9,7 +9,7 @@ namespace PoEAssetUpdater
 	{
 		#region Consts
 
-		private const string RegexPlaceholder = "(\\S+)";
+		private const string RegexPlaceholder = @"(\S+)";
 		public const string Placeholder = "#";
 
 		#endregion
@@ -49,6 +49,11 @@ namespace PoEAssetUpdater
 			get; private set;
 		}
 
+		public bool ContainsIndexableSkillGem
+		{
+			get; private set;
+		}
+
 		public bool ContainsConqueredPassivesText
 		{
 			get; private set;
@@ -81,6 +86,7 @@ namespace PoEAssetUpdater
 			ContainsAfflictionRewardType = toCopy.ContainsAfflictionRewardType;
 			ContainsConqueredPassivesText = toCopy.ContainsConqueredPassivesText;
 			ContainsIndexableSupportGem = toCopy.ContainsIndexableSupportGem;
+			ContainsIndexableSkillGem = toCopy.ContainsIndexableSkillGem;
 			ContainsAdvancedStatDescriptions = toCopy.ContainsAdvancedStatDescriptions;
 		}
 
@@ -88,7 +94,7 @@ namespace PoEAssetUpdater
 
 		#region Public Methods
 
-		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems, bool isAdvancedStat)
+		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems, string[] indexableSkillGems, bool isAdvancedStat)
 		{
 			int openQuoteIdx = line.IndexOf('"');
 			int closeQuoteIdx = line.IndexOf('"', openQuoteIdx + 1);
@@ -133,7 +139,7 @@ namespace PoEAssetUpdater
 			{
 				string num = i.ToString(CultureInfo.InvariantCulture);
 				var numPart = numberParts[i];
-				if(numPart.Contains('#') && !Regex.IsMatch(statDescription, string.Concat("\\{", (i == 0 ? "(0(:\\+?d)?|:\\+?d)?" : $"{num}(:\\+?d)?"), "\\}")))
+				if(numPart.Contains('#') && !Regex.IsMatch(statDescription, string.Concat(@"\{", (i == 0 ? @"(0(:\+?d)?|:\+?d)?" : $@"{num}(:\+?d)?"), @"\}")))
 				{
 					numberParts[i] = numPart.Replace("#", numPart.Contains('|') ? numPart.Split('|')[0] : string.Empty);
 				}
@@ -141,7 +147,6 @@ namespace PoEAssetUpdater
 				statDescription = statDescription
 					.Replace($"{{{num}}}", Placeholder)
 					.Replace($"{{{num}:d}}", Placeholder)
-					.Replace($"{{{num}:+d}}%", Placeholder)
 					.Replace($"{{{num}:+d}}", $"+{Placeholder}");
 			}
 			numberPart = string.Join(' ', numberParts).Trim();
@@ -149,10 +154,9 @@ namespace PoEAssetUpdater
 			statDescription = statDescription
 				.Replace("{}", Placeholder)
 				.Replace("{:d}", Placeholder)
-				.Replace("{:+d}%", Placeholder)
 				.Replace("{:+d}", $"+{Placeholder}")
 				.Replace("%%", "%")
-				.Replace("\\n", "\n");
+				.Replace(@"\n", "\n");
 
 			if(!_statLines.TryGetValue(language, out List<StatLine> statLines))
 			{
@@ -182,6 +186,23 @@ namespace PoEAssetUpdater
 					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSupportGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
 				}
 			}
+			else if(additionalData.Contains("display_indexable_skill"))
+			{
+				ContainsIndexableSkillGem = true;
+				var splittedAdditionalData = additionalData.Split(' ').ToList();
+				int indexableSkillNameIdx = int.Parse(splittedAdditionalData[splittedAdditionalData.IndexOf("display_indexable_skill") + 1]);
+				var placeholderIdx = statDescription.IndexOf(Placeholder);
+				for(int i = 1; i < indexableSkillNameIdx; i++)
+				{
+					placeholderIdx = statDescription.IndexOf(Placeholder, placeholderIdx + Placeholder.Length);
+				}
+				var advancedModSuffix = $"({indexableSkillGems[0]}-{indexableSkillGems[^1]})";
+				for(int i = 0; i < indexableSkillGems.Length; i++)
+				{
+					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSkillGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
+					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], $"{indexableSkillGems[i]}{advancedModSuffix}", statDescription[(placeholderIdx + Placeholder.Length)..])));
+				}
+			}
 			else
 			{
 				CreateAndAddStatLine(new StatLine(numberPart, statDescription));
@@ -207,16 +228,22 @@ namespace PoEAssetUpdater
 			}
 
 			// Check if an english stat description is provided, if so, the matching index should be returned as only result.
-			if(singleMatchOnly || ContainsAfflictionRewardType || ContainsIndexableSupportGem || ContainsConqueredPassivesText)
+			if(singleMatchOnly || ContainsAfflictionRewardType || ContainsIndexableSupportGem || ContainsIndexableSkillGem || ContainsConqueredPassivesText)
 			{
 				if(!_statLines.TryGetValue(Language.English, out List<StatLine> englishStatLines))
 				{
 					return new StatLine[0];
 				}
-				var statLine = statLines[englishStatLines.FindIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription))];
+				int statLineIdx = englishStatLines.FindIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
+				var statLine = statLines[statLineIdx];
 				if(ContainsAdvancedStatDescriptions)
 				{
 					return statLines.FindAll(x => x.NumberPart == statLine.NumberPart).DistinctBy(x => x.StatDescription).ToArray();
+				}
+				else if(ContainsIndexableSkillGem)
+				{
+					// Add both the regular (= matched) stat line and the advanced description stat line
+					return new StatLine[] { statLine, statLines[statLineIdx + 1] };
 				}
 				return new StatLine[] { statLine };
 			}
@@ -289,7 +316,15 @@ namespace PoEAssetUpdater
 			#region Public Methods
 
 			public static string GetStatDescriptionRegex(string statDescription)
-				=> $"^{statDescription.Replace("+", "\\+").Replace(Placeholder, RegexPlaceholder)}$";
+			{
+				string regex = statDescription
+					.Replace($"+{Placeholder}", Placeholder)
+					.Replace("+", @"\+")
+					.Replace("(", @"\(")
+					.Replace(")", @"\)")
+					.Replace(Placeholder, RegexPlaceholder);
+				return $"^{regex}$";
+			}
 
 			public bool IsMatchingTradeAPIStatDescription(string statDescription)
 			{

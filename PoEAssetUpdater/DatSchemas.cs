@@ -107,6 +107,11 @@ namespace PoEAssetUpdater
 			public const string Name = "Name";
 		}
 
+		public static class IndexableSkillGems
+		{
+			public const string Name1 = "Name1";
+		}
+
 		public static class ItemVisualIdentity
 		{
 			public const string Id = "Id";

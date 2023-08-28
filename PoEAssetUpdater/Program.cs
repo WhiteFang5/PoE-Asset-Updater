@@ -836,6 +836,7 @@ namespace PoEAssetUpdater
 				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.dat64")[Language.English][0];
 				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat64")[Language.English][0];
 				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.dat64")[Language.English][0];
+				var indexableSkillGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSkillGems.dat64")[Language.English][0];
 				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat64")[Language.English][0];
 				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat64");
 
@@ -845,11 +846,13 @@ namespace PoEAssetUpdater
 				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
+				string[] sanctumRelicStatDescriptionsText = GetStatDescriptions("sanctum_relic_stat_descriptions.txt");
 				string[] advancedModsStatDescriptionsText = GetStatDescriptions("advanced_mod_stat_descriptions.txt");
 
-				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || clientStringsDatContainers == null ||
-					clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null ||
-					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || advancedModsStatDescriptionsText == null)
+				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || indexableSkillGemsDatContainer == null ||
+					clientStringsDatContainers == null || clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null ||
+					atlasStatDescriptionsText == null || heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || sanctumRelicStatDescriptionsText == null ||
+					advancedModsStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -865,6 +868,10 @@ namespace PoEAssetUpdater
 				Logger.WriteLine($"Parsing {indexableSupportGemsDatContainer.FileDefinition.Name}...");
 
 				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSupportGems.Name)).ToArray();
+
+				Logger.WriteLine($"Parsing {indexableSkillGemsDatContainer.FileDefinition.Name}...");
+
+				string[] indexableSkillGems = indexableSkillGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSkillGems.Name1)).ToArray();
 
 				Logger.WriteLine($"Parsing {nameof(PresenceStatIdToClientStringIdMapping)}...");
 
@@ -918,7 +925,7 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText);
+				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).Concat(sanctumRelicStatDescriptionsText);
 				int advancedModDesStartIdx = textDescriptions.Count();
 				string[] lines = textDescriptions.Concat(advancedModsStatDescriptionsText).ToArray();
 				for (int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
@@ -964,7 +971,7 @@ namespace PoEAssetUpdater
 							int textCount = int.Parse(line);
 							for (int i = 0; i < textCount; i++)
 							{
-								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems, isAdvancedStat);
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems, indexableSkillGems, isAdvancedStat);
 							}
 							if (lineIdx < lastLineIdx)
 							{
