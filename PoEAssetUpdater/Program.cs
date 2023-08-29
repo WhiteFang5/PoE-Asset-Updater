@@ -1330,7 +1330,7 @@ namespace PoEAssetUpdater
 				string descSuffix = null;
 				if (LabelsWithSuffix.Contains(label))
 				{
-					descSuffix = $" \\({label}\\)";
+					descSuffix = $" ({label})";
 				}
 
 				if (options == null)
