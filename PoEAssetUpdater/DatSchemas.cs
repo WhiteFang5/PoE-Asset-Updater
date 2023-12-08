@@ -9,7 +9,7 @@ namespace PoEAssetUpdater
 
 		public static class AlternateQualityTypes
 		{
-			public const string ModsKey = "ModsKey";
+			public const string QualityModifier = "QualityModifier";
 			public const string Description = "Description";
 		}
 

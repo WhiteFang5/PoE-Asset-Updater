@@ -44,6 +44,7 @@ namespace PoEAssetUpdater
 		public const string Flask = "flask";
 		public const string Map = "map";
 		public const string MapFragment = "map.fragment";
+		public const string MapBreachstone = "map.breachstone";
 		public const string MapInvitation = "map.invitation";
 		public const string MapScarab = "map.scarab";
 		public const string Leaguestone = "leaguestone";
@@ -63,6 +64,9 @@ namespace PoEAssetUpdater
 		public const string ExpeditionLogbook = "logbook";
 		public const string SanctumResearch = "sanctum.research";
 		public const string SanctumRelic = "sanctum.relic";
+		public const string AzmeriTincture = "azmeri.tincture";
+		public const string AzmeriCharm = "azmeri.charm";
+		public const string AzmeriCorpse = "azmeri.corpse";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";

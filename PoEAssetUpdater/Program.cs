@@ -16,6 +16,11 @@ using System.Threading;
 
 namespace PoEAssetUpdater
 {
+	/// <remarks>
+	/// Check & update every league:
+	/// * <see cref="CurrentLeagueName"/>
+	/// * <see cref="PresenceStatIdToClientStringIdMapping"/>
+	/// </remarks>
 	public class Program
 	{
 		#region Properties
@@ -23,7 +28,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Ancestor";
+		private const string CurrentLeagueName = "Affliction";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -143,6 +148,10 @@ namespace PoEAssetUpdater
 			["SanctumFloorBase"] = ItemCategory.SanctumResearch,
 			// Sentinels
 			["SentinelDroneBase"] = ItemCategory.Sentinel,
+			// Affliction (Azmeri)
+			["AbstractTincture"] = ItemCategory.AzmeriTincture,
+			["AbstractAnimalCharm"] = ItemCategory.AzmeriCharm,
+			["AbstractItemisedCorpse"] = ItemCategory.AzmeriCorpse,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
@@ -236,8 +245,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15582] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15583] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15569] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15570] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -591,7 +600,7 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetAlternateQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				var modsKey = recordData.GetValue<UInt128>(DatSchemas.AlternateQualityTypes.ModsKey);
+				var modsKey = recordData.GetValue<UInt128>(DatSchemas.AlternateQualityTypes.QualityModifier);
 				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
 				string name = recordData.GetValue<string>(DatSchemas.AlternateQualityTypes.Description);
 				return (id, name);
@@ -847,12 +856,13 @@ namespace PoEAssetUpdater
 				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
 				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
 				string[] sanctumRelicStatDescriptionsText = GetStatDescriptions("sanctum_relic_stat_descriptions.txt");
+				string[] tinctureStatDescriptionsText = GetStatDescriptions("tincture_stat_descriptions.txt");
 				string[] advancedModsStatDescriptionsText = GetStatDescriptions("advanced_mod_stat_descriptions.txt");
 
 				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || indexableSkillGemsDatContainer == null ||
 					clientStringsDatContainers == null || clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null ||
 					atlasStatDescriptionsText == null || heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || sanctumRelicStatDescriptionsText == null ||
-					advancedModsStatDescriptionsText == null)
+					tinctureStatDescriptionsText == null || advancedModsStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -925,7 +935,7 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).Concat(sanctumRelicStatDescriptionsText);
+				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).Concat(sanctumRelicStatDescriptionsText).Concat(tinctureStatDescriptionsText);
 				int advancedModDesStartIdx = textDescriptions.Count();
 				string[] lines = textDescriptions.Concat(advancedModsStatDescriptionsText).ToArray();
 				for (int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
