@@ -2,6 +2,13 @@ namespace PoEAssetUpdater
 {
 	public static class DatSchemas
 	{
+		public static class ActiveSkills
+		{
+			public const string Id = "Id";
+			public const string DisplayedName = "DisplayedName";
+			public const string TransfigureBase = "TransfigureBase";
+		}
+
 		public static class AfflictionRewardTypeVisuals
 		{
 			public const string Name = "Name";

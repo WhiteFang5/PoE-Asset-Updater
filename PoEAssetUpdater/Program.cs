@@ -1640,12 +1640,14 @@ namespace PoEAssetUpdater
 				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat64");
 				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat64");
 				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.dat64");
+				var activeSkillsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ActiveSkills.dat64");
 
 				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat64");
 
 				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
 				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
 				var uniqueMapsDatContainer = uniqueMapsDatContainers[Language.English][0];
+				var activeSkillsDatContainer = activeSkillsDatContainers[Language.English][0];
 
 				// Write the Base Item Types
 				for (int i = 0; i < baseItemTypesDatContainer.Count; i++)
@@ -1703,6 +1705,22 @@ namespace PoEAssetUpdater
 					var category = ItemCategory.Map;
 
 					WriteRecord(id, names, GetImageByName(id, names[Language.English], category), category, 1, 1);
+				}
+
+				// Write the Transfigured Gem Names
+				for(int i = 0; i < activeSkillsDatContainer.Count; i++)
+				{
+					var activeSkill = activeSkillsDatContainer.Records[i];
+					int regularVersionKey = (int)activeSkill.GetValue<ulong>(DatSchemas.ActiveSkills.TransfigureBase);
+					if(regularVersionKey < 0 || regularVersionKey > activeSkillsDatContainer.Count || activeSkill.GetValue<string>(DatSchemas.ActiveSkills.DisplayedName).StartsWith("[DNT]"))
+					{
+						continue;
+					}
+
+					string id = $"TransfiguredGem_{activeSkill.GetValue<string>(DatSchemas.ActiveSkills.Id)}";
+					var names = activeSkillsDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.ActiveSkills.DisplayedName).Trim()));
+
+					WriteRecord(id, names, string.Empty, ItemCategory.GemActivegem, 1, 1);
 				}
 
 				// Nested Method(s)
