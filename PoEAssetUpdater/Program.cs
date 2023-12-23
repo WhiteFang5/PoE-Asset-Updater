@@ -1685,6 +1685,11 @@ namespace PoEAssetUpdater
 				{
 					var monsterVariety = monsterVarietiesDatContainer.Records[i];
 					string id = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last();
+					string name = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Name);
+					if(baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Name) == name))
+					{
+						continue;
+					}
 
 					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.MonsterVarieties.Name).Trim()));
 
