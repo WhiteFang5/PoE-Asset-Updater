@@ -687,6 +687,7 @@ namespace PoEAssetVisualizer
 
 		private DatFile GetDatFile(string fileName)
 		{
+			fileName = fileName.ToLowerInvariant();
 			if (!_datFiles.TryGetValue(fileName, out DatFile datFile))
 			{
 				return GetDatFile(_assetIndex.FindFile(x => x.Name == fileName));
