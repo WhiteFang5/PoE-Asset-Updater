@@ -1604,6 +1604,11 @@ namespace PoEAssetUpdater
 				case ItemCategory.Currency when id.StartsWith("AncestralTattoo"):
 					category = ItemCategory.CurrencyTattoo;
 					break;
+
+				// Special case for atlas voidstones
+				case ItemCategory.Watchstone when id.StartsWith("AtlasUpgradePrimordial"):
+					category = ItemCategory.Currency;
+					break;
 			}
 
 			return category;
