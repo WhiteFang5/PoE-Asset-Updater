@@ -30,17 +30,22 @@ namespace PoEAssetUpdater
 			public const string Height = "Height";
 		}
 
+		public static class BlightCraftingItems
+		{
+			public const string Oil = "Oil";
+		}
+
 		public static class BlightCraftingRecipes
 		{
 			public const string BlightCraftingTypesKey = "BlightCraftingTypesKey";
 			public const string BlightCraftingItemsKeys = "BlightCraftingItemsKeys";
 			public const string BlightCraftingResultsKey = "BlightCraftingResultsKey";
-			public const string PassiveSkillsKey = "PassiveSkillsKey";
 		}
 
-		public static class BlightCraftingItems
+		public static class BlightCraftingResults
 		{
-			public const string Oil = "Oil";
+			public const string PassiveSkillsKey = "PassiveSkillsKey";
+			public const string ModsKey = "ModsKey";
 		}
 
 		public static class Characters

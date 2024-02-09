@@ -329,7 +329,8 @@ namespace PoEAssetUpdater
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				ExportWords(assetIndex, datDefinitions, assetOutputDir);
-				ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
+				//ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
+				ExportAnnointmentsV2(assetIndex, datDefinitions, assetOutputDir);
 				ExportModIcons(assetIndex, datDefinitions, assetOutputDir);
 				//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
@@ -1468,7 +1469,7 @@ namespace PoEAssetUpdater
 				jsonWriter.WritePropertyName("annointments");
 				jsonWriter.WriteStartObject();
 
-				// Write the Base Item Types
+				// Write the Amulet Annoints
 				for (int i = 0, recordCount = craftingRecipesDatContainer.Records.Count; i < recordCount; i++)
 				{
 					var craftingRecipe = craftingRecipesDatContainer.Records[i];
@@ -1484,7 +1485,7 @@ namespace PoEAssetUpdater
 					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.PassiveSkillsKey);
+					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillsKey);
 					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
 
 					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
@@ -1492,6 +1493,86 @@ namespace PoEAssetUpdater
 					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
 					jsonWriter.WriteStartArray();
 					foreach (var craftingItemKey in craftingItemKeys)
+					{
+						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
+						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
+						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
+						var id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+
+						jsonWriter.WriteValue(id);
+					}
+					jsonWriter.WriteEndArray();
+				}
+
+				jsonWriter.WriteEndObject();
+			}
+		}
+
+		private static void ExportAnnointmentsV2(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "annointments-v2.json"), WriteRecords, false);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
+				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat64");
+				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat64");
+				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat64");
+				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat64");
+				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat64");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat64");
+
+				jsonWriter.WritePropertyName("annointments");
+				jsonWriter.WriteStartObject();
+
+				var amuletAnnoints = craftingRecipesDatContainer.Records.Where(x => x.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey) == 0);
+				var ringAnnoints = craftingRecipesDatContainer.Records.Where(x => x.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingTypesKey) == 1);
+
+				// Write the Unique & Amulet Annointments
+				jsonWriter.WritePropertyName("mod_granted_passive_hash");
+				jsonWriter.WriteStartObject();
+				foreach(var craftingRecipe in amuletAnnoints)
+				{
+					var craftingItemKeys = craftingRecipe.GetValue<List<UInt128>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
+
+					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
+					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
+
+					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillsKey);
+					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
+
+					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
+
+					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
+					jsonWriter.WriteStartArray();
+					foreach(var craftingItemKey in craftingItemKeys)
+					{
+						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
+						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
+						var baseItemType = baseItemTypesDatContainer.Records[baseItemTypeKey];
+						var id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+
+						jsonWriter.WriteValue(id);
+					}
+					jsonWriter.WriteEndArray();
+				}
+				jsonWriter.WriteEndObject();
+
+				// Wite the Ring Annointments
+				foreach(var craftingRecipe in ringAnnoints)
+				{
+					var craftingItemKeys = craftingRecipe.GetValue<List<UInt128>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
+
+					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
+					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
+
+					var modsKey = craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.ModsKey);
+					var statsKey = modsDatContainer.Records[(int)modsKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, "1"));
+					var statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
+
+					jsonWriter.WritePropertyName(statId);
+					jsonWriter.WriteStartArray();
+					foreach(var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
 						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
