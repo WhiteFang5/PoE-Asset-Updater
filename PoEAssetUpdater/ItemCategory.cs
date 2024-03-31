@@ -67,6 +67,7 @@ namespace PoEAssetUpdater
 		public const string AzmeriTincture = "azmeri.tincture";
 		public const string AzmeriCharm = "azmeri.charm";
 		public const string AzmeriCorpse = "azmeri.corpse";
+		public const string NecropolisPack = "necropolis.pack";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";

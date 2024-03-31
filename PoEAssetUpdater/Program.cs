@@ -28,7 +28,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Affliction";
+		private const string CurrentLeagueName = "Necropolis";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -56,7 +56,7 @@ namespace PoEAssetUpdater
 			[Language.Japanese] = string.Format(CountryStatsURLFormat, "jp"),
 			[Language.Korean] = "https://poe.game.daum.net/api/trade/data/stats",
 			//[Language.SimplifiedChinese] = "https://poe.game.qq.com/api/trade/data/stats",
-			[Language.TraditionalChinese] = "https://web.poe.garena.tw/api/trade/data/stats",
+			[Language.TraditionalChinese] = "https://pathofexile.tw/api/trade/data/stats",
 		};
 
 		private static readonly string PoEStaticTradeDataUrl = string.Format(CountryStaticURLFormat, "www");
@@ -91,7 +91,15 @@ namespace PoEAssetUpdater
 
 		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
 
-		private static readonly string[] LabelsWithSuffix = new string[] { "implicit", "crafted", "fractured", "enchant", "crucible" };
+		private static readonly Dictionary<string, string> LabelsWithSuffix = new Dictionary<string, string>()
+		{
+			["implicit"] = " (implicit)",
+			["crafted"] = " (crafted)",
+			["fractured"] = " (fractured)",
+			["enchant"] = " (enchant)",
+			["crucible"] = " (crucible)",
+			["necropolis"] = " (implicit)",// For some odd reason necropolis stats are actually implicit stats and labelled as such
+		};
 
 		private static readonly Dictionary<string, string> BaseItemTypeInheritsFromToCategoryMapping = new Dictionary<string, string>()
 		{
@@ -152,6 +160,8 @@ namespace PoEAssetUpdater
 			["AbstractTincture"] = ItemCategory.AzmeriTincture,
 			["AbstractAnimalCharm"] = ItemCategory.AzmeriCharm,
 			["AbstractItemisedCorpse"] = ItemCategory.AzmeriCorpse,
+			// Necropolis
+			["AbstractNecropolisPack"] = ItemCategory.NecropolisPack,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
@@ -245,8 +255,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15569] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15570] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15570] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15571] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -296,6 +306,8 @@ namespace PoEAssetUpdater
 				return;
 			}
 
+			string logPath = Path.Combine(assetOutputDir, string.Concat(ApplicationName, ".log"));
+
 			try
 			{
 				// Read the index
@@ -327,14 +339,23 @@ namespace PoEAssetUpdater
 				// Legacy: replaced by Base Item Types v2
 				//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
 				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
+				Logger.SaveLogs(logPath);
+
 				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
 				ExportWords(assetIndex, datDefinitions, assetOutputDir);
+				Logger.SaveLogs(logPath);
+
 				//ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
 				ExportAnnointmentsV2(assetIndex, datDefinitions, assetOutputDir);
+				Logger.SaveLogs(logPath);
+
 				ExportModIcons(assetIndex, datDefinitions, assetOutputDir);
 				//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
 				ExportMods(assetIndex, datDefinitions, assetOutputDir);
+				Logger.SaveLogs(logPath);
+
 				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
+				Logger.SaveLogs(logPath);
 				//stats-local.json -> Likely/maintained created manually.
 			}
 #if !DEBUG
@@ -345,7 +366,7 @@ namespace PoEAssetUpdater
 #endif
 			finally
 			{
-				Logger.SaveLogs(Path.Combine(assetOutputDir, string.Concat(ApplicationName, ".log")));
+				Logger.SaveLogs(logPath);
 			}
 
 			Console.WriteLine(string.Empty);
@@ -578,6 +599,7 @@ namespace PoEAssetUpdater
 					["HeistObjectiveValueDescriptions.dat64"] = GetHeistObjectivesKVP,
 					["ExpeditionFactions.dat64"] = GetExpeditionFactionsKVP,
 					["Characters.dat64"] = GetCharactersKVP,
+					["ItemClasses.dat64"] = GetItemClassesKVP,
 				}, false);
 			}
 
@@ -601,8 +623,7 @@ namespace PoEAssetUpdater
 
 			static (string, string) GetAlternateQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
 			{
-				var modsKey = recordData.GetValue<UInt128>(DatSchemas.AlternateQualityTypes.QualityModifier);
-				string id = string.Concat("Quality", (modsKey + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
+				string id = string.Concat("Quality", (idx + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
 				string name = recordData.GetValue<string>(DatSchemas.AlternateQualityTypes.Description);
 				return (id, name);
 			}
@@ -685,6 +706,13 @@ namespace PoEAssetUpdater
 			{
 				string name = recordData.GetValue<string>(DatSchemas.Characters.Name).Trim();
 				return ($"CharacterName{idx}", name);
+			}
+
+			static (string, string) GetItemClassesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
+			{
+				string id = recordData.GetValue<string>(DatSchemas.ItemClasses.Id);
+				string name = recordData.GetValue<string>(DatSchemas.ItemClasses.Name).Trim();
+				return ($"ItemClass{id}", name);
 			}
 		}
 
@@ -858,12 +886,13 @@ namespace PoEAssetUpdater
 				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
 				string[] sanctumRelicStatDescriptionsText = GetStatDescriptions("sanctum_relic_stat_descriptions.txt");
 				string[] tinctureStatDescriptionsText = GetStatDescriptions("tincture_stat_descriptions.txt");
+				string[] necropolisStatDescriptionsText = GetStatDescriptions("necropolis_stat_descriptions.txt");
 				string[] advancedModsStatDescriptionsText = GetStatDescriptions("advanced_mod_stat_descriptions.txt");
 
 				if (statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null || indexableSkillGemsDatContainer == null ||
 					clientStringsDatContainers == null || clientStringsDatContainers.Count == 0 || statDescriptionFiles.Count == 0 || statDescriptionsText == null ||
 					atlasStatDescriptionsText == null || heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || sanctumRelicStatDescriptionsText == null ||
-					tinctureStatDescriptionsText == null || advancedModsStatDescriptionsText == null)
+					tinctureStatDescriptionsText == null || necropolisStatDescriptionsText == null || advancedModsStatDescriptionsText == null)
 				{
 					return;
 				}
@@ -936,7 +965,7 @@ namespace PoEAssetUpdater
 
 				// Create a list of all stat descriptions
 				List<StatDescription> statDescriptions = new List<StatDescription>();
-				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).Concat(sanctumRelicStatDescriptionsText).Concat(tinctureStatDescriptionsText);
+				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText).Concat(atlasStatDescriptionsText).Concat(heistEquipmentStatDescriptionsText).Concat(sentinelStatDescriptionsText).Concat(sanctumRelicStatDescriptionsText).Concat(tinctureStatDescriptionsText).Concat(necropolisStatDescriptionsText);
 				int advancedModDesStartIdx = textDescriptions.Count();
 				string[] lines = textDescriptions.Concat(advancedModsStatDescriptionsText).ToArray();
 				for (int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
@@ -1028,6 +1057,8 @@ namespace PoEAssetUpdater
 						Logger.WriteLine($"Couldn't find existing stat description for presence stat '{string.Join(" ", ids)}'");
 					}
 				}
+
+				statDescriptions.RemoveAll(x => !x.HasStatLines);
 
 				Logger.WriteLine("Downloading PoE Trade API Stats...");
 
@@ -1206,6 +1237,7 @@ namespace PoEAssetUpdater
 					StatDescription statDescription = null;
 					bool expandOptions = false;
 					bool addTradeStatData = false;
+					bool equalizedPlaceholders = false;
 					if (TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
 					{
 						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
@@ -1236,6 +1268,15 @@ namespace PoEAssetUpdater
 							candidateStatDescs = statDescriptions
 								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.All(y => x.HasMatchingStatLine(y)))
 								.OrderBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
+								.ToList();
+						}
+
+						if(candidateStatDescs.Count == 0)
+						{
+							equalizedPlaceholders = true;
+							candidateStatDescs = statDescriptions
+								.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text, equalizedPlaceholders))
+								.OrderBy(x => x.GetMatchingStatLineIndex(text, equalizedPlaceholders))
 								.ToList();
 						}
 
@@ -1338,10 +1379,9 @@ namespace PoEAssetUpdater
 			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, Dictionary<string, List<string>> tradeStatsData, string tradeId, Language language, JsonWriter jsonWriter)
 			{
 				string desc = statLine.StatDescription;
-				string descSuffix = null;
-				if (LabelsWithSuffix.Contains(label))
+				if (!LabelsWithSuffix.TryGetValue(label, out string descSuffix))
 				{
-					descSuffix = $" ({label})";
+					descSuffix = null;
 				}
 
 				if (options == null)
@@ -1567,10 +1607,18 @@ namespace PoEAssetUpdater
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
 					var modsKey = craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.ModsKey);
-					var statsKey = modsDatContainer.Records[(int)modsKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, "1"));
-					var statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
+					List<string> statNames = new List<string>();
+					for(int i = 1; i <= TotalNumberOfStats; i++)
+					{
+						var statsKey = modsDatContainer.Records[(int)modsKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-					jsonWriter.WritePropertyName(statId);
+						if(statsKey != UndefinedValueDat64)
+						{
+							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id));
+						}
+					}
+
+					jsonWriter.WritePropertyName(string.Join(" ", statNames.Distinct()));
 					jsonWriter.WriteStartArray();
 					foreach(var craftingItemKey in craftingItemKeys)
 					{

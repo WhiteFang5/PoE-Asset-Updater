@@ -16,7 +16,6 @@ namespace PoEAssetUpdater
 
 		public static class AlternateQualityTypes
 		{
-			public const string QualityModifier = "QualityModifier";
 			public const string Description = "Description";
 		}
 
@@ -122,6 +121,12 @@ namespace PoEAssetUpdater
 		public static class IndexableSkillGems
 		{
 			public const string Name1 = "Name1";
+		}
+
+		public static class ItemClasses
+		{
+			public const string Id = "Id";
+			public const string Name = "Name";
 		}
 
 		public static class ItemVisualIdentity

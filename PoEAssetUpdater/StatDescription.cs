@@ -11,6 +11,7 @@ namespace PoEAssetUpdater
 
 		private const string RegexPlaceholder = @"(\S+)";
 		public const string Placeholder = "#";
+		public const string PlaceholderWithPlus = "+#";
 
 		#endregion
 
@@ -63,6 +64,8 @@ namespace PoEAssetUpdater
 		{
 			get; private set;
 		}
+
+		public bool HasStatLines => _statLines.Count > 0;
 
 		#endregion
 
@@ -129,6 +132,11 @@ namespace PoEAssetUpdater
 					Negated = true;
 				}
 			}
+			else if(additionalData.Contains("tempest_mod_text"))
+			{
+				// Explicitly ignored because the description is '# #',  which doesn't help at all
+				return;
+			}
 
 			ContainsConqueredPassivesText = additionalData.Contains("ReminderTextConqueredPassives");
 
@@ -147,14 +155,14 @@ namespace PoEAssetUpdater
 				statDescription = statDescription
 					.Replace($"{{{num}}}", Placeholder)
 					.Replace($"{{{num}:d}}", Placeholder)
-					.Replace($"{{{num}:+d}}", $"+{Placeholder}");
+					.Replace($"{{{num}:+d}}", PlaceholderWithPlus);
 			}
 			numberPart = string.Join(' ', numberParts).Trim();
 
 			statDescription = statDescription
 				.Replace("{}", Placeholder)
 				.Replace("{:d}", Placeholder)
-				.Replace("{:+d}", $"+{Placeholder}")
+				.Replace("{:+d}", PlaceholderWithPlus)
 				.Replace("%%", "%")
 				.Replace(@"\n", "\n");
 
@@ -251,22 +259,22 @@ namespace PoEAssetUpdater
 			return statLines.ToArray();
 		}
 
-		public bool HasMatchingStatLine(string englishStatDescription)
+		public bool HasMatchingStatLine(string englishStatDescription, bool equalizePlaceholders = false)
 		{
 			if(!_statLines.TryGetValue(Language.English, out List<StatLine> statLines))
 			{
 				return false;
 			}
-			return statLines.Exists(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
+			return statLines.Exists(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription, equalizePlaceholders));
 		}
 
-		public int GetMatchingStatLineIndex(string englishStatDescription)
+		public int GetMatchingStatLineIndex(string englishStatDescription, bool equalizePlaceholders = false)
 		{
 			if(!_statLines.TryGetValue(Language.English, out List<StatLine> statLines))
 			{
 				return -1;
 			}
-			return statLines.FindLastIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
+			return statLines.FindLastIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription, equalizePlaceholders));
 		}
 
 		public bool HasMatchingIdentifier(string identifier) => _identifiers.Contains(identifier);
@@ -318,7 +326,7 @@ namespace PoEAssetUpdater
 			public static string GetStatDescriptionRegex(string statDescription)
 			{
 				string regex = statDescription
-					.Replace($"+{Placeholder}", Placeholder)
+					.Replace(PlaceholderWithPlus, Placeholder)
 					.Replace("+", @"\+")
 					.Replace("(", @"\(")
 					.Replace(")", @"\)")
@@ -326,16 +334,28 @@ namespace PoEAssetUpdater
 				return $"^{regex}$";
 			}
 
-			public bool IsMatchingTradeAPIStatDescription(string statDescription)
+			public bool IsMatchingTradeAPIStatDescription(string statDescription, bool equalizePlaceholders = false)
 			{
+				string aStatDescription;
+				string bStatDescription = statDescription.Trim();
+
 				if(statDescription.Contains("\n"))
 				{
-					return StatDescription == statDescription.Trim();
+					aStatDescription = StatDescription;
 				}
 				else
 				{
-					return _strippedTradeAPIStatDescription == statDescription.Trim();
+					aStatDescription = _strippedTradeAPIStatDescription;
 				}
+
+				if(equalizePlaceholders)
+				{
+					aStatDescription = aStatDescription.Replace(PlaceholderWithPlus, Placeholder);
+					bStatDescription = bStatDescription.Replace(PlaceholderWithPlus, Placeholder);
+				}
+
+				return aStatDescription == bStatDescription;
+			}
 			}
 
 			#endregion
