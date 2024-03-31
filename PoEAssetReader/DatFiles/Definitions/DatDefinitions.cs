@@ -188,7 +188,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 							{
 								break;
 							}
-							else if (line.Contains(":"))
+							else if (!line.StartsWith("\"") && line.Contains(":"))
 							{
 								string[] split = line.Split(": @".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 								string id = split[0];
