@@ -28,7 +28,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Necropolis";
+		private const string CurrentLeagueName = "Settlers";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -201,6 +201,7 @@ namespace PoEAssetUpdater
 			["Item"] = null,
 			["ArchnemesisMod"] = null,
 			["AbstractGiftBox"] = null,
+			["AbstractGold"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -255,8 +256,8 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
 		{
-			[15570] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15571] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			[15533] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
+			[15534] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
