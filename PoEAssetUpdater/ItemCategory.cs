@@ -64,10 +64,8 @@ namespace PoEAssetUpdater
 		public const string ExpeditionLogbook = "logbook";
 		public const string SanctumResearch = "sanctum.research";
 		public const string SanctumRelic = "sanctum.relic";
-		public const string AzmeriTincture = "azmeri.tincture";
-		public const string AzmeriCharm = "azmeri.charm";
-		public const string AzmeriCorpse = "azmeri.corpse";
-		public const string NecropolisPack = "necropolis.pack";
+		public const string Tincture = "tincture";
+		public const string Corpse = "corpse";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";
@@ -88,5 +86,9 @@ namespace PoEAssetUpdater
 		public const string CurrencyVividSeed = "currency.vividseed";
 		public const string CurrencyPrimalSeed = "currency.primalseed";
 		public const string CurrencySeedBooster = "currency.seedbooster";
+		public const string AzmeriTincture = "azmeri.tincture";
+		public const string AzmeriCharm = "azmeri.charm";
+		public const string AzmeriCorpse = "azmeri.corpse";
+		public const string NecropolisPack = "necropolis.pack";
 	}
 }

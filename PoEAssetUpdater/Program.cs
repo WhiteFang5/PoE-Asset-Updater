@@ -157,9 +157,9 @@ namespace PoEAssetUpdater
 			// Sentinels
 			["SentinelDroneBase"] = ItemCategory.Sentinel,
 			// Affliction (Azmeri)
-			["AbstractTincture"] = ItemCategory.AzmeriTincture,
+			["AbstractTincture"] = ItemCategory.Tincture,/// Was <see cref="ItemCategory.AzmeriTincture"/> during Affliction (Azmeri) league
 			["AbstractAnimalCharm"] = ItemCategory.AzmeriCharm,
-			["AbstractItemisedCorpse"] = ItemCategory.AzmeriCorpse,
+			["AbstractItemisedCorpse"] = ItemCategory.Corpse,/// Was <see cref="ItemCategory.AzmeriCorpse"/> during Affliction (Azmeri) league
 			// Necropolis
 			["AbstractNecropolisPack"] = ItemCategory.NecropolisPack,
 			// Maps
