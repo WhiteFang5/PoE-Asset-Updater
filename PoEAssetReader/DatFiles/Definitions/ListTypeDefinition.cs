@@ -53,7 +53,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 				var dataPos = dataSectionOffset + pointer;
 				var streamLength = binaryReader.BaseStream.Length;
 				var dataSize = Math.Max(0L, ListType.DataSize);
-				if ((dataPos + (dataSize * count)) <= streamLength)
+				if (dataPos >= 0 && (dataPos + (dataSize * count)) <= streamLength)
 				{
 					var oldPos = binaryReader.BaseStream.Position;
 					binaryReader.BaseStream.Seek(dataPos, SeekOrigin.Begin);

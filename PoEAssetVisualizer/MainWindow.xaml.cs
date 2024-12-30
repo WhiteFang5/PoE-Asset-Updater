@@ -199,6 +199,7 @@ namespace PoEAssetVisualizer
 							{
 								case ".dat":
 								case ".dat64":
+								case ".datc64":
 									FillDatViewer(_openedAssetFile);
 									string datSchemaFolder = Path.Combine(Directory.GetCurrentDirectory(), DatDefinitionFolder);
 									if (Directory.Exists(datSchemaFolder))
@@ -219,6 +220,7 @@ namespace PoEAssetVisualizer
 									break;
 
 								case ".txt":
+								case ".csd":
 									TextViewer.Text = Encoding.UTF8.GetString(contents);
 									TextViewerTab.Visibility = Visibility.Visible;
 									break;
@@ -792,6 +794,7 @@ namespace PoEAssetVisualizer
 				{
 					case ".dat":
 					case ".dat64":
+					case ".datc64":
 						saveFileDialog.Filter += "|CSV file (*.csv)|*.csv";
 						break;
 				}

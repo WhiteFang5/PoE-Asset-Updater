@@ -33,7 +33,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 		{
 			var pointer = _x64 ? binaryReader.ReadInt64() : binaryReader.ReadUInt32();
 			var oldPos = binaryReader.BaseStream.Position;
-			binaryReader.BaseStream.Seek(Math.Min(binaryReader.BaseStream.Length, dataSectionOffset + pointer), SeekOrigin.Begin);
+			binaryReader.BaseStream.Seek(Math.Max(0, Math.Min(binaryReader.BaseStream.Length, dataSectionOffset + pointer)), SeekOrigin.Begin);
 			var value = RefType.ReadData(binaryReader, dataSectionOffset);
 			binaryReader.BaseStream.Seek(oldPos, SeekOrigin.Begin);
 			return value;

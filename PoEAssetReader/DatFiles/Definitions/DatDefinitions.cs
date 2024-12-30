@@ -179,7 +179,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 					string line = lines[i];
 					if (line.StartsWith("type "))
 					{
-						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
+						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "c64" : string.Empty)}";
 						List<FieldDefinition> fields = new List<FieldDefinition>();
 						for (i++; i < lines.Length; i++)
 						{
@@ -214,7 +214,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 					}
 					else if (line.StartsWith("enum "))
 					{
-						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "64" : string.Empty)}";
+						string name = $"{line.Split(" ")[1].Trim()}.dat{(x64 ? "c64" : string.Empty)}";
 						enums.Add(name);
 					}
 				}
@@ -289,8 +289,13 @@ namespace PoEAssetReader.DatFiles.Definitions
 					case "bool":
 						dataType = "bool";
 						break;
+					case "i16":
 					case "i32":
 						dataType = isList ? "uint" : "int";
+						break;
+					case "u16":
+					case "u32":
+						dataType = "uint";
 						break;
 					case "f32":
 						dataType = "float";
@@ -305,7 +310,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 						{
 							throw new InvalidDataException($"Invalid data type '{input}' found in '{filePath}'");
 						}
-						refDatFileName = $"{input}.dat{(x64 ? "64" : string.Empty)}";
+						refDatFileName = $"{input}.dat{(x64 ? "c64" : string.Empty)}";
 						dataType = x64 ? "uint128" : "ulong";
 						break;
 				}

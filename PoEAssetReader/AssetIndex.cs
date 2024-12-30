@@ -218,7 +218,10 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 			for(int i = 0; i < fileCount; i++)
 			{
 				var fileInfo = files[i];
-				var fileName = paths[fileInfo.fileNameHash];
+				if(!paths.TryGetValue(fileInfo.fileNameHash, out var fileName))
+				{
+					continue;
+				}
 
 				if(currentBundleIndex != fileInfo.bundleIndex)
 				{
