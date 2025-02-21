@@ -348,6 +348,8 @@ namespace PoEAssetVisualizer
 				TryAddColumn("_Remainder");
 				TryAddColumn("_RemainderBool");
 				TryAddColumn("_RemainderByte");
+				TryAddColumn("_RemainderShort");
+				TryAddColumn("_RemainderUShort");
 				TryAddColumn("_RemainderInt");
 				TryAddColumn("_RemainderUInt");
 				TryAddColumn("_RemainderLong");
