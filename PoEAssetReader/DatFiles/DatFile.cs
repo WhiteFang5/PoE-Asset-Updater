@@ -66,6 +66,8 @@ namespace PoEAssetReader.DatFiles
 
 							TryRead("bool", "_RemainderBool");
 							TryRead("byte", "_RemainderByte");
+							TryRead("short", "_RemainderShort");
+							TryRead("ushort", "_RemainderUShort");
 							TryRead("int", "_RemainderInt");
 							TryRead("uint", "_RemainderUInt");
 							TryRead("long", "_RemainderLong");

@@ -290,10 +290,14 @@ namespace PoEAssetReader.DatFiles.Definitions
 						dataType = "bool";
 						break;
 					case "i16":
+						dataType = isList ? "ushort" : "short";
+						break;
 					case "i32":
 						dataType = isList ? "uint" : "int";
 						break;
 					case "u16":
+						dataType = "ushort";
+						break;
 					case "u32":
 						dataType = "uint";
 						break;

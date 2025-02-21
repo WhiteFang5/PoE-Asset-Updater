@@ -20,7 +20,7 @@ namespace PoEAssetReader.DatFiles.Definitions
 			get;
 		}
 
-		public bool X64 => Name.EndsWith(".dat64");
+		public bool X64 => Name.EndsWith("64");
 
 		#endregion
 	}
