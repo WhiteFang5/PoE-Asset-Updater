@@ -43,8 +43,8 @@ namespace PoEAssetUpdater
 
 		public static class BlightCraftingResults
 		{
-			public const string PassiveSkillsKey = "PassiveSkillsKey";
-			public const string ModsKey = "ModsKey";
+			public const string PassiveSkillKey = "PassiveSkill";
+			public const string ModKey = "Mod";
 		}
 
 		public static class Characters

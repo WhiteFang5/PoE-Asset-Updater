@@ -162,6 +162,8 @@ namespace PoEAssetUpdater
 			["AbstractItemisedCorpse"] = ItemCategory.Corpse,/// Was <see cref="ItemCategory.AzmeriCorpse"/> during Affliction (Azmeri) league
 			// Necropolis
 			["AbstractNecropolisPack"] = ItemCategory.NecropolisPack,
+			// Settlers (Phercia race event)
+			["AbstractAtlasRelic"] = ItemCategory.Idol,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
@@ -547,8 +549,8 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(assetFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["BaseItemTypes.dat64"] = GetBaseItemTypeKVP,
-					["MonsterVarieties.dat64"] = GetMonsterVaritiesKVP,
+					["BaseItemTypes.datc64"] = GetBaseItemTypeKVP,
+					["MonsterVarieties.datc64"] = GetMonsterVaritiesKVP,
 				}, true);
 			}
 
@@ -589,18 +591,18 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["ClientStrings.dat64"] = GetClientStringKVP,
-					["AlternateQualityTypes.dat64"] = GetAlternateQualityTypesKVP,
-					["MetamorphosisMetaSkillTypes.dat64"] = GetMetamorphosisMetaSkillTypesKVP,
-					["GrantedEffectQualityTypes.dat64"] = GetAlternateGemQualityTypesKVP,
-					["UltimatumEncounters.dat64"] = GetUltimatumEncountersKVP,
-					["UltimatumItemisedRewards.dat64"] = GetUltimatumItemisedRewardsKVP,
-					["IncursionRooms.dat64"] = GetIncursionRoomsKVP,
-					["HeistJobs.dat64"] = GetHeistJobsKVP,
-					["HeistObjectiveValueDescriptions.dat64"] = GetHeistObjectivesKVP,
-					["ExpeditionFactions.dat64"] = GetExpeditionFactionsKVP,
-					["Characters.dat64"] = GetCharactersKVP,
-					["ItemClasses.dat64"] = GetItemClassesKVP,
+					["ClientStrings.datc64"] = GetClientStringKVP,
+					["AlternateQualityTypes.datc64"] = GetAlternateQualityTypesKVP,
+					["MetamorphosisMetaSkillTypes.datc64"] = GetMetamorphosisMetaSkillTypesKVP,
+					["GrantedEffectQualityTypes.datc64"] = GetAlternateGemQualityTypesKVP,
+					["UltimatumEncounters.datc64"] = GetUltimatumEncountersKVP,
+					["UltimatumItemisedRewards.datc64"] = GetUltimatumItemisedRewardsKVP,
+					["IncursionRooms.datc64"] = GetIncursionRoomsKVP,
+					["HeistJobs.datc64"] = GetHeistJobsKVP,
+					["HeistObjectiveValueDescriptions.datc64"] = GetHeistObjectivesKVP,
+					["ExpeditionFactions.datc64"] = GetExpeditionFactionsKVP,
+					["Characters.datc64"] = GetCharactersKVP,
+					["ItemClasses.datc64"] = GetItemClassesKVP,
 				}, false);
 			}
 
@@ -725,7 +727,7 @@ namespace PoEAssetUpdater
 			{
 				ExportLanguageDataFile(dataFiles, datDefinitions, jsonWriter, new Dictionary<string, GetKeyValuePairDelegate>()
 				{
-					["Words.dat64"] = GetWordsKVP,
+					["Words.datc64"] = GetWordsKVP,
 				}, true);
 			}
 
@@ -772,9 +774,9 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat64");
-				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat64");
-				var modFamilyDatContainer = GetDatFile(dataFiles, datDefinitions, "ModFamily.dat64");
+				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.datc64");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.datc64");
+				var modFamilyDatContainer = GetDatFile(dataFiles, datDefinitions, "ModFamily.datc64");
 
 				if (modsDatContainer == null || statsDatContainer == null)
 				{
@@ -872,12 +874,12 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.dat64")[Language.English][0];
-				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.dat64")[Language.English][0];
-				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.dat64")[Language.English][0];
-				var indexableSkillGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSkillGems.dat64")[Language.English][0];
-				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.dat64")[Language.English][0];
-				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.dat64");
+				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.datc64")[Language.English][0];
+				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.datc64")[Language.English][0];
+				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.datc64")[Language.English][0];
+				var indexableSkillGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSkillGems.datc64")[Language.English][0];
+				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.datc64")[Language.English][0];
+				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.datc64");
 
 				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions".ToLowerInvariant()));
 				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
@@ -1457,8 +1459,8 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
-				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.dat64");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.datc64");
+				var monsterVarietiesDatContainer = GetDatFile(dataFiles, datDefinitions, "MonsterVarieties.datc64");
 
 				if (baseItemTypesDatContainer == null)
 				{
@@ -1501,11 +1503,11 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
-				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat64");
-				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat64");
-				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat64");
-				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat64");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.datc64");
+				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.datc64");
+				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.datc64");
+				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.datc64");
+				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.datc64");
 
 				jsonWriter.WritePropertyName("annointments");
 				jsonWriter.WriteStartObject();
@@ -1526,8 +1528,8 @@ namespace PoEAssetUpdater
 					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillsKey);
-					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
+					var passiveSkillKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillKey);
+					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillKey];
 
 					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
 
@@ -1555,13 +1557,13 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.dat64");
-				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.dat64");
-				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.dat64");
-				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.dat64");
-				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.dat64");
-				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.dat64");
-				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.dat64");
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.datc64");
+				var craftingItemsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingItems.datc64");
+				var craftingResultsDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingResults.datc64");
+				var craftingRecipesDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightCraftingRecipes.datc64");
+				var passiveSkillsDatContainer = GetDatFile(dataFiles, datDefinitions, "PassiveSkills.datc64");
+				var modsDatContainer = GetDatFile(dataFiles, datDefinitions, "Mods.datc64");
+				var statsDatContainer = GetDatFile(dataFiles, datDefinitions, "Stats.datc64");
 
 				jsonWriter.WritePropertyName("annointments");
 				jsonWriter.WriteStartObject();
@@ -1579,10 +1581,10 @@ namespace PoEAssetUpdater
 					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var passiveSkillsKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillsKey);
-					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillsKey];
+					var passiveSkillKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.PassiveSkillKey);
+					var passiveSkill = passiveSkillsDatContainer.Records[passiveSkillKey];
 
-					var statOptionID = passiveSkill.GetValue<int>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
+					var statOptionID = passiveSkill.GetValue<ushort>(DatSchemas.PassiveSkills.PassiveSkillGraphId);
 
 					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
 					jsonWriter.WriteStartArray();
@@ -1607,11 +1609,11 @@ namespace PoEAssetUpdater
 					var craftingResultsKey = (int)craftingRecipe.GetValue<UInt128>(DatSchemas.BlightCraftingRecipes.BlightCraftingResultsKey);
 					var craftingResult = craftingResultsDatContainer.Records[craftingResultsKey];
 
-					var modsKey = craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.ModsKey);
+					var modKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.ModKey);
 					List<string> statNames = new List<string>();
 					for(int i = 1; i <= TotalNumberOfStats; i++)
 					{
-						var statsKey = modsDatContainer.Records[(int)modsKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+						var statsKey = modsDatContainer.Records[modKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
 						if(statsKey != UndefinedValueDat64)
 						{
@@ -1770,14 +1772,14 @@ namespace PoEAssetUpdater
 
 			void WriteRecords(List<AssetFile> assetFiles, JsonWriter jsonWriter)
 			{
-				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.dat64");
-				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.dat64");
-				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.dat64");
-				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.dat64");
-				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.dat64");
-				var activeSkillsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ActiveSkills.dat64");
+				var baseItemTypesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "BaseItemTypes.datc64");
+				var clientStringsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ClientStrings.datc64");
+				var monsterVarietiesDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "MonsterVarieties.datc64");
+				var uniqueMapsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "UniqueMaps.datc64");
+				var wordsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "Words.datc64");
+				var activeSkillsDatContainers = GetLanguageDataFiles(assetFiles, datDefinitions, "ActiveSkills.datc64");
 
-				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.dat64");
+				var itemVisualIdentityDatContainer = GetDatFile(assetFiles, datDefinitions, "ItemVisualIdentity.datc64");
 
 				var baseItemTypesDatContainer = baseItemTypesDatContainers[Language.English][0];
 				var monsterVarietiesDatContainer = monsterVarietiesDatContainers[Language.English][0];
@@ -2368,7 +2370,7 @@ namespace PoEAssetUpdater
 					if (languageFiles.Count > 0)
 					{
 						// Find the given datFile.
-						var datContainer = GetDatFile(languageFiles, datDefinitions, "Mods.dat64");
+						var datContainer = GetDatFile(languageFiles, datDefinitions, "Mods.datc64");
 						if (datContainer == null)
 						{
 							// An error was already logged.
