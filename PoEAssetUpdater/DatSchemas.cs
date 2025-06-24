@@ -159,6 +159,7 @@ namespace PoEAssetUpdater
 			public const string Name = "Name";
 			public const string IsEssenceOnlyModifier = "IsEssenceOnlyModifier";
 			public const string InfluenceTypes = "InfluenceTypes";
+			public const string ModGenerationType = "ModGenerationType";
 
 			public const string StatPrefix = "Stat";
 			public const string StatMinSuffix = "Min";

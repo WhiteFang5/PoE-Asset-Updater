@@ -28,7 +28,7 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Settlers";
+		private const string CurrentLeagueName = "Mercenaries";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
@@ -256,10 +256,10 @@ namespace PoEAssetUpdater
 			["enchant.stat_1422267548"] = ("mod_granted_passive_hash", false),
 		};
 
-		private static readonly Dictionary<UInt128, string> PresenceStatIdToClientStringIdMapping = new Dictionary<UInt128, string>()
+		private static readonly Dictionary<string, string> PresenceStatIdToClientStringIdMapping = new Dictionary<string, string>()
 		{
-			[15533] = "InfluenceStatConditionPresenceUniqueMonster",//local_influence_mod_requires_unique_monster_presence
-			[15534] = "InfluenceStatConditionPresenceCelestialBoss",//local_influence_mod_requires_celestial_boss_presence
+			["local_influence_mod_requires_unique_monster_presence"] = "InfluenceStatConditionPresenceUniqueMonster",
+			["local_influence_mod_requires_celestial_boss_presence"] = "InfluenceStatConditionPresenceCelestialBoss",
 		};
 
 		private static readonly Dictionary<string, string> PoEStaticDataLabelToImagesMapping = new Dictionary<string, string>()
@@ -920,7 +920,7 @@ namespace PoEAssetUpdater
 
 				Dictionary<UInt128, Dictionary<Language, string>> presenceMapping = PresenceStatIdToClientStringIdMapping
 					.ToDictionary(
-					kvp => kvp.Key,
+					kvp => (UInt128)statsDatContainer.Records.ToList().FindIndex(x => x.GetValue<string>(DatSchemas.Stats.Id) == kvp.Key),
 					kvp => clientStringsDatContainers.ToDictionary(
 						kvp2 => kvp2.Key,
 						kvp2 => kvp2.Value[0].Records.Single(x => x.GetValue<string>(DatSchemas.ClientStrings.Id) == kvp.Value).GetValue<string>(DatSchemas.ClientStrings.Text)
