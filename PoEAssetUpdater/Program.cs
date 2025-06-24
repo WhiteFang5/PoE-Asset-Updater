@@ -1274,7 +1274,7 @@ namespace PoEAssetUpdater
 								.ToList();
 						}
 
-						if(candidateStatDescs.Count == 0)
+						if (candidateStatDescs.Count == 0)
 						{
 							equalizedPlaceholders = true;
 							candidateStatDescs = statDescriptions
@@ -1438,11 +1438,11 @@ namespace PoEAssetUpdater
 				{
 					return;
 				}
-				foreach((var existingDesc, var tradeData) in tradeStatsData)
+				foreach ((var existingDesc, var tradeData) in tradeStatsData)
 				{
-					if(existingDesc == desc || Regex.IsMatch(desc, StatDescription.StatLine.GetStatDescriptionRegex(existingDesc)))
+					if (existingDesc == desc || Regex.IsMatch(desc, StatDescription.StatLine.GetStatDescriptionRegex(existingDesc)))
 					{
-						if(!tradeData.Contains(tradeId))
+						if (!tradeData.Contains(tradeId))
 						{
 							tradeData.Add(tradeId);
 						}
@@ -1574,7 +1574,7 @@ namespace PoEAssetUpdater
 				// Write the Unique & Amulet Annointments
 				jsonWriter.WritePropertyName("mod_granted_passive_hash");
 				jsonWriter.WriteStartObject();
-				foreach(var craftingRecipe in amuletAnnoints)
+				foreach (var craftingRecipe in amuletAnnoints)
 				{
 					var craftingItemKeys = craftingRecipe.GetValue<List<UInt128>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
 
@@ -1588,7 +1588,7 @@ namespace PoEAssetUpdater
 
 					jsonWriter.WritePropertyName(statOptionID.ToString(CultureInfo.InvariantCulture));
 					jsonWriter.WriteStartArray();
-					foreach(var craftingItemKey in craftingItemKeys)
+					foreach (var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
 						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
@@ -1602,7 +1602,7 @@ namespace PoEAssetUpdater
 				jsonWriter.WriteEndObject();
 
 				// Wite the Ring Annointments
-				foreach(var craftingRecipe in ringAnnoints)
+				foreach (var craftingRecipe in ringAnnoints)
 				{
 					var craftingItemKeys = craftingRecipe.GetValue<List<UInt128>>(DatSchemas.BlightCraftingRecipes.BlightCraftingItemsKeys);
 
@@ -1611,11 +1611,11 @@ namespace PoEAssetUpdater
 
 					var modKey = (int)craftingResult.GetValue<UInt128>(DatSchemas.BlightCraftingResults.ModKey);
 					List<string> statNames = new List<string>();
-					for(int i = 1; i <= TotalNumberOfStats; i++)
+					for (int i = 1; i <= TotalNumberOfStats; i++)
 					{
 						var statsKey = modsDatContainer.Records[modKey].GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
 
-						if(statsKey != UndefinedValueDat64)
+						if (statsKey != UndefinedValueDat64)
 						{
 							statNames.Add(statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id));
 						}
@@ -1623,7 +1623,7 @@ namespace PoEAssetUpdater
 
 					jsonWriter.WritePropertyName(string.Join(" ", statNames.Distinct()));
 					jsonWriter.WriteStartArray();
-					foreach(var craftingItemKey in craftingItemKeys)
+					foreach (var craftingItemKey in craftingItemKeys)
 					{
 						var craftingItem = craftingItemsDatContainer.Records[(int)craftingItemKey];
 						var baseItemTypeKey = (int)craftingItem.GetValue<UInt128>(DatSchemas.BlightCraftingItems.Oil);
@@ -1823,7 +1823,7 @@ namespace PoEAssetUpdater
 					var monsterVariety = monsterVarietiesDatContainer.Records[i];
 					string id = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Id).Split('/').Last();
 					string name = monsterVariety.GetValue<string>(DatSchemas.MonsterVarieties.Name);
-					if(baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Name) == name))
+					if (baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Name) == name))
 					{
 						continue;
 					}
@@ -1850,11 +1850,11 @@ namespace PoEAssetUpdater
 				}
 
 				// Write the Transfigured Gem Names
-				for(int i = 0; i < activeSkillsDatContainer.Count; i++)
+				for (int i = 0; i < activeSkillsDatContainer.Count; i++)
 				{
 					var activeSkill = activeSkillsDatContainer.Records[i];
 					int regularVersionKey = (int)activeSkill.GetValue<ulong>(DatSchemas.ActiveSkills.TransfigureBase);
-					if(regularVersionKey < 0 || regularVersionKey > activeSkillsDatContainer.Count || activeSkill.GetValue<string>(DatSchemas.ActiveSkills.DisplayedName).StartsWith("[DNT]"))
+					if (regularVersionKey < 0 || regularVersionKey > activeSkillsDatContainer.Count || activeSkill.GetValue<string>(DatSchemas.ActiveSkills.DisplayedName).StartsWith("[DNT]"))
 					{
 						continue;
 					}
@@ -1969,7 +1969,7 @@ namespace PoEAssetUpdater
 								string genStr = ((string)genObj).Replace(", Gen-", string.Empty);
 								if (!int.TryParse(genStr, out int gen))
 								{
-									if(genStr == "Ritual")
+									if (genStr == "Ritual")
 									{
 										gen = 10;
 									}
@@ -1977,7 +1977,7 @@ namespace PoEAssetUpdater
 									{
 										// Ignore any gens before Ritual (all maps should've been on the atlas in Ritual)
 										gen = -1;
-									} 
+									}
 								}
 								if (gen > highestGen)
 								{
