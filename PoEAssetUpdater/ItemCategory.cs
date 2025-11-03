@@ -67,6 +67,8 @@ namespace PoEAssetUpdater
 		public const string Tincture = "tincture";
 		public const string Corpse = "corpse";
 		public const string Idol = "idol";
+		public const string Graft = "graft";
+		public const string Wombgift = "wombgift";
 		public const string Currency = "currency";
 		public const string CurrencyPiece = "currency.piece";
 		public const string CurrencyResonator = "currency.resonator";

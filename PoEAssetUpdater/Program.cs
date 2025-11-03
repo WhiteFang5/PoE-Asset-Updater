@@ -28,23 +28,23 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Mercenaries";
+		private const string CurrentLeagueName = "Keepers";
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
 
 		private const int TotalNumberOfStats = 6;
 
 		private const ulong UndefinedValueDat = 18374403900871474942L;
-		private static readonly UInt128 UndefinedValueDat64 = new UInt128(UndefinedValueDat, UndefinedValueDat);
+		private static readonly UInt128 UndefinedValueDat64 = new(UndefinedValueDat, UndefinedValueDat);
 
 		private static readonly char[] NewLineSplitter = "\r\n".ToCharArray();
 		private static readonly char[] WhiteSpaceSplitter = "\t ".ToCharArray();
 
-		private static readonly Language[] AllLanguages = (Language[])Enum.GetValues(typeof(Language));
+		private static readonly Language[] AllLanguages = Enum.GetValues<Language>();
 
 		private const string CountryBaseURLFormat = "https://{0}.pathofexile.com/api/trade/data/";
 		private const string CountryStatsURLFormat = CountryBaseURLFormat + "stats";
 		private const string CountryStaticURLFormat = CountryBaseURLFormat + "static";
-		private static readonly Dictionary<Language, string> LanguageToPoETradeAPIUrlMapping = new Dictionary<Language, string>()
+		private static readonly Dictionary<Language, string> LanguageToPoETradeAPIUrlMapping = new()
 		{
 			[Language.English] = string.Format(CountryStatsURLFormat, "www"),
 			[Language.Portuguese] = string.Format(CountryStatsURLFormat, "br"),
@@ -74,7 +74,7 @@ namespace PoEAssetUpdater
 		private const string PoEWikiMapsPageId = "10735";//fandom wiki: 1010
 
 		private const string CountryCachedFileNameFormat = "{0}.stats.json";
-		private static readonly Dictionary<Language, string> LanguageToPoETradeAPICachedFileNameMapping = new Dictionary<Language, string>()
+		private static readonly Dictionary<Language, string> LanguageToPoETradeAPICachedFileNameMapping = new()
 		{
 			[Language.English] = string.Format(CountryCachedFileNameFormat, "www"),
 			[Language.Portuguese] = string.Format(CountryCachedFileNameFormat, "br"),
@@ -89,7 +89,7 @@ namespace PoEAssetUpdater
 			[Language.Japanese] = string.Format(CountryCachedFileNameFormat, "jp"),
 		};
 
-		private static readonly Regex StatDescriptionLangRegex = new Regex("^lang \"(.*)\"$");
+		private static readonly Regex StatDescriptionLangRegex = new("^lang \"(.*)\"$");
 
 		private static readonly Dictionary<string, string> LabelsWithSuffix = new Dictionary<string, string>()
 		{
@@ -164,6 +164,9 @@ namespace PoEAssetUpdater
 			["AbstractNecropolisPack"] = ItemCategory.NecropolisPack,
 			// Settlers (Phercia race event)
 			["AbstractAtlasRelic"] = ItemCategory.Idol,
+			// Grafts (Keepers of the Flame)
+			["AbstractChayulaGraft"] = ItemCategory.Graft,
+			["AbstractChayulaFruit"] = ItemCategory.Wombgift,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
@@ -2362,7 +2365,10 @@ namespace PoEAssetUpdater
 			{
 				foreach (var language in AllLanguages)
 				{
-					Dictionary<string, ModIconType> records = new Dictionary<string, ModIconType>();
+					Dictionary<string, ModIconType> records = new()
+					{
+						["foulborn"] = ModIconType.Foulborn,
+					};
 
 					// Determine the directory to search for the given datFile. English is the base/main language and isn't located in a sub-folder.
 					var langDir = (language == Language.English ? "Data" : $"Data\\{language}").ToLowerInvariant();
@@ -2507,6 +2513,7 @@ namespace PoEAssetUpdater
 			Veiled = 9,
 			Essence = 10,
 			Bestiary = 11,
+			Foulborn = 12,
 		}
 
 		#endregion
