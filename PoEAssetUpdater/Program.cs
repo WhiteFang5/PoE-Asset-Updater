@@ -1244,6 +1244,7 @@ namespace PoEAssetUpdater
 					bool expandOptions = false;
 					bool addTradeStatData = false;
 					bool equalizedPlaceholders = false;
+					bool singleStatOnly = tradeId.Contains('|');
 					if (TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
 					{
 						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
@@ -1343,7 +1344,7 @@ namespace PoEAssetUpdater
 									}
 									else
 									{
-										foreach (var statLine in statDescription.GetStatLines(language, text, false))
+										foreach (var statLine in statDescription.GetStatLines(language, text, singleStatOnly))
 										{
 											WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
 										}
