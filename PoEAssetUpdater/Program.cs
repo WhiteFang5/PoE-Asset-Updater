@@ -28,8 +28,8 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Keepers";
-		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name.
+		private const string CurrentLeagueName = "Mirage";
+		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name. -- Unused since ExportMaps is disabled
 
 		private const int TotalNumberOfStats = 6;
 
@@ -170,6 +170,7 @@ namespace PoEAssetUpdater
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
+			["AbstractMapKey"] = ItemCategory.Map,
 			["AbstractMiscMapItem"] = ItemCategory.MapFragment,
 			["AbstractMapFragment"] = ItemCategory.MapFragment,
 			["OfferingToTheGoddess"] = ItemCategory.MapFragment,
