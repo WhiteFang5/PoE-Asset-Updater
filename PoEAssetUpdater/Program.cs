@@ -1811,7 +1811,7 @@ namespace PoEAssetUpdater
 					}
 
 					// Explicitly exclude old maps from previous expansions.
-					if (ShouldExclude(id, category, inheritsFrom))
+					if (ShouldExcludeMap(id, category, inheritsFrom))
 					{
 						Logger.WriteLine($"[BITsV2] Excluded: '{id}' ('{name}')");
 						continue;
@@ -1996,13 +1996,13 @@ namespace PoEAssetUpdater
 					return false;
 				}
 
-				static bool ShouldExclude(string id, string category, string inheritsFrom)
+				static bool ShouldExcludeMap(string id, string category, string inheritsFrom)
 				{
 					if (category != ItemCategory.Map)
 					{
 						return false;
 					}
-					if (id.StartsWith("MapWorlds") || id.StartsWith("Itemised") || id.StartsWith("Crucible"))
+					if (id.StartsWith("MapKey") || id.StartsWith("Itemised") || id.StartsWith("Crucible"))
 					{
 						return false;
 					}
