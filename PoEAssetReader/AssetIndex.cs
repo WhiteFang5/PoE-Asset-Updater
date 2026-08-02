@@ -192,7 +192,7 @@ ubyte path_rep_bundle[FileSize() - bundle_start];
 					break;
 
 				case 0xf42a94e69cff42fe:
-					MurmurHash murmurHash = new MurmurHash(0x1337b33f);
+					MurmurHash64 murmurHash = new MurmurHash64(0x1337b33f);
 					for(int i = 0; i < pathCount; i++)
 					{
 						var pathSection = pathSections[i];

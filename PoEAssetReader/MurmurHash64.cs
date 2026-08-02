@@ -1,22 +1,27 @@
 using System;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PoEAssetReader
 {
 	/// <summary>
 	/// A MurmurHash64A implementation based on:
+	/// <para>
 	/// * https://github.com/SlideWave/Mumurhash264A/blob/master/Murmurhash264A/Murmurhash264A/Murmur2.cs
+	/// </para>
+	/// <para>
 	/// * https://github.com/zao/ooz/blob/6307b387e45c6b2283d622d82d2713a38e25e503/bun.cpp#L311-L337
+	/// </para>
+	/// <para>
 	/// * https://github.com/Project-Path-of-Exile-Wiki/PyPoE/pull/113/files#diff-82b1fe47bff7d588880afb974703f2073841fca9c79a558667af5528aaed5c44
+	/// </para>
 	/// </summary>
-	internal class MurmurHash
+	public sealed class MurmurHash64
 	{
 		private const ulong m = 0xc6a4a7935bd1e995;
 		private const int r = 47;
 
 		private readonly ulong _seed;
 
-		public MurmurHash(ulong seed)
+		public MurmurHash64(ulong seed)
 		{
 			_seed = seed;
 		}
