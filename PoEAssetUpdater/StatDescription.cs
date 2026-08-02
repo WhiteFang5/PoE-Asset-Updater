@@ -1,6 +1,9 @@
+using PoEAssetReader;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PoEAssetUpdater
@@ -13,6 +16,9 @@ namespace PoEAssetUpdater
 		public const string Placeholder = "#";
 		public const string PlaceholderWithPlus = "+#";
 
+		private static readonly MurmurHash32 ClientHasher = new(0xC58F1A7B);
+		private static readonly MurmurHash32 TradeHasher = new(0x02312233);
+
 		#endregion
 
 		#region Variables
@@ -24,6 +30,16 @@ namespace PoEAssetUpdater
 		#endregion
 
 		#region Properties
+
+		public uint TradeHash
+		{
+			get;
+		}
+
+		public uint TradeHashReverse
+		{
+			get;
+		}
 
 		public string FullIdentifier
 		{
@@ -76,6 +92,8 @@ namespace PoEAssetUpdater
 			_identifiers = ids;
 			LocalStat = localStat;
 			FullIdentifier = string.Join(" ", _identifiers);
+			TradeHash = CalcTradeHash(_identifiers);
+			TradeHashReverse = CalcTradeHash(_identifiers.Reverse().ToArray());
 		}
 
 		public StatDescription(StatDescription toCopy, string[] ids)
@@ -96,6 +114,17 @@ namespace PoEAssetUpdater
 		#endregion
 
 		#region Public Methods
+
+		public static uint CalcTradeHash(string[] ids)
+		{
+			List<byte> clientValues = new();
+			foreach(string id in ids)
+			{
+				uint clientHash = ClientHasher.ComputeHash(Encoding.ASCII.GetBytes(id));
+				clientValues.AddRange(BitConverter.GetBytes(clientHash));
+			}
+			return TradeHasher.ComputeHash(clientValues.ToArray());
+		}
 
 		public void ParseAndAddStatLine(Language language, string line, int lineIdx, string[] afflictionRewardTypes, string[] indexableSupportGems, string[] indexableSkillGems, bool isAdvancedStat)
 		{
@@ -189,7 +218,7 @@ namespace PoEAssetUpdater
 				{
 					placeholderIdx = statDescription.IndexOf(Placeholder, placeholderIdx + Placeholder.Length);
 				}
-				for (int i = 0; i < indexableSupportGems.Length; i++)
+				for(int i = 0; i < indexableSupportGems.Length; i++)
 				{
 					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSupportGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
 				}
@@ -296,7 +325,7 @@ namespace PoEAssetUpdater
 						statLines[i] = new StatLine(statLine.NumberPart, string.Format(presenceText, statLine.StatDescription));
 					}
 				}
-			} 
+			}
 		}
 
 		#endregion
@@ -356,11 +385,10 @@ namespace PoEAssetUpdater
 
 				return aStatDescription == bStatDescription;
 			}
-			}
-
-			#endregion
 		}
 
 		#endregion
 	}
+
+	#endregion
 }

@@ -28,7 +28,8 @@ namespace PoEAssetUpdater
 		private static string ApplicationName => Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 		private static string ApplicationVersion => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-		private const string CurrentLeagueName = "Mirage";
+		private const string StandardLeagueName = "Standard";
+		private const string CurrentLeagueName = "Allflame"; // Used for the resolve PoE Ninja URLs to the current league
 		private const string CurrentMapSeries = "Ritual"; // The current map series, this isn't always the same as the League name. -- Unused since ExportMaps is disabled
 
 		private const int TotalNumberOfStats = 6;
@@ -61,12 +62,28 @@ namespace PoEAssetUpdater
 
 		private static readonly string PoEStaticTradeDataUrl = string.Format(CountryStaticURLFormat, "www");
 
-		private const string PoENinjaAPIUrlFormat = "https://poe.ninja/api/data/{0}?league={2}&type={1}&language=en";
-		private static readonly string PoENinjaMapCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", CurrentLeagueName);
-		private static readonly string PoENinjaMapStandardAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "Map", "Standard");
-		private static readonly string PoENinjaUniqueMapCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "UniqueMap", CurrentLeagueName);
-		private static readonly string PoENinjaUniqueMapStandardAPIUrl = string.Format(PoENinjaAPIUrlFormat, "itemoverview", "UniqueMap", "Standard");
-		private static readonly string PoENinjaCurrencyCurrentLeagueAPIUrl = string.Format(PoENinjaAPIUrlFormat, "currencyoverview", "Currency", CurrentLeagueName);
+		// Example url: "https://poe.ninja/poe1/api/economy/stash/current/currency/overview?league=Allflame&type=Currency"
+		private const string PoENinjaAPIUrlFormat = "https://poe.ninja/poe1/api/economy/{0}/current/{1}overview?league={3}&type={2}&language=en";
+
+		private const string PoENinjaEconomyStash = "stash";
+		private const string PoENinjaEconomyExchange = "exchange";
+		private static readonly List<string> PoENinjaMapAPIUrls = new()
+		{
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "item/", "Map", CurrentLeagueName),
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "item/", "Map", StandardLeagueName),
+		};
+		private static readonly List<string> PoENinjaUniqueMapAPIUrls = new()
+		{
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "item/", "UniqueMap", CurrentLeagueName),
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "item/", "UniqueMap", StandardLeagueName),
+		};
+		private static readonly List<string> PoENinjaCurrencyAPIUrls = new()
+		{
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "currency/", "Currency", CurrentLeagueName),
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyExchange, string.Empty, "Currency", CurrentLeagueName),
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyStash, "currency/", "Currency", StandardLeagueName),
+			string.Format(PoENinjaAPIUrlFormat, PoENinjaEconomyExchange, string.Empty, "Currency", StandardLeagueName),
+		};
 
 		private const string PoEWikiUrl = "https://www.poewiki.net";//https://pathofexile.fandom.com
 		private static readonly string PoEWikiApiUrl = $"{PoEWikiUrl}/w";//https://pathofexile.fandom.com
@@ -74,6 +91,7 @@ namespace PoEAssetUpdater
 		private const string PoEWikiMapsPageId = "10735";//fandom wiki: 1010
 
 		private const string CountryCachedFileNameFormat = "{0}.stats.json";
+		private const double CacheExpirationHours = 1d;
 		private static readonly Dictionary<Language, string> LanguageToPoETradeAPICachedFileNameMapping = new()
 		{
 			[Language.English] = string.Format(CountryCachedFileNameFormat, "www"),
@@ -317,53 +335,62 @@ namespace PoEAssetUpdater
 
 			try
 			{
-				// Read the index
-				AssetIndex assetIndex = new AssetIndex(poeDirectory);
-				DatDefinitions datDefinitions;
-				if (datSchemaPath.EndsWith(".py"))
+				Export();
+
+				void Export()
 				{
-					datDefinitions = DatDefinitions.ParseLocalPyPoE(datSchemaPath);
+					// Read the index
+					AssetIndex assetIndex = new AssetIndex(poeDirectory);
+					DatDefinitions datDefinitions;
+					if(datSchemaPath.EndsWith(".py"))
+					{
+						datDefinitions = DatDefinitions.ParseLocalPyPoE(datSchemaPath);
+					}
+					else if(datSchemaPath.EndsWith(".json"))
+					{
+						datDefinitions = DatDefinitions.ParseJson(datSchemaPath);
+					}
+					else if(File.GetAttributes(datSchemaPath).HasFlag(FileAttributes.Directory))
+					{
+						datDefinitions = DatDefinitions.ParseLocalGQLDirectory(datSchemaPath);
+					}
+					else
+					{
+						Logger.WriteLine($"Dat Schema Path '{datSchemaPath}' doesn't contain not a valid DatDefinition.");
+						PrintUsage();
+						return;
+					}
+
+					//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
+
+					// Legacy: replaced by Base Item Types v2
+					//ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
+					// Legacy: replaced by Base Item Types v2
+					//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
+					ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
+					Logger.SaveLogs(logPath);
+
+					ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
+					ExportWords(assetIndex, datDefinitions, assetOutputDir);
+					Logger.SaveLogs(logPath);
+
+					//ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
+					ExportAnnointmentsV2(assetIndex, datDefinitions, assetOutputDir);
+					Logger.SaveLogs(logPath);
+
+					ExportStashTabLayouts(assetIndex, datDefinitions, assetOutputDir);
+					Logger.SaveLogs(logPath);
+
+					ExportModIcons(assetIndex, datDefinitions, assetOutputDir);
+					//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
+					ExportMods(assetIndex, datDefinitions, assetOutputDir);
+					Logger.SaveLogs(logPath);
+
+					//ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);// Retired usage of this method since 3.29 combined with poe overlay CF 0.9.0
+					ExportStatsV2(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
+					Logger.SaveLogs(logPath);
+					//stats-local.json -> Likely/maintained created manually.
 				}
-				else if (datSchemaPath.EndsWith(".json"))
-				{
-					datDefinitions = DatDefinitions.ParseJson(datSchemaPath);
-				}
-				else if (File.GetAttributes(datSchemaPath).HasFlag(FileAttributes.Directory))
-				{
-					datDefinitions = DatDefinitions.ParseLocalGQLDirectory(datSchemaPath);
-				}
-				else
-				{
-					Logger.WriteLine($"Dat Schema Path '{datSchemaPath}' doesn't contain not a valid DatDefinition.");
-					PrintUsage();
-					return;
-				}
-
-				//assetIndex.ExportBundleTree(Path.Combine(assetIndex.PoEDirectory, "_.index.tree.json"));
-
-				// Legacy: replaced by Base Item Types v2
-				//ExportBaseItemTypeCategories(assetIndex, datDefinitions, assetOutputDir);
-				// Legacy: replaced by Base Item Types v2
-				//ExportBaseItemTypes(assetIndex, datDefinitions, assetOutputDir);
-				ExportBaseItemTypesV2(assetIndex, datDefinitions, assetOutputDir);
-				Logger.SaveLogs(logPath);
-
-				ExportClientStrings(assetIndex, datDefinitions, assetOutputDir);
-				ExportWords(assetIndex, datDefinitions, assetOutputDir);
-				Logger.SaveLogs(logPath);
-
-				//ExportAnnointments(assetIndex, datDefinitions, assetOutputDir);
-				ExportAnnointmentsV2(assetIndex, datDefinitions, assetOutputDir);
-				Logger.SaveLogs(logPath);
-
-				ExportModIcons(assetIndex, datDefinitions, assetOutputDir);
-				//ExportMaps(assetIndex, datDefinitions, assetOutputDir);//Broken poewiki after nov 2021
-				ExportMods(assetIndex, datDefinitions, assetOutputDir);
-				Logger.SaveLogs(logPath);
-
-				ExportStats(assetIndex, datDefinitions, assetOutputDir, tradeApiCacheDir);
-				Logger.SaveLogs(logPath);
-				//stats-local.json -> Likely/maintained created manually.
 			}
 #if !DEBUG
 			catch(Exception ex)
@@ -401,9 +428,9 @@ namespace PoEAssetUpdater
 			Logger.WriteLine(string.Empty);
 		}
 
-		private static void PrintWarning(string message)
+		private static void PrintWarning(string message, bool printToConsole = true)
 		{
-			Logger.WriteLine($"!! WARNING: {message}");
+			Logger.WriteLine($"!! WARNING: {message}", printToConsole);
 		}
 
 		private static void WriteJsonFile(string exportFilePath, Action<JsonWriter> writeData)
@@ -866,7 +893,7 @@ namespace PoEAssetUpdater
 			if (response.StatusCode == HttpStatusCode.OK)
 			{
 				using Stream dataStream = response.GetResponseStream();
-				using StreamReader reader = new StreamReader(dataStream);
+				using StreamReader reader = new(dataStream);
 				return reader.ReadToEnd();
 			}
 			throw new Exception($"Failed to retrieve data from '{url}'. Unexpected response code {response.StatusCode} (Desc: {response.StatusDescription})");
@@ -1102,7 +1129,7 @@ namespace PoEAssetUpdater
 
 				Logger.WriteLine("Parsing PoE Trade API Stats...");
 
-				if (!poeTradeStats.ContainsKey(Language.English))
+				if (!poeTradeStats.TryGetValue(Language.English, out JObject englishPoeTradeStats))
 				{
 					PrintError($"Failed to parse PoE Trade API Stats.");
 					return;
@@ -1125,7 +1152,7 @@ namespace PoEAssetUpdater
 				var indistuingishableStats = new Dictionary<string, Dictionary<string, List<string>>>();
 
 				// Parse the PoE Trade Stats
-				foreach (var result in poeTradeStats[Language.English]["result"])
+				foreach (var result in englishPoeTradeStats["result"])
 				{
 					var label = GetLabel(result);
 
@@ -1369,7 +1396,7 @@ namespace PoEAssetUpdater
 									else
 									{
 										otherLangText = text;
-										PrintWarning($"Missing {language} trade ID '{tradeIdSearch}'");
+										PrintWarning($"Missing {language} trade ID '{tradeIdSearch}'", language == Language.English);
 									}
 
 									var statLine = new StatDescription.StatLine("#", otherLangText);
@@ -1448,6 +1475,646 @@ namespace PoEAssetUpdater
 					if (existingDesc == desc || Regex.IsMatch(desc, StatDescription.StatLine.GetStatDescriptionRegex(existingDesc)))
 					{
 						if (!tradeData.Contains(tradeId))
+						{
+							tradeData.Add(tradeId);
+						}
+						return;
+					}
+				}
+				tradeStatsData[desc] = new List<string>() { tradeId };
+			}
+		}
+
+		private static void ExportStatsV2(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir, string tradeApiCacheDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "stats.json"), WriteRecords, true);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				var statsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Stats.datc64")[Language.English][0];
+				var afflictionRewardTypeVisualsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "AfflictionRewardTypeVisuals.datc64")[Language.English][0];
+				var indexableSupportGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSupportGems.datc64")[Language.English][0];
+				var indexableSkillGemsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "IndexableSkillGems.datc64")[Language.English][0];
+				var modsDatContainer = GetLanguageDataFiles(dataFiles, datDefinitions, "Mods.datc64")[Language.English][0];
+				var clientStringsDatContainers = GetLanguageDataFiles(dataFiles, datDefinitions, "ClientStrings.datc64");
+
+				List<AssetFile> statDescriptionFiles = assetIndex.FindFiles(x => x.Name.StartsWith("Metadata/StatDescriptions".ToLowerInvariant()));
+				string[] statDescriptionsText = GetStatDescriptions("stat_descriptions.txt");
+				string[] mapStatDescriptionsText = GetStatDescriptions("map_stat_descriptions.txt");
+				string[] atlasStatDescriptionsText = GetStatDescriptions("atlas_stat_descriptions.txt");
+				string[] atlasRelicStatDescriptionsText = GetStatDescriptions("atlas_relic_stat_descriptions.txt");
+				string[] heistEquipmentStatDescriptionsText = GetStatDescriptions("heist_equipment_stat_descriptions.txt");
+				string[] sentinelStatDescriptionsText = GetStatDescriptions("sentinel_stat_descriptions.txt");
+				string[] sanctumRelicStatDescriptionsText = GetStatDescriptions("sanctum_relic_stat_descriptions.txt");
+				string[] tinctureStatDescriptionsText = GetStatDescriptions("tincture_stat_descriptions.txt");
+				string[] necropolisStatDescriptionsText = GetStatDescriptions("necropolis_stat_descriptions.txt");
+				string[] graftStatDescriptionsText = GetStatDescriptions("graft_stat_descriptions.txt");
+				string[] advancedModsStatDescriptionsText = GetStatDescriptions("advanced_mod_stat_descriptions.txt");
+
+				if(statsDatContainer == null || afflictionRewardTypeVisualsDatContainer == null || indexableSupportGemsDatContainer == null ||
+					indexableSkillGemsDatContainer == null || clientStringsDatContainers == null || clientStringsDatContainers.Count == 0 ||
+					statDescriptionFiles.Count == 0 || statDescriptionsText == null || atlasStatDescriptionsText == null || atlasRelicStatDescriptionsText == null ||
+					heistEquipmentStatDescriptionsText == null || sentinelStatDescriptionsText == null || sanctumRelicStatDescriptionsText == null ||
+					tinctureStatDescriptionsText == null || necropolisStatDescriptionsText == null || graftStatDescriptionsText == null ||
+					advancedModsStatDescriptionsText == null)
+				{
+					return;
+				}
+
+				Logger.WriteLine($"Parsing {statsDatContainer.FileDefinition.Name}...");
+
+				string[] localStats = statsDatContainer.Records.Where(x => x.GetValue<bool>(DatSchemas.Stats.IsLocal)).Select(x => x.GetValue<string>(DatSchemas.Stats.Id)).ToArray();
+
+				Logger.WriteLine($"Parsing {afflictionRewardTypeVisualsDatContainer.FileDefinition.Name}...");
+
+				string[] afflictionRewardTypes = afflictionRewardTypeVisualsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.AfflictionRewardTypeVisuals.Name)).ToArray();
+
+				Logger.WriteLine($"Parsing {indexableSupportGemsDatContainer.FileDefinition.Name}...");
+
+				string[] indexableSupportGems = indexableSupportGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSupportGems.Name)).ToArray();
+
+				Logger.WriteLine($"Parsing {indexableSkillGemsDatContainer.FileDefinition.Name}...");
+
+				string[] indexableSkillGems = indexableSkillGemsDatContainer.Records.Select(x => x.GetValue<string>(DatSchemas.IndexableSkillGems.Name1)).ToArray();
+
+				Logger.WriteLine($"Parsing {nameof(PresenceStatIdToClientStringIdMapping)}...");
+
+				Dictionary<UInt128, Dictionary<Language, string>> presenceMapping = PresenceStatIdToClientStringIdMapping
+					.ToDictionary(
+						kvp => (UInt128)statsDatContainer.Records.ToList().FindIndex(x => x.GetValue<string>(DatSchemas.Stats.Id) == kvp.Key),
+						kvp => clientStringsDatContainers.ToDictionary(
+							kvp2 => kvp2.Key,
+							kvp2 => kvp2.Value[0].Records.Single(x => x.GetValue<string>(DatSchemas.ClientStrings.Id) == kvp.Value).GetValue<string>(DatSchemas.ClientStrings.Text)
+						)
+					);
+				List<(string[] ids, bool isLocalStat, UInt128 presenceStatKey)> presenceStats = new();
+				List<(string[] ids, bool isLocalStat, UInt128 presenceStatKey)> presenceCandidates = modsDatContainer.Records
+					// Find all mods that are using any of the presence stats
+					.Where(recordData =>
+					{
+						for(int i = 1; i <= TotalNumberOfStats; i++)
+						{
+							var statsKey = recordData.GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+
+							if(statsKey != UndefinedValueDat64 && presenceMapping.ContainsKey(statsKey))
+							{
+								return true;
+							}
+						}
+						return false;
+					}).Select(recordData =>
+					{
+						List<string> ids = new List<string>();
+						(UInt128 statKey, string statId) presenceRecord = (0, null);
+						for(int i = 1; i <= TotalNumberOfStats; i++)
+						{
+							var statsKey = recordData.GetValue<UInt128>(string.Concat(DatSchemas.Mods.StatsKeyPrefix, i.ToString(CultureInfo.InvariantCulture)));
+
+							// Add all valid stats that aren't the 'presence' stat
+							if(statsKey != UndefinedValueDat64)
+							{
+								string statId = statsDatContainer.Records[(int)statsKey].GetValue<string>(DatSchemas.Stats.Id);
+								ids.Add(statId);
+								if(presenceMapping.ContainsKey(statsKey))
+								{
+									presenceRecord = (statsKey, statId);
+								}
+							}
+						}
+						return (ids.ToArray(), ids.Any(x => !x.Equals(presenceRecord.statId) && localStats.Contains(x)), presenceRecord.statKey);
+					}).ToList();
+				foreach(var candidate in presenceCandidates)
+				{
+					if(!presenceStats.Exists(x => x.ids.All(y => candidate.ids.Contains(y))))
+					{
+						presenceStats.Add(candidate);
+					}
+				}
+
+				Logger.WriteLine($"Parsing Stat Description Files...");
+
+				// Create a list of all stat descriptions
+				List<StatDescription> statDescriptions = new List<StatDescription>();
+				var textDescriptions = statDescriptionsText.Concat(mapStatDescriptionsText)
+					.Concat(atlasStatDescriptionsText)
+					.Concat(atlasRelicStatDescriptionsText)
+					.Concat(heistEquipmentStatDescriptionsText)
+					.Concat(sentinelStatDescriptionsText)
+					.Concat(sanctumRelicStatDescriptionsText)
+					.Concat(tinctureStatDescriptionsText)
+					.Concat(necropolisStatDescriptionsText)
+					.Concat(graftStatDescriptionsText);
+				int advancedModDesStartIdx = textDescriptions.Count();
+				string[] lines = textDescriptions.Concat(advancedModsStatDescriptionsText).ToArray();
+				List<uint> oldDoNotUseHashes = new();
+				for(int lineIdx = 0, lastLineIdx = lines.Length - 1; lineIdx <= lastLineIdx; lineIdx++)
+				{
+					string line = lines[lineIdx];
+					// Description found => read id(s)
+					if(line.StartsWith("description"))
+					{
+						line = lines[++lineIdx];
+						string[] ids = line.Split(WhiteSpaceSplitter, StringSplitOptions.RemoveEmptyEntries);
+						int statCount = int.Parse(ids[0]);
+
+						// Strip the number indicating how many stats are present from the IDs
+						ids = ids.Skip(1).ToArray();
+						string fullID = string.Join(" ", ids);
+						bool isLocalStat = ids.Any(x => localStats.Contains(x));
+						bool isAdvancedStat = lineIdx >= advancedModDesStartIdx;
+
+						if(Array.Exists(ids, x => x.Contains("old_do_not_use")))
+						{
+							// Ignore all "old do not use" stats.
+							oldDoNotUseHashes.Add(StatDescription.CalcTradeHash(ids));
+							continue;
+						}
+
+						// Find an existing stat in the list
+						StatDescription statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == fullID && x.LocalStat == isLocalStat);
+						if(statDescription == null)
+						{
+							statDescription = new StatDescription(ids, isLocalStat);
+							statDescriptions.Add(statDescription);
+						}
+						else
+						{
+							Logger.WriteLine($"Found existing stat description for '{fullID}'");
+						}
+
+						// Initial (first) language is always english
+						Language language = Language.English;
+						while(true)
+						{
+							// Read the next line as it contains how many mods are added.
+							line = lines[++lineIdx];
+							int textCount = int.Parse(line);
+							for(int i = 0; i < textCount; i++)
+							{
+								statDescription.ParseAndAddStatLine(language, lines[++lineIdx], i, afflictionRewardTypes, indexableSupportGems, indexableSkillGems, isAdvancedStat);
+							}
+							if(lineIdx < lastLineIdx)
+							{
+								// Take a peek at the next line to check if it's a new language, or something else
+								line = lines[lineIdx + 1];
+								Match match = StatDescriptionLangRegex.Match(line);
+								if(match.Success)
+								{
+									lineIdx++;
+									language = Enum.Parse<Language>(match.Groups[1].Value.Replace(" ", ""), true);
+								}
+								else
+								{
+									break;
+								}
+							}
+							else
+							{
+								break;
+							}
+						}
+					}
+				}
+
+				// Add all 'presence' stat descriptions
+				for(int i = 0; i < presenceStats.Count; i++)
+				{
+					var (ids, isLocalStat, presenceStatKey) = presenceStats[i];
+
+					// Find an existing stat in the list
+					StatDescription statDescription = statDescriptions
+						.Where(x => x.HasMatchingIdentifier(ids) && x.LocalStat == isLocalStat)
+						.OrderBy(x => x.GetMatchingIdentifierCount(ids))
+						.FirstOrDefault();
+					if(statDescription != null)
+					{
+						statDescription = new StatDescription(statDescription, ids);
+						statDescription.ApplyPresenceText(presenceMapping[presenceStatKey]);
+						statDescriptions.Add(statDescription);
+					}
+					else
+					{
+						Logger.WriteLine($"Couldn't find existing stat description for presence stat '{string.Join(" ", ids)}'");
+					}
+				}
+
+				statDescriptions.RemoveAll(x => !x.HasStatLines);
+
+				Logger.WriteLine("Checking PoE Trade API Stats...");
+
+				// Download the PoE Trade Stats json
+				Dictionary<Language, JObject> poeTradeStats = new();
+				Dictionary<Language, string> poeTradeSiteContent = new();
+				bool retrievedAllContent = true;
+				DateTime cacheExpirationTime = DateTime.UtcNow.AddHours(CacheExpirationHours);
+				foreach((var language, var tradeAPIUrl) in LanguageToPoETradeAPIUrlMapping)
+				{
+					try
+					{
+						bool usingCache = false;
+						// Check if we have a cached file
+						if(!string.IsNullOrEmpty(tradeApiCacheDir))
+						{
+							string cachedFileName = Path.Combine(tradeApiCacheDir, LanguageToPoETradeAPICachedFileNameMapping[language]);
+							if(File.Exists(cachedFileName) && cacheExpirationTime >= File.GetCreationTimeUtc(cachedFileName))
+							{
+								poeTradeStats[language] = JObject.Parse(File.ReadAllText(cachedFileName));
+								usingCache = true;
+								Logger.WriteLine($"\tUsing Cache for {language}");
+							}
+						}
+						if(!usingCache)
+						{
+							Logger.WriteLine($"\tDownloading {language} from {tradeAPIUrl}...");
+							string content = GetWebContent(tradeAPIUrl);
+							poeTradeSiteContent[language] = content;
+							poeTradeStats[language] = JObject.Parse(content);
+
+							// Sleep for a short time to avoid spamming the different trade APIs
+							Thread.Sleep(1000);
+						}
+					}
+					catch(Exception ex)
+					{
+						retrievedAllContent = false;
+						PrintError($"Failed to connect to '{tradeAPIUrl}': {ex.Message}");
+						// Check if we have a cached file
+						if(!string.IsNullOrEmpty(tradeApiCacheDir))
+						{
+							string cachedFileName = Path.Combine(tradeApiCacheDir, LanguageToPoETradeAPICachedFileNameMapping[language]);
+							if(File.Exists(cachedFileName))
+							{
+								PrintWarning($"Using cached trade-api data for {language}");
+								poeTradeStats[language] = JObject.Parse(File.ReadAllText(cachedFileName));
+							}
+						}
+					}
+				}
+
+				Logger.WriteLine("Parsing PoE Trade API Stats...");
+
+				if(!poeTradeStats.TryGetValue(Language.English, out JObject englishPoeTradeStats))
+				{
+					PrintError($"Failed to parse PoE Trade API Stats.");
+					return;
+				}
+
+				// Update the trade api cached files
+				if(retrievedAllContent && !string.IsNullOrEmpty(tradeApiCacheDir))
+				{
+					foreach((var language, string content) in poeTradeSiteContent)
+					{
+						if(LanguageToPoETradeAPICachedFileNameMapping.TryGetValue(language, out string fileName))
+						{
+							string cachedFileName = Path.Combine(tradeApiCacheDir, fileName);
+							File.WriteAllText(cachedFileName, content);
+						}
+					}
+				}
+				poeTradeSiteContent.Clear();
+
+				var indistuingishableStats = new Dictionary<string, Dictionary<string, List<string>>>();
+
+				// Parse the PoE Trade Stats
+				foreach(var result in englishPoeTradeStats["result"])
+				{
+					var label = GetLabel(result);
+
+					var tradeStatsData = new Dictionary<string, List<string>>();
+
+					jsonWriter.WritePropertyName(label);
+					jsonWriter.WriteStartObject();
+					foreach(var entry in result["entries"])
+					{
+						string tradeId = GetTradeID(entry, label);
+						string text = (string)entry["text"];
+						string modValue = null;
+						Dictionary<string, string> optionValues = null;
+
+						// Check the trade text for mods
+						(text, modValue) = GetTradeMod(text);
+
+						// Check for options
+						var options = entry["option"]?["options"];
+						if(options != null)
+						{
+							optionValues = options.ToDictionary(option => option["id"].ToString(), option => option["text"].ToString());
+						}
+
+						FindAndWriteStatDescription(label, tradeId, modValue, text, optionValues, tradeStatsData);
+					}
+					jsonWriter.WriteEndObject();
+
+					indistuingishableStats[label] = tradeStatsData;
+				}
+
+				// Write the ingistinguishale stats json
+				WriteJsonFile(Path.Combine(exportDir, "stats-indistinguishable.json"), jsonWriter =>
+				{
+					jsonWriter.WritePropertyName("indistinguishableStats");
+					jsonWriter.WriteStartObject();
+					foreach((var label, var tradeStatsData) in indistuingishableStats)
+					{
+						jsonWriter.WritePropertyName(label);
+						jsonWriter.WriteStartObject();
+						var usedTradeIds = new List<string>();
+						foreach((string statDesc, List<string> tradeIds) in tradeStatsData)
+						{
+							if(tradeIds.Count > 1)
+							{
+#if DEBUG
+								Logger.WriteLine($"[{label}] Indistinguishable Desc '{statDesc}' for Trade Stat IDs: {string.Join(", ", tradeIds.Select(x => $"'{x}'"))}");
+#endif
+								for(int i = 0; i < tradeIds.Count; i++)
+								{
+									string tradeId = tradeIds[i];
+									if(usedTradeIds.Contains(tradeId))
+									{
+										continue;
+									}
+									jsonWriter.WritePropertyName(tradeId);
+									jsonWriter.WriteStartArray();
+									for(int j = 0; j < tradeIds.Count; j++)
+									{
+										if(i == j)
+										{
+											continue;
+										}
+										jsonWriter.WriteValue(tradeIds[j]);
+									}
+									jsonWriter.WriteEndArray();
+
+									usedTradeIds.Add(tradeId);
+								}
+							}
+						}
+						jsonWriter.WriteEndObject();
+					}
+					jsonWriter.WriteEndObject();
+				});
+
+				// Nested Method(s)
+				static string GetLabel(JToken token) => ((string)token["label"]).ToLowerInvariant();
+
+				static string GetTradeID(JToken token, string label) => ((string)token["id"])[(label.Length + 1)..];
+
+				static (string modlessText, string modValue) GetTradeMod(string tradeAPIStatDescription)
+				{
+					if(tradeAPIStatDescription.EndsWith(")"))
+					{
+						int bracketsOpenIdx = tradeAPIStatDescription.LastIndexOf("(");
+						int bracketsCloseIdx = tradeAPIStatDescription.LastIndexOf(")");
+						string modValue = tradeAPIStatDescription.Substring(bracketsOpenIdx + 1, bracketsCloseIdx - bracketsOpenIdx - 1).ToLowerInvariant();
+						string modlessText = tradeAPIStatDescription.Substring(0, bracketsOpenIdx).Trim();
+						return (modlessText, modValue);
+					}
+					return (tradeAPIStatDescription, null);
+				}
+
+				string[] GetStatDescriptions(string fileName)
+				{
+					var statDescriptionsFile = statDescriptionFiles.FirstOrDefault(x => Path.GetFileName(x.Name) == fileName.ToLowerInvariant());
+
+					if(statDescriptionsFile == null)
+					{
+						Logger.WriteLine($"\t{fileName} not found.");
+						return null;
+					}
+
+					Logger.WriteLine($"Reading {statDescriptionsFile.Name}...");
+					string content = Encoding.Unicode.GetString(statDescriptionsFile.GetFileContents());
+					return content
+						.Split(NewLineSplitter, StringSplitOptions.RemoveEmptyEntries)
+						.Select(x => x.Trim())
+						.Where(x => x.Length > 0).ToArray();
+				}
+
+				void FindAndWriteStatDescription(string label, string tradeId, string mod, string text, Dictionary<string, string> options, Dictionary<string, List<string>> tradeStatsData)
+				{
+					StatDescription statDescription = null;
+					bool explicitLocal = mod == "local";
+					bool expandOptions = false;
+					bool addTradeStatData = false;
+					bool equalizedPlaceholders = false;
+					bool singleStatOnly = tradeId.Contains('|');
+
+					if(tradeId.StartsWith("stat_", StringComparison.InvariantCultureIgnoreCase))
+					{
+						uint tradeIdHash = uint.Parse(tradeId.Split('_', '|')[1]);
+						statDescription = statDescriptions.FirstOrDefault(x => x.TradeHash == tradeIdHash || x.TradeHashReverse == tradeIdHash);
+						if(statDescription != null)
+						{
+							mod ??= statDescription.LocalStat ? "local" : null;
+						}
+						else if(!oldDoNotUseHashes.Contains(tradeIdHash))
+						{
+							PrintWarning($"[TRADEHASH] Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
+						}
+					}
+
+					if(statDescription == null && TradeStatIdManualMapping.TryGetValue($"{label}.{tradeId}", out (string statId, bool clearOptions) mapping))
+					{
+						statDescription = statDescriptions.FirstOrDefault(x => x.FullIdentifier == mapping.statId);
+						if(statDescription != null)
+						{
+							addTradeStatData = true;
+							if(mapping.clearOptions)
+							{
+								options = null;
+							}
+						}
+					}
+
+					// Lookup the stat, unless it's a pseudo stat (those arn't supposed to be linked to real stats)
+					if(statDescription == null && label != "pseudo")
+					{
+						var candidateStatDescs = statDescriptions
+							.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
+							.OrderBy(x => x.GetMatchingStatLineIndex(text))
+							.ToList();
+
+						// When no regular stat descs were found, and options are present, try to split them out and find matching stat descs.
+						if(candidateStatDescs.Count == 0 && options != null)
+						{
+							expandOptions = true;
+
+							string[] searchTexts = options.Select(x => GetOptionStatDesc(text, x.Value)).ToArray();
+
+							candidateStatDescs = statDescriptions
+								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.All(y => x.HasMatchingStatLine(y)))
+								.OrderBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
+								.ToList();
+						}
+
+						if(candidateStatDescs.Count == 0)
+						{
+							equalizedPlaceholders = true;
+							candidateStatDescs = statDescriptions
+								.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text, equalizedPlaceholders))
+								.OrderBy(x => x.GetMatchingStatLineIndex(text, equalizedPlaceholders))
+								.ToList();
+						}
+
+						if(candidateStatDescs.Count == 0)
+						{
+							PrintWarning($"Missing {nameof(StatDescription)} for Label '{label}', TradeID '{tradeId}', Desc: '{text.Replace("\n", "\\n")}'");
+						}
+						else
+						{
+							// Only add trade data for candidates that have equal "local stat" values because instinguishable stats always occur between different "local stat" values, but are properly distinguished by the app.
+							addTradeStatData = candidateStatDescs.All(x => x.LocalStat == candidateStatDescs[0].LocalStat);
+
+							statDescription = candidateStatDescs.First();
+							mod ??= statDescription.LocalStat ? "local" : null;
+						}
+					}
+
+					jsonWriter.WritePropertyName(tradeId);
+					jsonWriter.WriteStartObject();
+					{
+						if(statDescription != null)
+						{
+							jsonWriter.WritePropertyName("id");
+							jsonWriter.WriteValue(statDescription.FullIdentifier);
+							jsonWriter.WritePropertyName("negated");
+							jsonWriter.WriteValue(statDescription.Negated);
+						}
+						if(mod != null)
+						{
+							jsonWriter.WritePropertyName("mod");
+							jsonWriter.WriteValue(mod);
+						}
+						if(options != null)
+						{
+							jsonWriter.WritePropertyName("option");
+							jsonWriter.WriteValue(true);
+						}
+						jsonWriter.WritePropertyName("text");
+						jsonWriter.WriteStartObject();
+						{
+							for(int i = 0; i < AllLanguages.Length; i++)
+							{
+								Language language = AllLanguages[i];
+
+								jsonWriter.WritePropertyName((i + 1).ToString(CultureInfo.InvariantCulture));
+								jsonWriter.WriteStartArray();
+								if(statDescription != null)
+								{
+									if(expandOptions)
+									{
+										foreach((_, var optionValue) in options)
+										{
+											foreach(var statLine in statDescription.GetStatLines(language, GetOptionStatDesc(text, optionValue), true))
+											{
+												WriteStatLine(statLine, null, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+											}
+										}
+									}
+									else
+									{
+										foreach(var statLine in statDescription.GetStatLines(language, text, singleStatOnly))
+										{
+											WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+										}
+									}
+								}
+								else
+								{
+									var tradeIdSearch = $"{label}.{tradeId}";
+
+									JToken otherLangStat = null;
+									if(poeTradeStats.TryGetValue(language, out var otherLangTradeStats))
+									{
+										otherLangStat = otherLangTradeStats["result"].SelectMany(x => x["entries"]).FirstOrDefault(x => ((string)x["id"]).ToLowerInvariant() == tradeIdSearch);
+									}
+									string otherLangText;
+									if(otherLangStat != null)
+									{
+										otherLangText = (string)otherLangStat["text"];
+										(otherLangText, _) = GetTradeMod(otherLangText);// i.e. strips the trade mod.
+									}
+									else
+									{
+										otherLangText = text;
+										PrintWarning($"Missing {language} trade ID '{tradeIdSearch}'", language == Language.English);
+									}
+
+									var statLine = new StatDescription.StatLine("#", otherLangText);
+									WriteStatLine(statLine, options, label, addTradeStatData ? tradeStatsData : null, tradeId, language, jsonWriter);
+								}
+								jsonWriter.WriteEndArray();
+							}
+						}
+						jsonWriter.WriteEndObject();
+					}
+					jsonWriter.WriteEndObject();
+				}
+			}
+
+			void WriteStatLine(StatDescription.StatLine statLine, Dictionary<string, string> options, string label, Dictionary<string, List<string>> tradeStatsData, string tradeId, Language language, JsonWriter jsonWriter)
+			{
+				string desc = statLine.StatDescription;
+				if(!LabelsWithSuffix.TryGetValue(label, out string descSuffix))
+				{
+					descSuffix = null;
+				}
+
+				if(options == null)
+				{
+					WriteStatLine(statLine.NumberPart, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(desc, descSuffix)));
+					if(language == Language.English)
+					{
+						AddTradeStatData(tradeStatsData, desc, tradeId);
+					}
+				}
+				else
+				{
+					foreach((var id, var optionValue) in options)
+					{
+						string optionDesc = GetOptionStatDesc(desc, optionValue);
+						WriteStatLine(id, StatDescription.StatLine.GetStatDescriptionRegex(AppendSuffix(optionDesc, descSuffix)));
+						if(language == Language.English)
+						{
+							AddTradeStatData(tradeStatsData, optionDesc, tradeId);
+						}
+					}
+				}
+
+				static string AppendSuffix(string text, string suffix)
+				{
+					if(string.IsNullOrEmpty(suffix))
+					{
+						return text;
+					}
+					return string.Join("\n", text.Split('\n').Select(x => string.Concat(x, suffix)).ToArray());
+				}
+
+				void WriteStatLine(string predicate, string regex)
+				{
+					jsonWriter.WriteStartObject();
+					jsonWriter.WritePropertyName(predicate);
+					jsonWriter.WriteValue(regex);
+					jsonWriter.WriteEndObject();
+				}
+			}
+
+			static string GetOptionStatDesc(string desc, string optionValue)
+			{
+				// Split the options into lines, replaced the placeholder with each line, and join them back together to form a single line.
+				return string.Join("\n", optionValue.Split('\n').Select(option => desc.Replace(StatDescription.Placeholder, option)));
+			}
+
+			static void AddTradeStatData(Dictionary<string, List<string>> tradeStatsData, string desc, string tradeId)
+			{
+				if(tradeStatsData == null)
+				{
+					return;
+				}
+				foreach((var existingDesc, var tradeData) in tradeStatsData)
+				{
+					if(existingDesc == desc || Regex.IsMatch(desc, StatDescription.StatLine.GetStatDescriptionRegex(existingDesc)))
+					{
+						if(!tradeData.Contains(tradeId))
 						{
 							tradeData.Add(tradeId);
 						}
@@ -1644,6 +2311,182 @@ namespace PoEAssetUpdater
 			}
 		}
 
+		private static void ExportStashTabLayouts(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
+		{
+			ExportDataFile(assetIndex, Path.Combine(exportDir, "stashtab-layouts.json"), WriteRecords, false);
+
+			void WriteRecords(List<AssetFile> dataFiles, JsonWriter jsonWriter)
+			{
+				var baseItemTypesDatContainer = GetDatFile(dataFiles, datDefinitions, "BaseItemTypes.datc64");
+				var currencyStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "CurrencyStashTabLayout.datc64");
+				var essenceStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "EssenceStashTabLayout.datc64");
+				var fragmentStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "FragmentStashTabLayout.datc64");
+				var delveStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "DelveStashTabLayout.datc64");
+				var blightStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "BlightStashTabLayout.datc64");
+				var metamorphosisStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "MetamorphosisStashTabLayout.datc64");
+				var deliriumStashTabLayoutDatContainer = GetDatFile(dataFiles, datDefinitions, "DeliriumStashTabLayout.datc64");
+
+				jsonWriter.WritePropertyName("layouts");
+				jsonWriter.WriteStartObject();
+
+				WriteStashTabLayout(
+					"currency-general",
+					currencyStashTabLayoutDatContainer.Records.Where(r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.SlotGroup) == 0),
+					r => r.GetValue<UInt128>(DatSchemas.CurrencyStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.Height),
+					r => r.GetValue<bool>(DatSchemas.CurrencyStashTabLayout.ShowIfEmpty)
+				);
+
+				WriteStashTabLayout(
+					"currency-exotic",
+					currencyStashTabLayoutDatContainer.Records.Where(r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.SlotGroup) == 1),
+					r => r.GetValue<UInt128>(DatSchemas.CurrencyStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.CurrencyStashTabLayout.Height),
+					r => r.GetValue<bool>(DatSchemas.CurrencyStashTabLayout.ShowIfEmpty)
+				);
+
+				WriteStashTabLayout(
+					"essence",
+					essenceStashTabLayoutDatContainer.Records,
+					r => r.GetValue<UInt128>(DatSchemas.EssenceStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.EssenceStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.EssenceStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.EssenceStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.EssenceStashTabLayout.Height),
+					r => true
+				);
+
+				WriteStashTabLayout(
+					"fragment-general",
+					fragmentStashTabLayoutDatContainer.Records.Where(r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Tab) == 0),
+					r => r.GetValue<List<UInt128>>(DatSchemas.FragmentStashTabLayout.StoredItems).First(),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Height),
+					r => !r.GetValue<bool>(DatSchemas.FragmentStashTabLayout.HideIfEmpty)
+				);
+
+				WriteStashTabLayout(
+					"fragment-breach",
+					fragmentStashTabLayoutDatContainer.Records.Where(r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Tab) == 1),
+					r => r.GetValue<List<UInt128>>(DatSchemas.FragmentStashTabLayout.StoredItems).First(),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Height),
+					r => !r.GetValue<bool>("_1")
+				);
+
+				WriteStashTabLayout(
+					"fragment-scarab",
+					fragmentStashTabLayoutDatContainer.Records.Where(r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Tab) == 2),
+					r => r.GetValue<List<UInt128>>(DatSchemas.FragmentStashTabLayout.StoredItems).First(),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.FragmentStashTabLayout.Height),
+					r => !r.GetValue<bool>("_1") && !r.GetValue<bool>("_4") // Special bools used to indicate legacy scarabs
+				);
+
+				WriteStashTabLayout(
+					"delve",
+					delveStashTabLayoutDatContainer.Records,
+					r => r.GetValue<UInt128>(DatSchemas.DelveStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.DelveStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.DelveStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.DelveStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.DelveStashTabLayout.Height),
+					r => !r.GetValue<bool>(DatSchemas.DelveStashTabLayout.HideIfEmpty)
+				);
+
+				WriteStashTabLayout(
+					"blight",
+					blightStashTabLayoutDatContainer.Records,
+					r => r.GetValue<UInt128>(DatSchemas.BlightStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.BlightStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.BlightStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.BlightStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.BlightStashTabLayout.Height),
+					r => !r.GetValue<bool>("_4") // Special bools used to indicate legacy oils
+				);
+
+				WriteStashTabLayout(
+					"metamorph",
+					metamorphosisStashTabLayoutDatContainer.Records,
+					r => r.GetValue<UInt128>(DatSchemas.MetamophosisStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.MetamophosisStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.MetamophosisStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.MetamophosisStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.MetamophosisStashTabLayout.Height),
+					r => true
+				);
+
+				WriteStashTabLayout(
+					"delirium",
+					deliriumStashTabLayoutDatContainer.Records,
+					r => r.GetValue<UInt128>(DatSchemas.DeliriumStashTabLayout.StoredItem),
+					r => r.GetValue<int>(DatSchemas.DeliriumStashTabLayout.XOffset),
+					r => r.GetValue<int>(DatSchemas.DeliriumStashTabLayout.YOffset),
+					r => r.GetValue<int>(DatSchemas.DeliriumStashTabLayout.Width),
+					r => r.GetValue<int>(DatSchemas.DeliriumStashTabLayout.Height),
+					r => !r.GetValue<bool>("_") // Special bools used to indicate legacy delrium orbs
+				);
+
+				jsonWriter.WriteEndObject();
+
+				// Nested
+				void WriteStashTabLayout(string stashTabType, IEnumerable<DatRecord> records, Func<DatRecord, UInt128> getStoredItemId, Func<DatRecord, int> getXOffset, Func<DatRecord, int> getYOffset, Func<DatRecord, int> getWidth, Func<DatRecord, int> getHeight, Func<DatRecord, bool> getShowIfEmpty)
+				{
+					jsonWriter.WritePropertyName(stashTabType);
+					jsonWriter.WriteStartObject();
+
+					foreach (var record in records)
+					{
+						var storedItemId = getStoredItemId(record);
+						var xOffset = getXOffset(record);
+						var yOffset = getYOffset(record);
+
+						if (storedItemId == UndefinedValueDat64 || xOffset < 0 || yOffset < 0)
+						{
+							continue;
+						}
+
+						string id = baseItemTypesDatContainer.Records[(int)storedItemId].GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
+
+						jsonWriter.WritePropertyName(id);
+						jsonWriter.WriteStartObject();
+
+						jsonWriter.WritePropertyName("xOffset");
+						jsonWriter.WriteValue(xOffset);
+
+						jsonWriter.WritePropertyName("yOffset");
+						jsonWriter.WriteValue(yOffset);
+
+						jsonWriter.WritePropertyName("width");
+						jsonWriter.WriteValue(getWidth(record));
+
+						jsonWriter.WritePropertyName("height");
+						jsonWriter.WriteValue(getHeight(record));
+
+
+						jsonWriter.WritePropertyName("showIfEmpty");
+						jsonWriter.WriteValue(getShowIfEmpty(record));
+
+						jsonWriter.WriteEndObject();
+					}
+
+					jsonWriter.WriteEndObject();
+				}
+			}
+		}
+
 		private static string GetItemCategory(DatRecord baseItemType, int rowIndex)
 		{
 			string id = baseItemType.GetValue<string>(DatSchemas.BaseItemTypes.Id).Split('/').Last();
@@ -1754,11 +2597,10 @@ namespace PoEAssetUpdater
 		private static void ExportBaseItemTypesV2(AssetIndex assetIndex, DatDefinitions datDefinitions, string exportDir)
 		{
 			JObject staticTradeData = TryParseData(PoEStaticTradeDataUrl);
-			JObject poeNinjaMapDataCurrentLeague = TryParseData(PoENinjaMapCurrentLeagueAPIUrl);
-			JObject poeNinjaMapDataStandard = TryParseData(PoENinjaMapStandardAPIUrl);
-			JObject poeNinjaUniqueMapDataCurrentLeague = TryParseData(PoENinjaUniqueMapCurrentLeagueAPIUrl);
-			JObject poeNinjaUniqueMapDataStandard = TryParseData(PoENinjaUniqueMapStandardAPIUrl);
-			JObject poeNinjaCurrencyDataCurrentLeague = TryParseData(PoENinjaCurrencyCurrentLeagueAPIUrl);
+
+			List<JObject> poeNinjaMapDataList = PoENinjaMapAPIUrls.Select(TryParseData).Where(x => x != null).ToList();
+			List<JObject> poeNinjaUniqueMapDataList = PoENinjaUniqueMapAPIUrls.Select(TryParseData).Where(x => x != null).ToList();
+			List<JObject> poeNinjaCurrencyDataList = PoENinjaCurrencyAPIUrls.Select(TryParseData).Where(x => x != null).ToList();
 
 			ExportDataFile(assetIndex, Path.Combine(exportDir, "base-item-types-v2.json"), WriteRecords, true);
 
@@ -1901,33 +2743,54 @@ namespace PoEAssetUpdater
 					}
 
 					// Check if poe-ninja contains the data
-					if (TryGetPoENinjaMapImage(poeNinjaMapDataCurrentLeague, name, true, out string image))
+					foreach(JObject data in poeNinjaMapDataList)
 					{
-						return image;
-					}
-					if (TryGetPoENinjaMapImage(poeNinjaMapDataStandard, name, true, out image))
-					{
-						return image;
-					}
-					if (TryGetPoENinjaMapImage(poeNinjaUniqueMapDataCurrentLeague, name, false, out image))
-					{
-						return image;
-					}
-					if (TryGetPoENinjaMapImage(poeNinjaUniqueMapDataStandard, name, false, out image))
-					{
-						return image;
-					}
-					if (poeNinjaCurrencyDataCurrentLeague != null)
-					{
-						foreach (var line in poeNinjaCurrencyDataCurrentLeague["currencyDetails"])
+						if(TryGetPoENinjaMapImage(data, name, true, out string image))
 						{
-							string lineName = (string)line["name"];
-							if (lineName == name)
+							return image;
+						}
+					}
+					foreach(JObject data in poeNinjaUniqueMapDataList)
+					{
+						if(TryGetPoENinjaMapImage(data, name, true, out string image))
+						{
+							return image;
+						}
+					}
+					foreach(JObject data in poeNinjaCurrencyDataList)
+					{
+						// Stash economy
+						var currencyDetails = data["currencyDetails"];
+						if(currencyDetails != null)
+						{
+							foreach(var line in currencyDetails)
 							{
-								var imageObj = line["icon"];
-								if (imageObj != null)
+								string lineName = (string)line["name"];
+								if(lineName == name)
 								{
-									return GetStrippedImageURL(imageObj);
+									var imageObj = line["icon"];
+									if(imageObj != null)
+									{
+										return GetStrippedImageURL(imageObj);
+									}
+								}
+							}
+						}
+
+						// Exchange economy
+						var items = data["items"];
+						if(items != null)
+						{
+							foreach(var item in items)
+							{
+								string itemName = (string)item["name"];
+								if(itemName == name)
+								{
+									var imageObj = item["image"];
+									if(imageObj != null)
+									{
+										return GetStrippedImageURL(imageObj);
+									}
 								}
 							}
 						}

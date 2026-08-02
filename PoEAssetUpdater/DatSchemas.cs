@@ -47,6 +47,16 @@ namespace PoEAssetUpdater
 			public const string ModKey = "Mod";
 		}
 
+		public static class BlightStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
+		}
+
 		public static class Characters
 		{
 			public const string Name = "Name";
@@ -56,6 +66,39 @@ namespace PoEAssetUpdater
 		{
 			public const string Id = "Id";
 			public const string Text = "Text";
+		}
+
+		public static class CurrencyStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
+			public const string SlotGroup = "SlotGroup";
+			public const string ShowIfEmpty = "ShowIfEmpty";
+		}
+
+		public static class DeliriumStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
+		}
+
+		public static class DelveStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
+			public const string HideIfEmpty = "HideIfEmpty";
 		}
 
 		public static class Essences
@@ -83,10 +126,32 @@ namespace PoEAssetUpdater
 			public const string ShieldModsKey = "Shield_ModsKey";
 		}
 
+		public static class EssenceStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
+		}
+
 		public static class ExpeditionFactions
 		{
 			public const string Id = "Id";
 			public const string Name = "Name";
+		}
+
+		public static class FragmentStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItems = "StoredItems";
+			public const string Tab = "Tab";
+			public const string HideIfEmpty = "HideIfEmpty";
 		}
 
 		public static class GrantedEffectQualityTypes
@@ -139,6 +204,16 @@ namespace PoEAssetUpdater
 		{
 			public const string UnknownAfterBodyPartName = "_2";
 			public const string BodypartName = "BodypartName";
+		}
+
+		public static class MetamophosisStashTabLayout
+		{
+			public const string Id = "Id";
+			public const string XOffset = "XOffset";
+			public const string YOffset = "YOffset";
+			public const string Width = "Width";
+			public const string Height = "Height";
+			public const string StoredItem = "StoredItem";
 		}
 
 		public static class PassiveSkills

@@ -20,10 +20,13 @@ namespace PoEAssetUpdater
 			Console.Write(message);
 		}
 
-		public static void WriteLine(string message)
+		public static void WriteLine(string message, bool printToConsole = true)
 		{
 			_logs.AppendLine(message);
-			Console.WriteLine(message);
+			if(printToConsole)
+			{
+				Console.WriteLine(message);
+			}
 		}
 
 		public static void SaveLogs(string logFilePath)
