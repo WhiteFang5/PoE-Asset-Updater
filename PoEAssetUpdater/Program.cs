@@ -180,11 +180,14 @@ namespace PoEAssetUpdater
 			["AbstractItemisedCorpse"] = ItemCategory.Corpse,/// Was <see cref="ItemCategory.AzmeriCorpse"/> during Affliction (Azmeri) league
 			// Necropolis
 			["AbstractNecropolisPack"] = ItemCategory.NecropolisPack,
-			// Settlers (Phercia race event)
+			// Settlers (Phrecia race event)
 			["AbstractAtlasRelic"] = ItemCategory.Idol,
 			// Grafts (Keepers of the Flame)
 			["AbstractChayulaGraft"] = ItemCategory.Graft,
 			["AbstractChayulaFruit"] = ItemCategory.Wombgift,
+			// Allflame
+			["CocoonedItem"] = ItemCategory.Enshrouded,
+			["DeepwaterChart"] = ItemCategory.Chart,
 			// Maps
 			["AbstractMap"] = ItemCategory.Map,
 			["AbstractVaultKey"] = ItemCategory.Map,
@@ -237,10 +240,10 @@ namespace PoEAssetUpdater
 
 		private static readonly Dictionary<UInt128, string> TagsToItemCategoryMapping = new Dictionary<UInt128, string>()
 		{
-			[644] = ItemCategory.HeistCloak,//heist_equipment_utility
-			[645] = ItemCategory.HeistBrooch,//heist_equipment_reward
-			[646] = ItemCategory.HeistGear,//heist_equipment_weapon
-			[657] = ItemCategory.HeistTool,//heist_equipment_tool
+			[643] = ItemCategory.HeistCloak,//heist_equipment_utility
+			[644] = ItemCategory.HeistBrooch,//heist_equipment_reward
+			[645] = ItemCategory.HeistGear,//heist_equipment_weapon
+			[656] = ItemCategory.HeistTool,//heist_equipment_tool
 			[691] = ItemCategory.MapInvitation,//maven_map
 			[1057] = ItemCategory.Map,//crucible_map
 		};
