@@ -1719,7 +1719,7 @@ namespace PoEAssetUpdater
 						if(!string.IsNullOrEmpty(tradeApiCacheDir))
 						{
 							string cachedFileName = Path.Combine(tradeApiCacheDir, LanguageToPoETradeAPICachedFileNameMapping[language]);
-							if(File.Exists(cachedFileName) && cacheExpirationTime >= File.GetCreationTimeUtc(cachedFileName))
+							if(File.Exists(cachedFileName) && File.GetCreationTimeUtc(cachedFileName) >= cacheExpirationTime)
 							{
 								poeTradeStats[language] = JObject.Parse(File.ReadAllText(cachedFileName));
 								usingCache = true;

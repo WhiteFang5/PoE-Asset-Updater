@@ -272,6 +272,10 @@ namespace PoEAssetUpdater
 					return new StatLine[0];
 				}
 				int statLineIdx = englishStatLines.FindIndex(x => x.IsMatchingTradeAPIStatDescription(englishStatDescription));
+				if(statLineIdx == -1)
+				{
+					return new StatLine[0];
+				}
 				var statLine = statLines[statLineIdx];
 				if(ContainsAdvancedStatDescriptions)
 				{
