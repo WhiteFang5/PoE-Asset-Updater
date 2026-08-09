@@ -1933,7 +1933,8 @@ namespace PoEAssetUpdater
 					{
 						var candidateStatDescs = statDescriptions
 							.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text))
-							.OrderBy(x => x.GetMatchingStatLineIndex(text))
+							.OrderByDescending(x => x.ContainsIndexableSupportGem || x.ContainsIndexableSkillGem)
+							.ThenBy(x => x.GetMatchingStatLineIndex(text))
 							.ToList();
 
 						// When no regular stat descs were found, and options are present, try to split them out and find matching stat descs.
@@ -1945,7 +1946,8 @@ namespace PoEAssetUpdater
 
 							candidateStatDescs = statDescriptions
 								.Where(x => (!explicitLocal || x.LocalStat) && searchTexts.All(y => x.HasMatchingStatLine(y)))
-								.OrderBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
+								.OrderByDescending(x => x.ContainsIndexableSupportGem || x.ContainsIndexableSkillGem)
+								.ThenBy(x => x.GetMatchingStatLineIndex(searchTexts.First(y => x.HasMatchingStatLine(y))))
 								.ToList();
 						}
 
@@ -1954,7 +1956,8 @@ namespace PoEAssetUpdater
 							equalizedPlaceholders = true;
 							candidateStatDescs = statDescriptions
 								.Where(x => (!explicitLocal || x.LocalStat) && x.HasMatchingStatLine(text, equalizedPlaceholders))
-								.OrderBy(x => x.GetMatchingStatLineIndex(text, equalizedPlaceholders))
+								.OrderByDescending(x => x.ContainsIndexableSupportGem || x.ContainsIndexableSkillGem)
+								.ThenBy(x => x.GetMatchingStatLineIndex(text, equalizedPlaceholders))
 								.ToList();
 						}
 
@@ -1964,7 +1967,7 @@ namespace PoEAssetUpdater
 						}
 						else
 						{
-							// Only add trade data for candidates that have equal "local stat" values because instinguishable stats always occur between different "local stat" values, but are properly distinguished by the app.
+							// Only add trade data for candidates that have equal "local stat" values because indistinguishable stats always occur between different "local stat" values, but are properly distinguished by the app.
 							addTradeStatData = candidateStatDescs.All(x => x.LocalStat == candidateStatDescs[0].LocalStat);
 
 							statDescription = candidateStatDescs.First();
@@ -2676,6 +2679,10 @@ namespace PoEAssetUpdater
 					if (baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Name) == name))
 					{
 						continue;
+					}
+					if(baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Id) == id))
+					{
+						id = $"{id}_Beast";
 					}
 
 					var names = monsterVarietiesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.MonsterVarieties.Name).Trim()));

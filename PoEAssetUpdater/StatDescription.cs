@@ -218,9 +218,11 @@ namespace PoEAssetUpdater
 				{
 					placeholderIdx = statDescription.IndexOf(Placeholder, placeholderIdx + Placeholder.Length);
 				}
+				var advancedModSuffix = $"({indexableSupportGems[0]}-{indexableSupportGems[^1]})";
 				for(int i = 0; i < indexableSupportGems.Length; i++)
 				{
 					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], indexableSupportGems[i], statDescription[(placeholderIdx + Placeholder.Length)..])));
+					CreateAndAddStatLine(new StatLine(Placeholder, string.Concat(statDescription[..placeholderIdx], $"{indexableSupportGems[i]}{advancedModSuffix}", statDescription[(placeholderIdx + Placeholder.Length)..])));
 				}
 			}
 			else if(additionalData.Contains("display_indexable_skill"))
@@ -281,7 +283,7 @@ namespace PoEAssetUpdater
 				{
 					return statLines.FindAll(x => x.NumberPart == statLine.NumberPart).DistinctBy(x => x.StatDescription).ToArray();
 				}
-				else if(ContainsIndexableSkillGem)
+				else if(ContainsIndexableSupportGem || ContainsIndexableSkillGem)
 				{
 					// Add both the regular (= matched) stat line and the advanced description stat line
 					return new StatLine[] { statLine, statLines[statLineIdx + 1] };
