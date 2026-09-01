@@ -229,6 +229,7 @@ namespace PoEAssetUpdater
 			["ArchnemesisMod"] = null,
 			["AbstractGiftBox"] = null,
 			["AbstractGold"] = null,
+			["CursedDucat"] = null,
 		};
 
 		private static readonly Dictionary<string, string> HarvestSeedPrefixToItemCategoryMapping = new Dictionary<string, string>()
@@ -627,8 +628,6 @@ namespace PoEAssetUpdater
 				{
 					["ClientStrings.datc64"] = GetClientStringKVP,
 					["AlternateQualityTypes.datc64"] = GetAlternateQualityTypesKVP,
-					["MetamorphosisMetaSkillTypes.datc64"] = GetMetamorphosisMetaSkillTypesKVP,
-					["GrantedEffectQualityTypes.datc64"] = GetAlternateGemQualityTypesKVP,
 					["UltimatumEncounters.datc64"] = GetUltimatumEncountersKVP,
 					["UltimatumItemisedRewards.datc64"] = GetUltimatumItemisedRewardsKVP,
 					["IncursionRooms.datc64"] = GetIncursionRoomsKVP,
@@ -662,22 +661,6 @@ namespace PoEAssetUpdater
 			{
 				string id = string.Concat("Quality", (idx + 1).ToString(CultureInfo.InvariantCulture));//Magic number "1" is the lowest mods key value plus the magic number; It's used to create a DESC sort.
 				string name = recordData.GetValue<string>(DatSchemas.AlternateQualityTypes.Description);
-				return (id, name);
-			}
-
-			static (string, string) GetMetamorphosisMetaSkillTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
-			{
-				int index = recordData.GetValue<int>(DatSchemas.MetamorphosisMetaSkillTypes.UnknownAfterBodyPartName);
-				string id = string.Concat("MetamorphBodyPart", (index + 1).ToString(CultureInfo.InvariantCulture));
-				string name = recordData.GetValue<string>(DatSchemas.MetamorphosisMetaSkillTypes.BodypartName).Trim();
-				return (id, name);
-			}
-
-			static (string, string) GetAlternateGemQualityTypesKVP(int idx, DatRecord recordData, List<AssetFile> languageFiles)
-			{
-				int qualityNum = recordData.GetValue<int>(DatSchemas.GrantedEffectQualityTypes.Id);
-				string id = string.Concat("GemAlternateQuality", qualityNum.ToString(CultureInfo.InvariantCulture), "EffectName");
-				string name = recordData.GetValue<string>(DatSchemas.GrantedEffectQualityTypes.Text);
 				return (id, name);
 			}
 
@@ -2640,6 +2623,7 @@ namespace PoEAssetUpdater
 				var activeSkillsDatContainer = activeSkillsDatContainers[Language.English][0];
 
 				// Write the Base Item Types
+				List<string> baseItemTypeIds = new();
 				for (int i = 0; i < baseItemTypesDatContainer.Count; i++)
 				{
 					var baseItemType = baseItemTypesDatContainer.Records[i];
@@ -2668,6 +2652,7 @@ namespace PoEAssetUpdater
 					var names = baseItemTypesDatContainers.ToDictionary(kvp => kvp.Key, kvp => Escape(kvp.Value[0].Records[i].GetValue<string>(DatSchemas.BaseItemTypes.Name).Trim()));
 
 					WriteRecord(id, names, GetImageByName(id, names[Language.English], category), category, baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Width), baseItemType.GetValue<int>(DatSchemas.BaseItemTypes.Height));
+					baseItemTypeIds.Add(id);
 				}
 
 				// Write the Monster Varieties
@@ -2680,7 +2665,7 @@ namespace PoEAssetUpdater
 					{
 						continue;
 					}
-					if(baseItemTypesDatContainer.Records.Any(x => x.GetValue<string>(DatSchemas.BaseItemTypes.Id) == id))
+					if(baseItemTypeIds.Contains(id))
 					{
 						id = $"{id}_Beast";
 					}
